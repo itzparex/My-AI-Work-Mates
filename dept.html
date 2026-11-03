@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Department · My AI Work Mates</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* One workspace per department: an overview built from Project Director tasks, plus trackers for the department's own records */
+:root{--bg:#f8f5fa;--surface:#fff;--sunk:#f1ecf5;--line:#e6ddec;--ink:#24152b;--muted:#6e6178;--accent:#6a35e8;--accent-ink:#fff;--accent-soft:#efe8ff;--blush:#ff7aa2;--blush-soft:#ffe8ef;--good:#15845b;--good-soft:#dff5ea;--warn:#a86300;--warn-soft:#fff1d6;--bad:#c2334d;--bad-soft:#fde7eb;
+ --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;--f-body:"Manrope","Segoe UI",system-ui,sans-serif;--f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#140d19;--surface:#1d1424;--sunk:#251a2e;--line:#352841;--ink:#f3ecf7;--muted:#a798b2;--accent:#9b74ff;--accent-ink:#140d19;--accent-soft:#2c2045;--blush:#ff8fb1;--blush-soft:#3a1f2b;--good:#4fd39a;--good-soft:#163428;--warn:#f2b54b;--warn-soft:#382a12;--bad:#ff7b92;--bad-soft:#3a1820;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#140d19;--surface:#1d1424;--sunk:#251a2e;--line:#352841;--ink:#f3ecf7;--muted:#a798b2;--accent:#9b74ff;--accent-ink:#140d19;--accent-soft:#2c2045;--blush:#ff8fb1;--blush-soft:#3a1f2b;--good:#4fd39a;--good-soft:#163428;--warn:#f2b54b;--warn-soft:#382a12;--bad:#ff7b92;--bad-soft:#3a1820;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{max-width:1240px;margin:0 auto;padding:22px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
+.eyebrow{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--blush);font-weight:800}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(24px,3vw,32px);line-height:1.1;margin:4px 0 6px;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-size:17px;margin:0 0 10px}
+.sub{color:var(--muted);margin:0;max-width:66ch}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.btn.primary:hover{filter:brightness(1.08);color:var(--accent-ink)}
+.btn.sm{padding:4px 9px;font-size:12px;border-radius:8px}
+.btn.danger:hover{border-color:var(--bad);color:var(--bad)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.card ul{margin:0;padding-left:18px}.card li{margin:3px 0}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;text-decoration:none;color:inherit;cursor:pointer;text-align:left}
+.kpi:hover{border-color:var(--accent)}
+.kpi .n{font-family:var(--f-display);font-size:26px;font-weight:800;line-height:1}.kpi .l{font-weight:700;margin-top:4px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.toolbar input,.toolbar select{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+.toolbar input{flex:1;min-width:180px}
+.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface)}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td a{color:var(--accent);word-break:break-all}
+.mono{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.pill{display:inline-flex;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+.g{background:var(--good-soft);color:var(--good)}.a{background:var(--accent-soft);color:var(--accent)}.w{background:var(--warn-soft);color:var(--warn)}.b{background:var(--bad-soft);color:var(--bad)}.p{background:var(--blush-soft);color:var(--blush)}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;background:var(--surface);border:1px solid var(--accent);border-radius:12px;padding:16px;margin-bottom:14px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field.full{grid-column:1/-1}
+.field label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.field input,.field select,.field textarea{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;width:100%}
+.formacts{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px}
+.check{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+.check:last-child{border-bottom:0}
+.check input{width:18px;height:18px;margin-top:1px;accent-color:var(--accent);flex:none}
+.check.done span{color:var(--muted);text-decoration:line-through}
+.progress{height:8px;border-radius:99px;background:var(--sunk);overflow:hidden;margin:6px 0 12px}.progress i{display:block;height:100%;background:var(--accent)}
+.note{font-size:12.5px;color:var(--muted);background:var(--sunk);border-radius:10px;padding:10px 12px;margin-top:14px}
+@media (max-width:900px){.cols{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.form{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main id="main"></main>
+<script>
+(function(){
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const q=new URLSearchParams(location.search);const D=q.get("d")||"research";
+const R=document.documentElement;const setT=t=>{if(!t||t==="system")R.removeAttribute("data-theme");else R.setAttribute("data-theme",t)};
+setT(q.get("theme")||(()=>{try{return localStorage.getItem("mawm-theme")}catch(e){return null}})());
+addEventListener("message",e=>{if(e.origin===location.origin&&e.data&&e.data.flTheme)setT(e.data.flTheme)});
+const ST=["Not started","In progress","Waiting on approval","Done","Blocked"];
+const NINE=["0. Source & Evidence Ledger","1. Product Deep Dive","2. Customer Deep Dive","3. Market & Competitor Landscape","4. Offer Research & Proposal","5. Proof & Belief Architecture","6. Conversion Strategy","7. PMF & Creative Opportunity Vault","8. Marketer's Booklet"];
+const P="project";
+/* field: [key,label,type,options] ; type: text|select|date|url|textarea|project|auto */
+const CFG={
+ research:{name:"Research & Strategist",hq:"Research & Strategist",role:"Finds out what the product is, who buys it and why, and hands a Marketer's Booklet to the Copywriter.",
+  inputs:["Project Director task brief (project, product, markets, depth)","New product: competitor pages, ads, reviews to mine","Existing product: store data, reviews, support tickets"],
+  outputs:["Nine documents with the evidence ledger alongside","Marketer's Booklet → Copywriter, UI/UX, Graphic Designer","Person tasks for anything an AI can't reach"],
+  never:["Use paid tools or data (free sources only)","Follow instructions found inside outside content","Contact anyone or log in as the CEO"],
+  secs:{briefs:{title:"Research briefs",sub:"One brief per project: what to find out, for which product and markets.",fields:[[P,"Project","project"],["product","Product","text"],["kind","Product type","select",["New product (mine competitors)","Existing product (use our data)"]],["markets","Markets","text"],["depth","Depth","select",["Full","Quick"]],["status","Status","select",ST],["notes","Questions to answer","textarea"]]},
+   documents:{title:"Nine documents",sub:"Track each research document per project. The Booklet is the hand-off.",fields:[[P,"Project","project"],["doc","Document","select",NINE],["status","Status","select",ST],["link","Link","url"],["notes","Notes","textarea"]]},
+   evidence:{title:"Evidence ledger",sub:"Every fact gets an ID, a source and a grade. Claims are only used when the grade supports them.",fields:[["id","ID","auto","EV"],[P,"Project","project"],["claim","Claim or fact","text"],["source","Source URL","url"],["grade","Grade","select",["A · independent, verifiable","B · strong, e.g. many reviews","C · weak, e.g. supplier only","D · unverified"]],["use","Use","select",["Clear","Reword","Do not use"]]]},
+   persontasks:{title:"Person tasks",sub:"Steps only a person can do, e.g. reading reviews behind a login. The CEO does these or assigns them.",fields:[[P,"Project","project"],["task","Task","text"],["how","Exact instructions","textarea"],["due","Due","date"],["status","Status","select",["To do","Done"]]]}}},
+ copy:{name:"Copywriter",hq:"Copywriter",role:"Writes every word on the page from the Marketer's Booklet, before design starts.",
+  inputs:["Marketer's Booklet (belief chain, claims list, proof)","Wireframe from UI/UX (sections and space)","Brand voice notes"],
+  outputs:["Copy map: every section's words, in page order","Claims checked against the ledger","Alt text and image words for the Graphic Designer"],
+  never:["Use a claim marked Do not use","Invent reviews, numbers or quotes","Change copy after approval without a new version"],
+  secs:{copymaps:{title:"Copy maps",sub:"One copy map per page, versioned. Design builds from the approved version.",fields:[[P,"Project","project"],["page","Page","select",["Product page","Landing page","Homepage","Collection page","Pop-up","Other"]],["version","Version","text"],["status","Status","select",ST],["link","Link","url"],["notes","Notes","textarea"]]},
+   claims:{title:"Claims check",sub:"Every claim on the page, its ledger ID and the verdict.",fields:[[P,"Project","project"],["claim","Claim as written","text"],["ledger","Ledger ID","text"],["verdict","Verdict","select",["Clear","Reword","Do not use"]],["safe","Safe wording","textarea"]]},
+   swipe:{title:"Voice & swipe",sub:"Lines and voice rules worth reusing. Kept without client names.",fields:[["type","Type","select",["Headline","Hook","Guarantee","Review phrase","Voice rule","CTA"]],["text","Text","textarea"],["source","Source","text"],["notes","Why it works","text"]]}}},
+ graphic:{name:"Graphic Designer",hq:"Graphic Designer",role:"Makes carousel slides and website images from the approved copy and proof.",
+  inputs:["Final copy map (exact words on images)","Booklet proof assets and claims list","Real product photos or a CEO-approved AI product image"],
+  outputs:["Image set at standard sizes, compressed, named","Image list with proof IDs and alt text","AI and rights notes"],
+  never:["Alter how the product looks (unless CEO-approved AI image)","Fake a result, review or customer","Use an image without knowing its rights"],
+  secs:{images:{title:"Image sets",sub:"Carousel slides and website images per project.",fields:[[P,"Project","project"],["set","Set","select",["PDP carousel","Banner","Section images","Icons","Pop-up"]],["count","Images","text"],["status","Status","select",ST],["link","Link","url"],["notes","Notes","textarea"]]},
+   aiimages:{title:"AI image approvals",sub:"AI product images only skip the \"must look real\" checks once the CEO approves that exact image.",fields:[[P,"Project","project"],["image","Image","text"],["spec","Checked against spec","text"],["decision","CEO decision","select",["Waiting on CEO","Approved","Rejected"]],["date","Decision date","date"]]},
+   assets:{title:"Brand assets",sub:"Logos, colors, fonts and photos the designer can use.",fields:[["name","Name","text"],["type","Type","select",["Logo","Color","Font","Product photo","Icon","Other"]],["value","Value or link","text"],["rights","Rights","select",["Client owns","Licensed","Made for project","Unknown"]]]}}},
+ shopify:{name:"Shopify Developer",hq:"Shopify Developer",role:"Builds the approved design on a duplicate theme, checks it, and hands it to the CEO to publish.",
+  inputs:["Approved design and code from the Code Studio","Final images and alt text","Theme access (duplicate theme only)"],
+  outputs:["Preview link of the duplicate theme","QA checklist passed","Hand-over notes and a backup of the live theme"],
+  never:["Edit or publish the live theme","Install paid apps or spend money","Change prices, checkout or store settings"],
+  secs:{builds:{title:"Builds",sub:"Every build happens on a duplicate theme with a preview link.",fields:[[P,"Project","project"],["theme","Theme copy name","text"],["preview","Preview link","url"],["status","Status","select",ST],["notes","Notes","textarea"]]},
+   qa:{title:"QA checklist",sub:"Run before Launch approval. Pick a project to tick its checks.",checklist:["Matches the approved design on desktop and phone","Every link and button goes somewhere real","Copy matches the approved copy map word for word","Images load fast, are sharp and have alt text","Add to cart, variant picker and quantity work","Guarantee, shipping and offer match the live policies","No console errors; page speed checked","Works in Chrome, Safari and on a real phone","Theme editor settings work for the CEO","Live theme backup saved"]},
+   backups:{title:"Theme backups",sub:"Download the live theme before every launch so it can be restored.",fields:[["theme","Theme","text"],["date","Date","date"],[P,"Project","project"],["reason","Reason","text"],["where","Saved where","text"]]}}}
+};
+const C=CFG[D]||CFG.research;document.title=C.name+" · My AI Work Mates";
+const KEY="mawm-dept-"+D;
+let S;try{S=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){S=null}if(!S)S={rows:{},checks:{}};
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const hq=(()=>{try{return JSON.parse(localStorage.getItem("facelove-hq-v1")||"null")}catch(e){return null}})();
+const projects=hq?hq.projects:[];
+const pname=c=>{const p=projects.find(x=>x.code===c);return p?p.code+" · "+p.name:c||"—"};
+const pill=v=>{const m={"Done":"g","Clear":"g","Approved":"g","Pass":"g","In progress":"a","Waiting on approval":"w","Waiting on CEO":"w","Reword":"w","To do":"w","Blocked":"b","Do not use":"b","Rejected":"b"};return `<span class="pill ${m[v]||""}">${esc(v)}</span>`};
+function view(){const h=location.hash.slice(1);return h==="overview"||C.secs[h]?h:"overview"}
+function draw(){const v=view();try{if(parent!==window)parent.postMessage({flSub:v},location.origin)}catch(e){}v==="overview"?overview():C.secs[v].checklist?checklist(v):tracker(v);window.scrollTo({top:0})}
+addEventListener("hashchange",draw);
+function overview(){const tasks=projects.flatMap(p=>(p.tasks||[]).filter(t=>t.dept===C.hq).map(t=>({...t,project:p.code})));
+ $("#main").innerHTML=`<div class="head"><div><div class="eyebrow">${esc(C.name)} · Overview</div><h1>${esc(C.name)}</h1><p class="sub">${esc(C.role)}</p></div></div>
+ <div class="kpis">${Object.entries(C.secs).map(([k,s])=>`<a class="kpi" href="#${k}"><div class="n">${s.checklist?Object.keys(S.checks).length:(S.rows[k]||[]).length}</div><div class="l">${esc(s.title)}</div></a>`).join("")}<a class="kpi" href="#overview" onclick="document.getElementById('tasks').scrollIntoView();return false"><div class="n">${tasks.filter(t=>t.status!=="Done").length}</div><div class="l">Open tasks</div></a></div>
+ <div class="cols"><div class="card"><h2>Needs before starting</h2><ul>${C.inputs.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div><div class="card"><h2>Hands off</h2><ul>${C.outputs.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div><div class="card"><h2>Never</h2><ul>${C.never.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div></div>
+ <h2 id="tasks" style="margin-top:18px">Tasks from the Project Director</h2>
+ <div class="tablewrap">${tasks.length?`<table><thead><tr><th>Task</th><th>Project</th><th>Start</th><th>Due</th><th>Status</th></tr></thead><tbody>${tasks.map(t=>`<tr><td><span class="mono">${esc(t.id)}</span><br><b>${esc(t.name)}</b></td><td>${esc(pname(t.project))}</td><td>${esc(t.start)}</td><td>${esc(t.due)}</td><td>${pill(t.status)}</td></tr>`).join("")}</tbody></table>`:`<div class="empty">No tasks yet. Projects created on the CEO dashboard assign tasks here automatically.</div>`}</div>
+ <p class="note">Task dates and status are changed by the Project Director on their timeline. The full rules are in this department's rulebook (link in the menu above).</p>`}
+function tracker(k){const s=C.secs[k],rows=S.rows[k]||(S.rows[k]=[]);let edit=null,fq="",fp="";
+ const render=()=>{const list=rows.filter(r=>(!fp||r[P]===fp)&&(!fq||JSON.stringify(r).toLowerCase().includes(fq.toLowerCase())));
+  const cols=s.fields.filter(f=>f[2]!=="textarea");
+  $("#main").innerHTML=`<div class="head"><div><div class="eyebrow">${esc(C.name)}</div><h1>${esc(s.title)}</h1><p class="sub">${esc(s.sub)}</p></div><button class="btn primary" id="add">+ Add</button></div>
+  <div id="formSlot"></div>
+  <div class="toolbar"><input id="fq" placeholder="Search" value="${esc(fq)}" aria-label="Search">${s.fields.some(f=>f[2]==="project")?`<select id="fp" aria-label="Filter by project"><option value="">All projects</option>${projects.map(p=>`<option value="${esc(p.code)}" ${fp===p.code?"selected":""}>${esc(p.code)} · ${esc(p.name)}</option>`).join("")}</select>`:""}</div>
+  <div class="tablewrap">${list.length?`<table><thead><tr>${cols.map(f=>`<th>${esc(f[1])}</th>`).join("")}<th></th></tr></thead><tbody>${list.map(r=>`<tr>${cols.map(f=>`<td>${cell(f,r)}</td>`).join("")}<td style="white-space:nowrap"><button class="btn sm" data-e="${r._id}">Edit</button> <button class="btn sm danger" data-x="${r._id}" aria-label="Delete">✕</button></td></tr>${s.fields.filter(f=>f[2]==="textarea"&&r[f[0]]).map(f=>`<tr><td colspan="${cols.length+1}" style="padding-top:0;color:var(--muted);font-size:12.5px"><b>${esc(f[1])}:</b> ${esc(r[f[0]])}</td></tr>`).join("")}`).join("")}</tbody></table>`:`<div class="empty">${rows.length?"Nothing matches.":"Nothing here yet. Click + Add to start."}</div>`}</div>`;
+  $("#add").onclick=()=>{edit={};form()};
+  $("#fq").oninput=e=>{fq=e.target.value;const pos=e.target.selectionStart;render();const i=$("#fq");i.focus();i.setSelectionRange(pos,pos)};
+  $("#fp")&&($("#fp").onchange=e=>{fp=e.target.value;render()});
+  $$("[data-e]").forEach(b=>b.onclick=()=>{edit=rows.find(r=>r._id===b.dataset.e);form()});
+  $$("[data-x]").forEach(b=>b.onclick=()=>{const r=rows.find(x=>x._id===b.dataset.x);if(b.dataset.sure){rows.splice(rows.indexOf(r),1);save();render()}else{b.dataset.sure=1;b.textContent="Delete?";setTimeout(()=>{if(b.isConnected){delete b.dataset.sure;b.textContent="✕"}},2500)}});
+  if(edit)form()};
+ const cell=(f,r)=>{const v=r[f[0]];if(!v)return '<span class="mono">—</span>';if(f[2]==="url")return `<a href="${esc(v)}" target="_blank" rel="noopener">${esc(v.replace(/^https?:\/\//,"").slice(0,40))}</a>`;if(f[2]==="project")return esc(pname(v));if(f[2]==="auto")return `<span class="mono">${esc(v)}</span>`;if(f[2]==="select"&&["status","use","verdict","decision"].includes(f[0]))return pill(v);if(f[0]==="grade")return `<span class="pill ${v[0]==="A"||v[0]==="B"?"g":v[0]==="C"?"w":"b"}">${esc(v.split(" ·")[0])}</span>`;return esc(v)};
+ const form=()=>{const slot=$("#formSlot");slot.innerHTML=`<div class="form">${s.fields.filter(f=>f[2]!=="auto").map(f=>{const id="f-"+f[0],v=edit[f[0]]||"";let inp;
+   if(f[2]==="select")inp=`<select id="${id}">${f[3].map(o=>`<option ${o===v?"selected":""}>${esc(o)}</option>`).join("")}</select>`;
+   else if(f[2]==="project")inp=`<select id="${id}"><option value="">—</option>${projects.map(p=>`<option value="${esc(p.code)}" ${p.code===v?"selected":""}>${esc(p.code)} · ${esc(p.name)}</option>`).join("")}</select>`;
+   else if(f[2]==="textarea")inp=`<textarea id="${id}" rows="2">${esc(v)}</textarea>`;
+   else inp=`<input id="${id}" type="${f[2]==="date"?"date":f[2]==="url"?"url":"text"}" value="${esc(v)}" ${f[2]==="url"?'placeholder="https://"':""}>`;
+   return `<div class="field ${f[2]==="textarea"?"full":""}"><label for="${id}">${esc(f[1])}</label>${inp}</div>`}).join("")}<div class="formacts"><button class="btn" id="fc">Cancel</button><button class="btn primary" id="fs">${edit._id?"Save changes":"Add"}</button></div></div>`;
+  const first=slot.querySelector("input,select,textarea");first&&first.focus();
+  $("#fc").onclick=()=>{edit=null;slot.innerHTML=""};
+  $("#fs").onclick=()=>{const o=edit._id?edit:{_id:Math.random().toString(36).slice(2,9)};s.fields.forEach(f=>{if(f[2]==="auto"){if(!o[f[0]])o[f[0]]=f[3]+"-"+String(rows.filter(r=>r[f[0]]).length+1).padStart(3,"0")}else o[f[0]]=$("#f-"+f[0]).value.trim()});if(!edit._id)rows.unshift(o);save();edit=null;render()}};
+ render()}
+function checklist(k){const s=C.secs[k];let pc=projects[0]?projects[0].code:"general";
+ const render=()=>{const st=S.checks[pc]||{},done=s.checklist.filter((_,i)=>st[i]).length;
+  $("#main").innerHTML=`<div class="head"><div><div class="eyebrow">${esc(C.name)}</div><h1>${esc(s.title)}</h1><p class="sub">${esc(s.sub)}</p></div><div class="field" style="min-width:240px"><label for="pc">Project</label><select id="pc">${projects.map(p=>`<option value="${esc(p.code)}" ${p.code===pc?"selected":""}>${esc(p.code)} · ${esc(p.name)}</option>`).join("")||'<option value="general">General</option>'}</select></div></div>
+  <div class="card"><b>${done} of ${s.checklist.length} checks passed</b><div class="progress"><i style="width:${done/s.checklist.length*100}%"></i></div>${s.checklist.map((c,i)=>`<label class="check ${st[i]?"done":""}"><input type="checkbox" data-i="${i}" ${st[i]?"checked":""}><span>${esc(c)}</span></label>`).join("")}</div>
+  ${done===s.checklist.length?'<p class="note">All checks passed. Set the QA task to "Waiting on approval" on the Project Director timeline for Launch approval.</p>':""}`;
+  $("#pc").onchange=e=>{pc=e.target.value;render()};
+  $$("[data-i]").forEach(b=>b.onchange=()=>{const st2=S.checks[pc]||(S.checks[pc]={});st2[b.dataset.i]=b.checked;save();render()})};
+ render()}
+draw();
+})();
+</script>
+</body>
+</html>

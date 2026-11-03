@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Agency HQ · My AI Work Mates</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+.embed .top,.embed body::before{display:none}.embed main{padding-top:16px}
+/* Layout: two separate dashboards (CEO, Project Director) behind one switcher; CEO = decisions first, Director = timeline first */
+:root{
+  --bg:#f8f5fa;--surface:#fff;--sunk:#f1ecf5;--line:#e6ddec;--ink:#24152b;--muted:#6e6178;
+  --accent:#6a35e8;--accent-ink:#fff;--accent-soft:#efe8ff;--blush:#ff7aa2;--blush-soft:#ffe8ef;
+  --good:#15845b;--good-soft:#dff5ea;--warn:#a86300;--warn-soft:#fff1d6;--bad:#c2334d;--bad-soft:#fde7eb;
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;--f-body:"Manrope","Segoe UI",system-ui,sans-serif;--f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --r:12px;--shadow:0 1px 2px rgba(36,21,43,.06),0 8px 24px rgba(36,21,43,.06);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#140d19;--surface:#1d1424;--sunk:#251a2e;--line:#352841;--ink:#f3ecf7;--muted:#a798b2;--accent:#9b74ff;--accent-ink:#140d19;--accent-soft:#2c2045;--blush:#ff8fb1;--blush-soft:#3a1f2b;--good:#4fd39a;--good-soft:#163428;--warn:#f2b54b;--warn-soft:#382a12;--bad:#ff7b92;--bad-soft:#3a1820;--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#140d19;--surface:#1d1424;--sunk:#251a2e;--line:#352841;--ink:#f3ecf7;--muted:#a798b2;--accent:#9b74ff;--accent-ink:#140d19;--accent-soft:#2c2045;--blush:#ff8fb1;--blush-soft:#3a1f2b;--good:#4fd39a;--good-soft:#163428;--warn:#f2b54b;--warn-soft:#382a12;--bad:#ff7b92;--bad-soft:#3a1820;--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.top .in{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-block:12px;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--blush));display:grid;place-items:center;color:#fff;font-family:var(--f-display);font-weight:800}
+.brand b{font-family:var(--f-display);font-size:17px;display:block;line-height:1.1}.brand small{color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.seg{display:inline-flex;background:var(--sunk);border-radius:10px;padding:3px}
+.seg button{all:unset;cursor:pointer;padding:6px 12px;border-radius:8px;font-weight:700;font-size:13px;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+main{max-width:1280px;margin:0 auto;padding-block:22px 48px;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.eyebrow{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--blush);font-weight:700}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(26px,3vw,34px);line-height:1.1;margin:4px 0 6px;letter-spacing:-.01em;text-wrap:balance}
+h2{font-family:var(--f-display);font-weight:700;font-size:18px;margin:0}
+.sub{color:var(--muted);margin:0;max-width:64ch}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.btn.primary:hover{filter:brightness(1.08);color:var(--accent-ink)}
+.btn.sm{padding:5px 10px;font-size:12px;border-radius:8px}
+.btn.good{color:var(--good);border-color:var(--good)}.btn.bad{color:var(--bad);border-color:var(--bad)}
+.pill{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+.p-done{background:var(--good-soft);color:var(--good)}.p-prog{background:var(--accent-soft);color:var(--accent)}.p-wait{background:var(--warn-soft);color:var(--warn)}.p-block{background:var(--bad-soft);color:var(--bad)}.p-person{background:var(--blush-soft);color:var(--blush)}
+.grid{display:grid;gap:14px}
+.cols{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.card>h2{margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.kpi .n{font-family:var(--f-display);font-size:28px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.kpi .l{font-weight:700;margin-top:4px}.kpi .d{color:var(--muted);font-size:12px}
+.decision{border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.decision.override{border-left-color:var(--blush)}.decision.escalation{border-left-color:var(--bad)}
+.decision .meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.decision p{margin:0}.rec{font-size:13px;color:var(--muted)}.rec b{color:var(--ink)}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.proj{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;background:var(--surface);text-align:left}
+.proj:hover{border-color:var(--accent)}
+.bar{height:8px;border-radius:99px;background:var(--sunk);overflow:hidden}.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.muted{color:var(--muted)}.small{font-size:12px}
+.mono{font-family:var(--f-mono);font-size:11.5px;color:var(--muted)}
+.deps{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.dept{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px;text-decoration:none;color:inherit}
+a.dept:hover{border-color:var(--accent)}
+.dept.off{opacity:.55}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+.tablewrap{overflow-x:auto}
+/* gantt */
+.gantt{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+.g-row{display:grid;grid-template-columns:230px 1fr;min-width:880px;border-bottom:1px solid var(--line)}
+.g-row:last-child{border-bottom:0}
+.g-label{padding:8px 10px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px;background:var(--surface)}
+.g-label b{font-size:13px}
+.g-track{position:relative;min-height:52px;background:repeating-linear-gradient(90deg,transparent 0 calc(var(--day) - 1px),var(--line) calc(var(--day) - 1px) var(--day))}
+.g-head .g-track{min-height:30px;background:none}
+.g-tick{position:absolute;top:8px;font-size:11px;color:var(--muted);transform:translateX(4px);white-space:nowrap}
+.g-bar{position:absolute;top:14px;height:24px;border-radius:7px;display:flex;align-items:center;padding:0 8px;font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;border:1.5px solid}
+.g-bar.s-done{background:var(--good-soft);color:var(--good);border-color:var(--good)}
+.g-bar.s-prog{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.g-bar.s-wait{background:var(--warn-soft);color:var(--warn);border-color:var(--warn)}
+.g-bar.s-block{background:var(--bad-soft);color:var(--bad);border-color:var(--bad)}
+.g-bar.s-person{background:var(--blush-soft);color:var(--blush);border-color:var(--blush)}
+.g-bar.s-not{background:var(--surface);color:var(--muted);border-color:var(--line);border-style:dashed}
+.g-bar.short{overflow:visible}.g-bar.short span{position:absolute;left:calc(100% + 6px);color:var(--muted);font-weight:600}
+.g-today{position:absolute;top:0;bottom:0;width:2px;background:var(--blush);z-index:1}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:currentColor}
+.wl{display:grid;grid-template-columns:150px 1fr 30px;gap:10px;align-items:center;font-size:13px}
+.wl .bar i{background:var(--blush)}
+.form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label,.field .lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.field input,.field select,.field textarea{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;width:100%}
+.field.wide{grid-column:span 2}.field.full{grid-column:1/-1}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.modalwrap{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;background:rgba(20,10,25,.5)}
+.modal{background:var(--surface);border-radius:16px;width:min(760px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+.note{font-size:12.5px;background:var(--sunk);border-radius:10px;padding:10px 12px;color:var(--muted)}
+.example{font-size:11px;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:60}
+.empty{padding:24px;text-align:center;color:var(--muted);border:1.5px dashed var(--line);border-radius:10px}
+.inline-input{display:flex;gap:6px;margin-top:6px}.inline-input input{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px}
+@media (max-width:980px){.cols{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.form{grid-template-columns:1fr}.field.wide{grid-column:auto}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="top"><div class="in">
+  <div class="brand"><div class="mark" aria-hidden="true">f.</div><div><b>My AI Work Mates</b><small>Command dashboards</small></div></div>
+  <div class="seg" id="roles" role="tablist" aria-label="Dashboard"><button data-r="ceo">CEO</button><button data-r="director">Project Director</button></div>
+  <div class="seg" id="themesw" aria-label="Page background"><button data-t="light">Light</button><button data-t="dark">Dark</button><button data-t="system">Auto</button></div>
+</div></header>
+<main id="main"></main>
+<div id="modalRoot"></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const uid=()=>Math.random().toString(36).slice(2,8);
+const TODAY="2026-11-03";
+const D=s=>new Date(s+"T00:00:00Z");const iso=d=>d.toISOString().slice(0,10);
+const addWork=(s,n)=>{let d=D(s);let left=Math.max(1,Math.round(n));while(left>1){d.setUTCDate(d.getUTCDate()+1);const w=d.getUTCDay();if(w!==0&&w!==6)left--}return iso(d)};
+const nextWork=s=>{let d=D(s);do{d.setUTCDate(d.getUTCDate()+1)}while([0,6].includes(d.getUTCDay()));return iso(d)};
+const days=(a,b)=>Math.round((D(b)-D(a))/864e5);
+const fmt=s=>s?D(s).toLocaleDateString(undefined,{month:"short",day:"numeric",timeZone:"UTC"}):"";
+const STUDIO="index.html#/uiux/studio";
+const DEPTS=[["Research & Strategist","index.html#/research/overview"],["Copywriter","index.html#/copy/overview"],["UI/UX Designer",STUDIO],["Graphic Designer","index.html#/graphic/overview"],["Shopify Developer","index.html#/shopify/overview"]];
+const PAUSED=["Video Editor","Email Marketing Manager","Social Media Manager","Media Buyer"];
+const STATUSES=["Not started","In progress","Waiting on approval","Waiting on a person","Done","Blocked"];
+const SCLS={"Done":"done","In progress":"prog","Waiting on approval":"wait","Waiting on a person":"person","Blocked":"block","Not started":"not"};
+const PCLS={"Done":"p-done","In progress":"p-prog","Waiting on approval":"p-wait","Waiting on a person":"p-person","Blocked":"p-block"};
+/* nine steps with working-day estimates [quick, full] */
+const STEPS=[["Research (nine documents and Booklet)","Research & Strategist",3,6,null],["Wireframe","UI/UX Designer",1,1,null],["Product page copy","Copywriter",1,2,null],["Page design in Code Studio","UI/UX Designer",2,4,null],["Carousel and website images","Graphic Designer",1,2,"parallel"],["Design approval","Project Director",1,1,"gate"],["Build on duplicate theme","Shopify Developer",1,2,null],["QA","UI/UX Designer",1,1,null],["Launch approval","Project Director",1,1,"gate"],["Live and results","CEO publishes",1,1,null]];
+function planTasks(code,start,depth){let cur=start,prevStart=start,tasks=[];STEPS.forEach((st,i)=>{const n=depth==="Quick"?st[2]:st[3];const s=st[4]==="parallel"?prevStart:cur;const e=addWork(s,n);tasks.push({id:code+"-"+String(i+1).padStart(2,"0"),name:st[0],dept:st[1],start:s,due:e,status:"Not started",gate:st[4]==="gate"});if(st[4]!=="parallel"){prevStart=s;cur=nextWork(e)}else{const later=tasks[i-1].due>e?tasks[i-1].due:e;cur=nextWork(later)}});return tasks}
+function seed(){
+ const p1={code:"FL-PDP",name:"Facelove product page",client:"Facelove",product:"Everlove mascara",goal:"Raise add-to-cart rate from 6% to 9%",markets:["US","UK"],depth:"Full",start:"2026-10-20",priority:"High",status:"Active",example:true,tasks:planTasks("FL-PDP","2026-10-20","Full")};
+ const st=["Done","Done","Done","In progress","Waiting on a person","Not started","Not started","Not started","Not started","Not started"];p1.tasks.forEach((t,i)=>t.status=st[i]);
+ p1.due=p1.tasks.at(-1).due;
+ const p2={code:"FL-COL",name:"Everlove collection page",client:"Facelove",product:"Everlove range",goal:"Lift collection-to-product clicks by 20%",markets:["US"],depth:"Quick",start:"2026-11-09",priority:"Normal",status:"Planning",example:true,tasks:planTasks("FL-COL","2026-11-09","Quick")};p2.due=p2.tasks.at(-1).due;
+ return {projects:[p1,p2],sel:"FL-PDP",
+  decisions:[
+   {id:uid(),type:"Approval",project:"FL-PDP",title:"Approve the launch offer",detail:"Offer Research recommends: 1 tube full price, 2 tubes save 15%, 3 tubes save 25%, 30-day guarantee. Margin stays above target on all three.",rec:"Approve. Test 2-for-15% against the current single-tube offer.",example:true},
+   {id:uid(),type:"Override",project:"FL-PDP",title:"AI product image for the new Brown Black shade",detail:"No real photos exist yet for the new shade, so carousel slide 1 is blocked. Graphic Designer can make an AI product image matched to the supplier spec.",rec:"Allow for slide 1 only, until real photos arrive.",example:true},
+   {id:uid(),type:"Escalation",project:"FL-PDP",title:"Client wants \"clinically proven\" in the headline",detail:"Evidence ledger has only grade C support (one supplier test without a published method). Claims check marked it Do not use.",rec:"Disallow. Use \"customers say\" wording backed by 120+ reviews (grade B).",example:true}],
+  issues:[{id:"IS-001",date:"2026-10-29",project:"FL-PDP",dept:"Research & Strategist",what:"Amazon reviews couldn't be read automatically",type:"Tool or access",sev:"Low",told:"Person task created (30 reviews per competitor)",decision:"—",status:"Resolved",example:true},{id:"IS-002",date:"2026-11-02",project:"FL-PDP",dept:"Graphic Designer",what:"No product photos for the new shade",type:"Blocked",sev:"High",told:"Options: wait for photos, or a CEO-approved AI product image",decision:"Waiting on CEO",status:"Waiting on CEO",example:true}],
+  lessons:[{id:"LL-001",date:"2026-10-30",project:"FL-PDP",dept:"Research & Strategist",what:"Competitor ad research took 2 extra days without the browser agent",type:"Process gap",change:"Run the Ad Library step through the browser agent first",example:true}],
+  reviews:{}};
+}
+const KEY="facelove-hq-v1";
+let S;try{S=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){S=null}
+if(!S||!S.projects){S=seed();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+let UI;try{UI=JSON.parse(localStorage.getItem(KEY+"-ui")||"null")}catch(e){UI=null}if(!UI)UI={theme:"system"};
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const saveUI=()=>{try{localStorage.setItem(KEY+"-ui",JSON.stringify(UI))}catch(e){}};
+let tt;const toast=m=>{const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2200)};
+function applyTheme(){if(UI.theme==="system")document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme",UI.theme);$$("#themesw button").forEach(b=>b.classList.toggle("on",b.dataset.t===UI.theme))}
+$("#themesw").onclick=e=>{const b=e.target.closest("button");if(!b)return;UI.theme=b.dataset.t;saveUI();applyTheme()};
+const proj=c=>S.projects.find(p=>p.code===c);
+const prog=p=>{const n=p.tasks.length,d=p.tasks.filter(t=>t.status==="Done").length;return {n,d,pct:n?Math.round(d/n*100):0}};
+const nextTask=p=>p.tasks.find(t=>t.status!=="Done");
+function route(){const h=location.hash.slice(1).split(":")[0];return h==="director"?"director":"ceo"}
+function draw(){const r=route();$$("#roles button").forEach(b=>b.classList.toggle("on",b.dataset.r===r));r==="ceo"?drawCEO():drawDirector();const sub=location.hash.split(":")[1];const el=sub&&document.querySelector(`[data-sec="${sub}"]`);el?el.scrollIntoView({block:"start"}):window.scrollTo({top:0})}
+$("#roles").onclick=e=>{const b=e.target.closest("button");if(!b)return;location.hash=b.dataset.r};
+window.addEventListener("hashchange",draw);
+
+/* ================= CEO ================= */
+function drawCEO(){
+ const active=S.projects.filter(p=>p.status!=="Closed");
+ const waiting=S.decisions.length;
+ const high=S.issues.filter(i=>i.sev==="High"&&i.status!=="Resolved").length;
+ const dueSoon=active.flatMap(p=>p.tasks.filter(t=>t.status!=="Done"&&days(TODAY,t.due)<=3&&days(TODAY,t.due)>=0)).length;
+ $("#main").innerHTML=`
+ <div class="head"><div><div class="eyebrow">CEO dashboard · ${fmt(TODAY)}</div><h1>${waiting?waiting+" decision"+(waiting>1?"s":"")+" need you":"Nothing waiting on you"}</h1><p class="sub">Approvals, guardrail overrides and escalations from the Project Director come here first. Nothing that publishes, spends or reaches a client moves without your yes.</p></div><button class="btn primary" id="newProj">+ Create project</button></div>
+ <div class="kpis">
+  <div class="kpi"><div class="n">${waiting}</div><div class="l">Decisions waiting</div><div class="d">No reply means disallowed</div></div>
+  <div class="kpi"><div class="n">${active.length}</div><div class="l">Open projects</div><div class="d">${active.filter(p=>p.status==="Active").length} active · ${active.filter(p=>p.status==="Planning").length} planning</div></div>
+  <div class="kpi"><div class="n">${dueSoon}</div><div class="l">Tasks due in 3 days</div><div class="d">Across all projects</div></div>
+  <div class="kpi"><div class="n" style="color:${high?"var(--bad)":"inherit"}">${high}</div><div class="l">High-severity issues</div><div class="d">Open in the issues log</div></div>
+ </div>
+ <div class="cols">
+  <section class="card" data-sec="decisions"><h2>Decisions waiting</h2><div class="grid" id="decisions">${S.decisions.map(d=>`
+   <article class="decision ${d.type.toLowerCase()}" data-id="${d.id}">
+    <div class="meta"><span class="pill ${d.type==="Approval"?"p-wait":d.type==="Override"?"p-person":"p-block"}">${esc(d.type)}</span><span class="mono">${esc(d.project)}</span>${d.example?'<span class="example">Example</span>':""}</div>
+    <b>${esc(d.title)}</b><p class="small">${esc(d.detail)}</p><div class="rec"><b>Project Director recommends:</b> ${esc(d.rec)}</div>
+    <div class="acts"><button class="btn sm good" data-dec="allow">Allow</button><button class="btn sm bad" data-dec="disallow">Disallow</button><button class="btn sm" data-dec="note">Allow with a note</button></div>
+   </article>`).join("")||'<div class="empty">You\'re all caught up. New decisions from the Project Director will appear here.</div>'}</div></section>
+  <div class="grid">
+   <section class="card" data-sec="projects"><h2>Projects</h2><div class="grid">${S.projects.map(p=>{const g=prog(p),n=nextTask(p);return `<button class="proj" data-open="${p.code}">
+    <div class="row"><b style="flex:1">${esc(p.name)}</b><span class="pill ${p.status==="Active"?"p-prog":p.status==="Closed"?"p-done":"p-wait"}">${esc(p.status)}</span></div>
+    <div class="row small muted"><span class="mono">${esc(p.code)}</span><span>${esc(p.client)}</span><span>·</span><span>${esc(p.markets.join(", "))}</span><span>·</span><span>${esc(p.priority)} priority</span>${p.example?'<span class="example">Example</span>':""}</div>
+    <div class="bar" aria-label="${g.pct}% done"><i style="width:${g.pct}%"></i></div>
+    <div class="row small"><span>${g.d} of ${g.n} tasks done</span><span class="muted" style="margin-left:auto">${n?`Next: ${esc(n.name)} · due ${fmt(n.due)}`:"Complete"}</span></div>
+    <div class="small muted">Launch due ${fmt(p.due)}</div></button>`}).join("")}</div></section>
+   <section class="card" data-sec="departments"><h2>Department dashboards</h2><div class="deps">${DEPTS.map(([n,u])=>{const open=S.projects.flatMap(p=>p.tasks).filter(t=>t.dept===n&&t.status!=="Done").length;return u?`<a class="dept" href="${u}" target="_top"><b>${esc(n)}</b><span class="small muted">${open} open tasks</span><span class="small" style="color:var(--accent);font-weight:700">Open dashboard ↗</span></a>`:`<div class="dept"><b>${esc(n)}</b><span class="small muted">${open} open tasks</span><span class="small muted">Dashboard coming next</span></div>`}).join("")}${PAUSED.map(n=>`<div class="dept off"><b>${esc(n)}</b><span class="small muted">Paused</span></div>`).join("")}</div></section>
+  </div>
+ </div>
+ <section class="card" data-sec="issues" style="margin-top:16px"><h2>Issues needing attention</h2>${issuesTable(S.issues.filter(i=>i.status!=="Resolved"))}</section>`;
+ $("#newProj").onclick=openCreate;
+ $$("[data-open]").forEach(b=>b.onclick=()=>{S.sel=b.dataset.open;save();if(parent!==window)parent.location.hash="#/director/timeline";else location.hash="director"});
+ $$("#decisions [data-dec]").forEach(b=>b.onclick=()=>{const card=b.closest("[data-id]");const d=S.decisions.find(x=>x.id===card.dataset.id);
+  if(b.dataset.dec==="note"&&!card.querySelector(".inline-input")){card.insertAdjacentHTML("beforeend",`<div class="inline-input"><input placeholder="Scope or condition, e.g. slide 1 only" aria-label="Note"><button class="btn sm good">Allow</button></div>`);const box=card.querySelector(".inline-input");box.querySelector("button").onclick=()=>decide(d,"Allowed: "+(box.querySelector("input").value||"no note"));box.querySelector("input").focus();return}
+  if(b.dataset.dec!=="note")decide(d,b.dataset.dec==="allow"?"Allowed":"Disallowed")});
+}
+function decide(d,result){S.decisions=S.decisions.filter(x=>x!==d);
+ const open=S.issues.find(i=>i.project===d.project&&i.status==="Waiting on CEO");
+ if(open&&d.type!=="Approval"){open.decision=result+" ("+fmt(TODAY)+")";open.status="Resolved"}
+ else S.issues.unshift({id:"IS-"+String(S.issues.length+1).padStart(3,"0"),date:TODAY,project:d.project,dept:"CEO decision",what:d.title,type:d.type==="Override"?"Override request":d.type,sev:"Medium",told:d.rec,decision:result,status:"Resolved"});
+ save();toast(result.split(":")[0]+" · recorded in the issues log");drawCEO()}
+function issuesTable(list){return list.length?`<div class="tablewrap"><table><thead><tr><th>ID</th><th>Date</th><th>Project</th><th>Department</th><th>What happened</th><th>Severity</th><th>CEO decision</th><th>Status</th></tr></thead><tbody>${list.map(i=>`<tr><td class="mono">${esc(i.id)}</td><td>${fmt(i.date)}</td><td class="mono">${esc(i.project)}</td><td>${esc(i.dept)}</td><td>${esc(i.what)}${i.example?' <span class="example">Example</span>':""}</td><td><span class="pill ${i.sev==="High"?"p-block":i.sev==="Medium"?"p-wait":""}">${esc(i.sev)}</span></td><td>${esc(i.decision)}</td><td><span class="pill ${i.status==="Resolved"?"p-done":"p-wait"}">${esc(i.status)}</span></td></tr>`).join("")}</tbody></table></div>`:'<div class="empty">No open issues.</div>'}
+function openCreate(){let mk=new Set(["US"]);
+ $("#modalRoot").innerHTML=`<div class="modalwrap"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="cpT"><div><div class="eyebrow">New project</div><h2 id="cpT" style="font-size:22px">Create a project</h2><p class="sub small">The Project Director builds the nine-step timeline from these answers using the standard task times. You can adjust dates afterwards.</p></div>
+ <div class="form">
+  <div class="field"><label for="cp-code">Project code</label><input id="cp-code" placeholder="FL-LP"></div>
+  <div class="field wide"><label for="cp-name">Project name</label><input id="cp-name" placeholder="Holiday landing page"></div>
+  <div class="field"><label for="cp-pri">Priority</label><select id="cp-pri"><option>High</option><option selected>Normal</option><option>Low</option></select></div>
+  <div class="field"><label for="cp-client">Client</label><input id="cp-client" placeholder="Facelove"></div>
+  <div class="field"><label for="cp-prod">Product</label><input id="cp-prod" placeholder="Everlove mascara"></div>
+  <div class="field wide"><label for="cp-goal">Goal and success number</label><input id="cp-goal" placeholder="Raise conversion rate from 2.1% to 3%"></div>
+  <div class="field wide"><span class="lbl">Markets</span><div class="chips" id="cp-mk">${["US","UK","EU","Canada","Australia"].map(m=>`<button type="button" class="chip ${mk.has(m)?"on":""}" data-m="${m}">${m}</button>`).join("")}</div></div>
+  <div class="field"><label for="cp-depth">Research depth</label><select id="cp-depth"><option>Full</option><option>Quick</option></select></div>
+  <div class="field"><label for="cp-start">Start date</label><input type="date" id="cp-start" value="${nextWork(TODAY)}"></div>
+ </div>
+ <div class="note" id="cp-preview"></div>
+ <div class="acts" style="justify-content:flex-end"><button class="btn" id="cp-cancel">Cancel</button><button class="btn primary" id="cp-save">Create and send to Project Director</button></div></div></div>`;
+ const pv=()=>{const t=planTasks("X",$("#cp-start").value||nextWork(TODAY),$("#cp-depth").value);$("#cp-preview").innerHTML=`Planned launch: <b>${fmt(t.at(-1).due)}</b> · ${t.length} tasks · ${$("#cp-depth").value} research. Status starts as Planning until you agree the plan.`};pv();
+ ["#cp-start","#cp-depth"].forEach(s=>$(s).onchange=pv);
+ $("#cp-mk").onclick=e=>{const b=e.target.closest("[data-m]");if(!b)return;mk.has(b.dataset.m)?mk.delete(b.dataset.m):mk.add(b.dataset.m);b.classList.toggle("on")};
+ $("#cp-cancel").onclick=()=>$("#modalRoot").innerHTML="";
+ $("#cp-save").onclick=()=>{const code=($("#cp-code").value.trim()||"P-"+uid()).toUpperCase(),name=$("#cp-name").value.trim();if(!name){toast("Give the project a name");$("#cp-name").focus();return}if(proj(code)){toast("That project code is already used");return}
+  const start=$("#cp-start").value||nextWork(TODAY),depth=$("#cp-depth").value,tasks=planTasks(code,start,depth);
+  S.projects.unshift({code,name,client:$("#cp-client").value.trim()||"—",product:$("#cp-prod").value.trim(),goal:$("#cp-goal").value.trim(),markets:[...mk],depth,start,due:tasks.at(-1).due,priority:$("#cp-pri").value,status:"Planning",tasks});
+  S.decisions.unshift({id:uid(),type:"Approval",project:code,title:"Agree the project plan for "+name,detail:`${tasks.length} tasks from ${fmt(start)} to ${fmt(tasks.at(-1).due)}, ${depth} research, markets ${[...mk].join(", ")}.`,rec:"Agree the plan so research can start."});
+  S.sel=code;save();$("#modalRoot").innerHTML="";toast("Project created · plan sent for your approval");drawCEO()};
+ $("#cp-name").focus()}
+
+/* ================= PROJECT DIRECTOR ================= */
+function drawDirector(){
+ if(!proj(S.sel))S.sel=S.projects[0]&&S.projects[0].code;const p=proj(S.sel);
+ const waitRev=S.projects.flatMap(x=>x.tasks.map(t=>({...t,project:x.code}))).filter(t=>t.status==="Waiting on approval");
+ $("#main").innerHTML=`
+ <div class="head"><div><div class="eyebrow">Project Director dashboard</div><h1>${p?esc(p.name):"No projects yet"}</h1><p class="sub">${p?`${esc(p.goal||"")} · ${esc(p.markets.join(", "))} · ${esc(p.depth)} research · launch due ${fmt(p.due)}`:"Projects the CEO creates appear here."}</p></div>
+  <div class="field" style="min-width:240px"><label for="pd-proj">Project</label><select id="pd-proj">${S.projects.map(x=>`<option value="${x.code}" ${x.code===S.sel?"selected":""}>${esc(x.code)} · ${esc(x.name)}</option>`).join("")}</select></div></div>
+ ${p?`<section class="card" data-sec="timeline"><h2>Timeline <span class="pill">${prog(p).d}/${prog(p).n} done</span>${p.example?'<span class="example">Example</span>':""}</h2>${gantt(p)}
+  <div class="legend"><span style="color:var(--good)">Done</span><span style="color:var(--accent)">In progress</span><span style="color:var(--warn)">Waiting on approval</span><span style="color:var(--blush)">Waiting on a person</span><span style="color:var(--bad)">Blocked</span><span style="color:var(--muted)">Not started</span></div></section>
+ <section class="card" data-sec="tasks" style="margin-top:16px"><h2>Tasks</h2><div class="tablewrap"><table><thead><tr><th>Task</th><th>Department</th><th>Start</th><th>Due</th><th>Status</th></tr></thead><tbody>${p.tasks.map((t,i)=>`<tr><td><span class="mono">${esc(t.id)}</span><br><b>${esc(t.name)}</b>${t.gate?' <span class="pill p-wait">Approval</span>':""}</td><td>${esc(t.dept)}</td><td><input type="date" value="${t.start}" data-ti="${i}" data-f="start" aria-label="Start date" style="border:1px solid var(--line);border-radius:8px;padding:4px 6px;background:var(--surface)"></td><td><input type="date" value="${t.due}" data-ti="${i}" data-f="due" aria-label="Due date" style="border:1px solid var(--line);border-radius:8px;padding:4px 6px;background:var(--surface)"></td><td><select data-ti="${i}" data-f="status" aria-label="Status" style="border:1px solid var(--line);border-radius:8px;padding:4px 6px;background:var(--surface)">${STATUSES.map(s=>`<option ${s===t.status?"selected":""}>${s}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table></div></section>`:""}
+ <div class="cols" style="margin-top:16px">
+  <section class="card" data-sec="review"><h2>Review queue <span class="pill">${waitRev.length}</span></h2>${waitRev.length?`<div class="grid">${waitRev.map(t=>`<div class="decision" data-proj="${t.project}" data-tid="${t.id}"><div class="meta"><span class="mono">${esc(t.project)} · ${esc(t.id)}</span><span class="pill">${esc(t.dept)}</span></div><b>${esc(t.name)}</b><span class="small muted">Check it against the department checklist and run the spot-checks before approving.</span><div class="acts"><button class="btn sm good" data-rv="ok">Approve</button><button class="btn sm bad" data-rv="back">Return with comments</button><button class="btn sm" data-rv="ceo">Send to CEO</button></div></div>`).join("")}</div>`:'<div class="empty">Nothing waiting for review. Set a task to "Waiting on approval" to queue it here.</div>'}</section>
+  <section class="card" data-sec="workload"><h2>Department workload</h2><div class="grid">${DEPTS.map(([n])=>{const c=S.projects.flatMap(x=>x.tasks).filter(t=>t.dept===n&&t.status!=="Done"&&t.status!=="Not started").length,q=S.projects.flatMap(x=>x.tasks).filter(t=>t.dept===n&&t.status==="Not started").length;return `<div class="wl"><span>${esc(n)}</span><div class="bar"><i style="width:${Math.min(100,c*34)}%"></i></div><span class="small muted" title="${q} queued">${c}</span></div>`}).join("")}<span class="small muted">Bars show active tasks; queued tasks are on each project's timeline.</span></div></section>
+ </div>
+ <section class="card" data-sec="issues" style="margin-top:16px"><h2>Issues log <button class="btn sm" id="addIssue" style="margin-left:auto">+ Log issue</button></h2>${issuesTable(S.issues)}</section>
+ <section class="card" data-sec="lessons" style="margin-top:16px"><h2>Lessons log <button class="btn sm" id="addLesson" style="margin-left:auto">+ Add lesson</button></h2>${S.lessons.length?`<div class="tablewrap"><table><thead><tr><th>ID</th><th>Date</th><th>Department</th><th>What happened</th><th>Type</th><th>Change for next time</th></tr></thead><tbody>${S.lessons.map(l=>`<tr><td class="mono">${esc(l.id)}</td><td>${fmt(l.date)}</td><td>${esc(l.dept)}</td><td>${esc(l.what)}${l.example?' <span class="example">Example</span>':""}</td><td>${esc(l.type)}</td><td>${esc(l.change)}</td></tr>`).join("")}</tbody></table></div>`:'<div class="empty">No lessons yet.</div>'}</section>`;
+ $("#pd-proj").onchange=e=>{S.sel=e.target.value;save();drawDirector()};
+ $$("[data-ti]").forEach(el=>el.onchange=()=>{const t=p.tasks[+el.dataset.ti];t[el.dataset.f]=el.value;if(el.dataset.f==="due"&&t.due<t.start)t.start=t.due;p.due=p.tasks.reduce((m,x)=>x.due>m?x.due:m,p.tasks[0].due);if(p.tasks.every(x=>x.status==="Done"))p.status="Launched";else if(p.status!=="Planning")p.status="Active";save();toast("Timeline updated");drawDirector()});
+ $$("[data-rv]").forEach(b=>b.onclick=()=>{const card=b.closest("[data-tid]"),pr=proj(card.dataset.proj),t=pr.tasks.find(x=>x.id===card.dataset.tid);
+  if(b.dataset.rv==="ok"){t.status="Done";save();toast("Approved");drawDirector()}
+  else if(b.dataset.rv==="ceo"){S.decisions.unshift({id:uid(),type:"Escalation",project:pr.code,title:"Review needed: "+t.name,detail:"Sent up by the Project Director from the review queue.",rec:"See the deliverable before deciding."});save();toast("Sent to the CEO");}
+  else if(!card.querySelector(".inline-input")){card.insertAdjacentHTML("beforeend",`<div class="inline-input"><input placeholder="What must change, field by field" aria-label="Return comment"><button class="btn sm bad">Return</button></div>`);const box=card.querySelector(".inline-input");box.querySelector("input").focus();box.querySelector("button").onclick=()=>{t.status="In progress";S.issues.unshift({id:"IS-"+String(S.issues.length+1).padStart(3,"0"),date:TODAY,project:pr.code,dept:t.dept,what:"Returned: "+t.name+" — "+(box.querySelector("input").value||"see comments"),type:"Error",sev:"Low",told:"—",decision:"—",status:"Open"});save();toast("Returned and logged");drawDirector()}}});
+ $("#addIssue").onclick=()=>quickAdd("issue");$("#addLesson").onclick=()=>quickAdd("lesson");
+}
+function gantt(p){const s0=p.tasks.reduce((m,t)=>t.start<m?t.start:m,p.tasks[0].start),e0=p.tasks.reduce((m,t)=>t.due>m?t.due:m,p.tasks[0].due);const total=days(s0,e0)+1;
+ const pct=d=>days(s0,d)/total*100,w=(a,b)=>(days(a,b)+1)/total*100;const ticks=[];for(let i=0;i<total;i+=Math.max(1,Math.ceil(total/10))){const d=new Date(D(s0));d.setUTCDate(d.getUTCDate()+i);ticks.push(iso(d))}
+ const today=TODAY>=s0&&TODAY<=e0?`<div class="g-today" style="left:${pct(TODAY)}%" title="Today"></div>`:"";
+ return `<div class="gantt" style="--day:calc(100% / ${total})"><div class="g-row g-head"><div class="g-label"><b>Task</b></div><div class="g-track">${ticks.map(d=>`<span class="g-tick" style="left:${pct(d)}%">${fmt(d)}</span>`).join("")}${today}</div></div>${p.tasks.map(t=>`<div class="g-row"><div class="g-label"><b>${esc(t.name)}</b><span class="small muted">${esc(t.dept)}</span></div><div class="g-track">${today}<div class="g-bar s-${SCLS[t.status]||"not"} ${days(t.start,t.due)<4?"short":""}" style="left:${pct(t.start)}%;width:${w(t.start,t.due)}%" title="${esc(t.name)}: ${fmt(t.start)} to ${fmt(t.due)}, ${esc(t.status)}"><span>${t.start===t.due?fmt(t.start):fmt(t.start)+" – "+fmt(t.due)}</span></div></div></div>`).join("")}</div>`}
+function quickAdd(kind){const p=proj(S.sel);const isI=kind==="issue";
+ $("#modalRoot").innerHTML=`<div class="modalwrap"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="qaT"><h2 id="qaT" style="font-size:20px">${isI?"Log an issue":"Add a lesson"}</h2><div class="form">
+  <div class="field"><label for="qa-dept">Department</label><select id="qa-dept">${DEPTS.map(([n])=>`<option>${n}</option>`).join("")}<option>Project Director</option></select></div>
+  <div class="field"><label for="qa-type">Type</label><select id="qa-type">${(isI?["Blocked","Error","Rule hit","Override request","Tool or access","Delay","Repeated return"]:["Mistake","Win","Process gap"]).map(x=>`<option>${x}</option>`).join("")}</select></div>
+  ${isI?`<div class="field"><label for="qa-sev">Severity</label><select id="qa-sev"><option>Low</option><option>Medium</option><option>High</option></select></div>`:""}
+  <div class="field full"><label for="qa-what">What happened</label><input id="qa-what"></div>
+  <div class="field full"><label for="qa-more">${isI?"What to tell the CEO (options and recommendation)":"Change for next time"}</label><input id="qa-more"></div></div>
+  ${isI?'<div class="note">High severity also creates a decision on the CEO dashboard.</div>':""}
+  <div class="acts" style="justify-content:flex-end"><button class="btn" id="qa-c">Cancel</button><button class="btn primary" id="qa-s">Save</button></div></div></div>`;
+ $("#qa-c").onclick=()=>$("#modalRoot").innerHTML="";
+ $("#qa-s").onclick=()=>{const what=$("#qa-what").value.trim();if(!what){toast("Describe what happened");return}
+  if(isI){const sev=$("#qa-sev").value,more=$("#qa-more").value.trim();S.issues.unshift({id:"IS-"+String(S.issues.length+1).padStart(3,"0"),date:TODAY,project:p?p.code:"—",dept:$("#qa-dept").value,what,type:$("#qa-type").value,sev,told:more||"—",decision:sev==="High"?"Waiting on CEO":"—",status:sev==="High"?"Waiting on CEO":"Open"});if(sev==="High")S.decisions.unshift({id:uid(),type:$("#qa-type").value==="Override request"?"Override":"Escalation",project:p?p.code:"—",title:what,detail:"Logged by the Project Director as high severity.",rec:more||"See the issues log."})}
+  else S.lessons.unshift({id:"LL-"+String(S.lessons.length+1).padStart(3,"0"),date:TODAY,project:p?p.code:"—",dept:$("#qa-dept").value,what,type:$("#qa-type").value,change:$("#qa-more").value.trim()||"—"});
+  save();$("#modalRoot").innerHTML="";toast("Saved");drawDirector()};
+ $("#qa-what").focus()}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")$("#modalRoot").innerHTML=""});
+applyTheme();draw();
+})();
+</script>
+<script>
+/* Embedded mode: when opened inside the Agency app, hide this page's own menu and follow the app's theme */
+(function(){const q=new URLSearchParams(location.search);if(!q.has("embed"))return;const R=document.documentElement;R.classList.add("embed");
+const set=t=>{if(!t||t==="system")R.removeAttribute("data-theme");else R.setAttribute("data-theme",t)};set(q.get("theme"));
+addEventListener("message",e=>{if(e.origin===location.origin&&e.data&&e.data.flTheme)set(e.data.flTheme)});})();
+</script>
+
+</html>

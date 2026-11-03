@@ -1,0 +1,978 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>UI/UX Design Studio · My AI Work Mates</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+.embed .rail{display:none}.embed .app{grid-template-columns:1fr}
+/* Layout: app shell — slim workspace rail, then a working area that changes per stage (Research → Concepts → Code Studio → Library) */
+:root{
+  --bg:#f8f5fa; --surface:#ffffff; --sunk:#f1ecf5; --line:#e6ddec; --ink:#24152b; --muted:#6e6178;
+  --accent:#6a35e8; --accent-ink:#ffffff; --accent-soft:#efe8ff; --blush:#ff7aa2; --blush-soft:#ffe8ef;
+  --good:#15845b; --good-soft:#dff5ea; --warn:#a86300; --warn-soft:#fff1d6; --bad:#c2334d;
+  --code-bg:#1c1424; --code-ink:#eadff2;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Manrope", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --r:12px; --shadow:0 1px 2px rgba(36,21,43,.06), 0 8px 24px rgba(36,21,43,.06);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#140d19; --surface:#1d1424; --sunk:#251a2e; --line:#352841; --ink:#f3ecf7; --muted:#a798b2;
+  --accent:#9b74ff; --accent-ink:#140d19; --accent-soft:#2c2045; --blush:#ff8fb1; --blush-soft:#3a1f2b;
+  --good:#4fd39a; --good-soft:#163428; --warn:#f2b54b; --warn-soft:#382a12; --bad:#ff7b92;
+  --code-bg:#0f0913; --code-ink:#eadff2; --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25); color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#140d19; --surface:#1d1424; --sunk:#251a2e; --line:#352841; --ink:#f3ecf7; --muted:#a798b2;
+  --accent:#9b74ff; --accent-ink:#140d19; --accent-soft:#2c2045; --blush:#ff8fb1; --blush-soft:#3a1f2b;
+  --good:#4fd39a; --good-soft:#163428; --warn:#f2b54b; --warn-soft:#382a12; --bad:#ff7b92;
+  --code-bg:#0f0913; --code-ink:#eadff2; --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25); color-scheme:dark;}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100%}
+/* rail */
+.rail{background:var(--surface);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:20px;position:sticky;top:0;height:100vh;overflow:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:0 6px}
+.mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--blush));display:grid;place-items:center;color:#fff;font-family:var(--f-display);font-weight:800;font-size:18px}
+.brand b{font-family:var(--f-display);font-size:17px;display:block;line-height:1.1}
+.brand small{color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.dept{background:var(--sunk);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--muted)}
+.dept strong{display:block;color:var(--ink);font-size:13px}
+.navlabel{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:0 8px;margin-bottom:6px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;color:var(--muted);font-weight:600}
+.nav button:hover{background:var(--sunk);color:var(--ink)}
+.nav button.on{background:var(--accent-soft);color:var(--accent)}
+.nav .step{width:22px;height:22px;border-radius:7px;border:1.5px solid currentColor;display:grid;place-items:center;font-size:11px;font-weight:700}
+.nav .count{margin-left:auto;font-size:12px;font-variant-numeric:tabular-nums}
+.rail .foot{margin-top:auto;font-size:12px;color:var(--muted);padding:0 8px}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--good);margin-right:6px}
+/* main */
+main{min-width:0;padding-block:22px 40px;padding-left:max(24px, env(safe-area-inset-left,0px));padding-right:max(24px, env(safe-area-inset-right,0px))}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.eyebrow{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--blush);font-weight:700}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(26px,3.2vw,36px);line-height:1.1;margin:4px 0 6px;text-wrap:balance;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-weight:700;font-size:18px;margin:0}
+.sub{color:var(--muted);margin:0;max-width:62ch}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08);color:var(--accent-ink)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.sm{padding:5px 10px;font-size:12px;border-radius:8px}
+.btn.danger{color:var(--bad)}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+.pill.draft{background:var(--warn-soft);color:var(--warn)}
+.pill.review{background:var(--blush-soft);color:var(--blush)}
+.pill.approved{background:var(--good-soft);color:var(--good)}
+.pill.reuse{background:var(--accent-soft);color:var(--accent)}
+.view[hidden]{display:none}
+/* pipeline strip */
+.pipeline{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.stage{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:2px;transition:transform .15s,border-color .15s}
+.stage:hover{transform:translateY(-2px);border-color:var(--accent)}
+.stage .n{font-family:var(--f-display);font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+.stage .l{font-weight:700}
+.stage .d{color:var(--muted);font-size:12px}
+.stage.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+/* research */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.search{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:0 12px}
+.search input{border:0;background:transparent;padding:9px 0;width:100%;outline:none}
+select,.field input,.field textarea,.field select{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
+.card:hover{box-shadow:var(--shadow)}
+.swatch{height:92px;display:flex;align-items:flex-end;padding:12px;color:#fff;font-family:var(--f-display);font-weight:700;font-size:18px}
+.card .body{padding:14px;display:flex;flex-direction:column;gap:8px;flex:1}
+.card .meta{display:flex;gap:6px;flex-wrap:wrap}
+.card p{margin:0;color:var(--muted);font-size:13px}
+.card .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto}
+.score{font-variant-numeric:tabular-nums;font-weight:700;font-size:12px}
+.score i{display:inline-block;width:48px;height:6px;border-radius:9px;background:var(--sunk);margin-left:6px;vertical-align:middle;position:relative;overflow:hidden}
+.score i b{position:absolute;inset:0 auto 0 0;background:var(--blush);border-radius:9px}
+/* concepts board */
+.board{display:grid;grid-template-columns:repeat(5,minmax(210px,1fr));gap:14px;overflow-x:auto;padding-bottom:6px}
+.col{background:var(--sunk);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:10px;min-height:200px}
+.col h3{margin:0;font-size:13px;display:flex;justify-content:space-between;align-items:center}
+.ticket{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.ticket b{font-size:14px}
+.ticket .hyp{font-size:12px;color:var(--muted);border-left:2px solid var(--blush);padding-left:8px}
+.ticket .refs{font-size:12px;color:var(--muted)}
+.ticket .acts{display:flex;gap:6px;flex-wrap:wrap}
+/* studio */
+.studio{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:14px;min-height:560px}
+.pane{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.panehead{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.panehead .grow{flex:1}
+.lang{font-family:var(--f-mono);font-size:11px;padding:3px 8px;border-radius:6px;background:var(--accent-soft);color:var(--accent);font-weight:500}
+.editor{flex:1;display:flex;flex-direction:column;background:var(--code-bg);min-height:420px}
+#code{flex:1;width:100%;border:0;resize:none;background:transparent;color:var(--code-ink);font-family:var(--f-mono);font-size:12.5px;line-height:1.6;padding:14px;outline:none;tab-size:2;white-space:pre;overflow:auto;min-height:420px}
+.mock{border-top:1px solid var(--line);background:var(--sunk)}
+.mock summary{cursor:pointer;padding:8px 12px;font-size:12px;font-weight:700;color:var(--muted)}
+#mockdata{width:100%;min-height:110px;border:0;background:transparent;font-family:var(--f-mono);font-size:12px;padding:0 12px 12px;resize:vertical;outline:none}
+.seg{display:inline-flex;background:var(--sunk);border-radius:9px;padding:3px}
+.seg button{all:unset;cursor:pointer;padding:4px 10px;border-radius:7px;font-size:12px;font-weight:600;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.stagebox{flex:1;background:repeating-conic-gradient(var(--sunk) 0 25%, transparent 0 50%) 0 0/18px 18px;display:flex;justify-content:center;align-items:flex-start;padding:16px;overflow:auto;min-height:420px}
+#preview{width:100%;height:100%;min-height:400px;border:0;background:#fff;border-radius:10px;box-shadow:var(--shadow);transition:width .25s}
+.status{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.status.err{color:var(--bad)}
+/* save sheet */
+.sheet{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label,.field .lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.field.wide{grid-column:span 2}
+.field.full{grid-column:1/-1}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.toggle{display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer}
+.toggle input{appearance:none;width:38px;height:22px;border-radius:99px;background:var(--line);position:relative;cursor:pointer;transition:background .15s}
+.toggle input::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s}
+.toggle input:checked{background:var(--accent)}
+.toggle input:checked::after{left:19px}
+.sheetfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;flex-wrap:wrap}
+/* library */
+.libcard{cursor:pointer;text-align:left;padding:0;border:1px solid var(--line)}
+.thumb{height:170px;position:relative;overflow:hidden;background:#fff;border-bottom:1px solid var(--line)}
+.thumb iframe{position:absolute;top:0;left:0;width:250%;height:250%;transform:scale(.4);transform-origin:0 0;border:0;pointer-events:none;background:#fff}
+.thumb .type{position:absolute;left:10px;top:10px;z-index:1}
+.libcard .name{font-weight:700;font-size:15px}
+.mono{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(20,10,25,.45);z-index:40}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(760px,100%);background:var(--surface);z-index:41;display:flex;flex-direction:column;box-shadow:-10px 0 40px rgba(0,0,0,.2);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px)}
+.drawer header{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start}
+.drawer header .grow{flex:1;min-width:0}
+.drawer .scroll{overflow:auto;padding:16px 18px;display:flex;flex-direction:column;gap:16px}
+.drawer iframe{width:100%;height:340px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.kv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.kv div{background:var(--sunk);border-radius:10px;padding:10px 12px}
+.kv span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+pre.code{background:var(--code-bg);color:var(--code-ink);font-family:var(--f-mono);font-size:12px;border-radius:10px;padding:14px;overflow:auto;max-height:260px;margin:0}
+.confirm{background:var(--blush-soft);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:60;box-shadow:var(--shadow)}
+.empty{padding:40px 16px;text-align:center;color:var(--muted);border:1.5px dashed var(--line);border-radius:var(--r)}
+.example{font-size:11px;color:var(--muted)}
+/* settings panel (theme-editor style) */
+.epane[hidden]{display:none}
+.settings{flex:1;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:12px;min-height:420px;max-height:680px}
+.settings h4{margin:6px 0 0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.set{display:flex;flex-direction:column;gap:5px}
+.set > span{font-size:12px;font-weight:600}
+.set input[type=text],.set textarea,.set select{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 9px;width:100%}
+.set textarea{min-height:64px;resize:vertical;font-size:12px}
+.set .rng{display:flex;gap:10px;align-items:center}.set .rng input{flex:1;accent-color:var(--accent)}
+.set .rng output{font-variant-numeric:tabular-nums;font-size:12px;min-width:56px;text-align:right;color:var(--muted)}
+.set .clr{display:flex;gap:8px;align-items:center}.set .clr input[type=color]{width:36px;height:30px;border:1px solid var(--line);border-radius:8px;padding:2px;background:var(--surface)}
+.set .chk{display:flex;gap:8px;align-items:center;font-size:12px;font-weight:600}
+.sethead{font-weight:700;border-top:1px solid var(--line);padding-top:10px}
+.blk{border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.blk summary{cursor:pointer;padding:9px 12px;display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px}
+.blk summary .grow{flex:1}
+.blk .inner{padding:4px 12px 12px;display:flex;flex-direction:column;gap:10px}
+.blk.off summary{opacity:.55}
+.note{font-size:12px;color:var(--muted);background:var(--sunk);border-radius:8px;padding:8px 10px}
+#paneData textarea{flex:1;width:100%;min-height:420px;border:0;background:var(--code-bg);color:var(--code-ink);font-family:var(--f-mono);font-size:12px;padding:14px;resize:none;outline:none}
+/* setup wizard + needs list + theme switch */
+.modalwrap{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;background:rgba(20,10,25,.5)}
+.modal{background:var(--surface);border-radius:16px;width:min(720px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal header{padding:18px 20px 0}
+.modal .steps{display:flex;gap:8px;margin:14px 0 0;flex-wrap:wrap}
+.modal .steps span{flex:1;min-width:120px;font-size:12px;font-weight:700;color:var(--muted);border-top:3px solid var(--line);padding-top:8px}
+.modal .steps span.on{color:var(--accent);border-color:var(--accent)}
+.modal .steps span.done{color:var(--good);border-color:var(--good)}
+.modal .mbody{padding:16px 20px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.modal footer{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.where{font-size:12.5px;background:var(--sunk);border-radius:10px;padding:10px 12px;line-height:1.55}
+.where b{color:var(--ink)}
+.found{font-size:12.5px;color:var(--good);font-weight:600}
+.needs{border:1px solid var(--blush);background:var(--blush-soft);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.needs h5{margin:0;font-size:13px;color:var(--ink)}
+.need{background:var(--surface);border-radius:8px;padding:8px 10px;font-size:12.5px}
+.need b{display:block;font-size:13px}
+.need .w{color:var(--muted);margin-top:2px}
+.need.opt b::after{content:" · optional";color:var(--muted);font-weight:500}
+.needbar{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--blush-soft);border-bottom:1px solid var(--line);font-size:12.5px;flex-wrap:wrap}
+.needbar[hidden]{display:none}
+.match{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;border:1px solid var(--line);border-radius:999px;padding:4px 10px;background:var(--surface);cursor:pointer}
+.match i{display:inline-flex;gap:2px}.match i b{width:8px;height:8px;border-radius:2px;background:var(--line)}.match i b.on{background:var(--good)}
+.themesw{display:flex;background:var(--sunk);border-radius:9px;padding:3px;margin:0 6px}
+.themesw button{all:unset;cursor:pointer;flex:1;text-align:center;padding:5px 6px;border-radius:7px;font-size:12px;font-weight:600;color:var(--muted)}
+.themesw button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.logo-prev{max-height:44px;max-width:160px;border:1px solid var(--line);border-radius:8px;padding:4px;background:#fff}
+/* theme library */
+.tl{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:14px;align-items:start}
+.tl-list{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;max-height:calc(100vh - 140px);min-height:420px}
+.tl-list .head{padding:12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.tl-items{overflow:auto;padding:6px}
+.tl-item{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;padding:8px;border-radius:10px;width:100%}
+.tl-item:hover{background:var(--sunk)}
+.tl-item.on{background:var(--accent-soft)}
+.tl-ico{width:44px;height:44px;border-radius:10px;background:var(--sunk);display:grid;place-items:center;font-weight:800;color:var(--accent);font-size:12px;overflow:hidden;position:relative}
+.tl-ico iframe{position:absolute;top:0;left:0;width:440px;height:440px;transform:scale(.1);transform-origin:0 0;border:0;pointer-events:none;background:#fff}
+.tl-item b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-group{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:10px 8px 4px;font-weight:700}
+.tl-detail{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);min-width:0;overflow:hidden}
+.tl-detail header{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.tl-tabs{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tl-tabs button{all:unset;cursor:pointer;padding:6px 10px;border-radius:8px;font-weight:600;font-size:13px;color:var(--muted)}
+.tl-tabs button.on{background:var(--accent-soft);color:var(--accent)}
+.tl-body{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.tl-body iframe.pv{width:100%;height:560px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.dep{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px}
+.dep .mono{flex:1}
+.import{border:1.5px dashed var(--accent);border-radius:var(--r);padding:14px;background:var(--accent-soft);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+@media (max-width:980px){.tl{grid-template-columns:1fr}.tl-list{max-height:none}}
+/* add forms inline */
+.addbox{background:var(--surface);border:1px solid var(--accent);border-radius:var(--r);padding:14px;margin-bottom:14px}
+@media (max-width:1100px){.studio{grid-template-columns:1fr}.form{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:860px){
+  .app{grid-template-columns:1fr}
+  .rail{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;padding:12px max(16px, env(safe-area-inset-left,0px));border-right:0;border-bottom:1px solid var(--line);gap:12px}
+  .rail .dept,.rail .foot,.navlabel{display:none}
+  .themesw{margin:0}
+  .nav{flex-direction:row;flex-wrap:wrap;width:100%}
+  .nav button{padding:7px 9px}
+  .nav .count{display:none}
+  main{padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
+  .pipeline{grid-template-columns:repeat(2,1fr)}
+  .form{grid-template-columns:1fr}.field.wide{grid-column:auto}
+  .kv{grid-template-columns:1fr 1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <aside class="rail">
+    <div class="brand"><div class="mark" aria-hidden="true">f.</div><div><b>Facelove</b><small>Design Studio</small></div></div>
+    <div class="dept"><strong>UI/UX Designer</strong>Department workspace · follows the UI/UX rulebook</div>
+    <div>
+      <div class="navlabel">Workflow</div>
+      <nav class="nav" id="nav">
+        <button data-view="research"><span class="step">1</span>Research<span class="count" id="c-research"></span></button>
+        <button data-view="concepts"><span class="step">2</span>Concepts<span class="count" id="c-concepts"></span></button>
+        <button data-view="studio"><span class="step">3</span>Code Studio</button>
+        <button data-view="library"><span class="step">4</span>Library<span class="count" id="c-library"></span></button>
+        <div class="navlabel" style="margin-top:14px">Store theme</div>
+        <button data-view="theme"><span class="step">◆</span>Theme library<span class="count" id="c-theme"></span></button>
+      </nav>
+    </div>
+    <div><div class="navlabel">Appearance</div><div class="themesw" id="themesw" role="group" aria-label="Page background"><button data-t="light">Light</button><button data-t="dark">Dark</button><button data-t="system">Auto</button></div></div>
+    <div class="foot"><span class="dot"></span>Saved in this browser<br>Hand-off: Project Director approves</div>
+  </aside>
+
+  <main>
+    <div class="pipeline" id="pipeline"></div>
+
+    <!-- RESEARCH -->
+    <section class="view" id="v-research">
+      <div class="top">
+        <div><div class="eyebrow">Step 1 · Research</div><h1>Swipe file</h1><p class="sub">Winning sites and competitor pages worth learning from. Note what works, score it, and turn the best ideas into concepts.</p></div>
+        <button class="btn primary" id="addRef">+ Add reference</button>
+      </div>
+      <div class="addbox" id="refForm" hidden>
+        <div class="form">
+          <div class="field wide"><label for="rf-name">Site or brand</label><input id="rf-name" placeholder="e.g. Glossier"></div>
+          <div class="field wide"><label for="rf-url">Page URL</label><input id="rf-url" placeholder="https://"></div>
+          <div class="field"><label for="rf-kind">Type</label><select id="rf-kind"><option>Competitor</option><option>Winning site</option><option>Inspiration</option></select></div>
+          <div class="field"><label for="rf-page">Page type</label><select id="rf-page"><option>Product page</option><option>Homepage</option><option>Landing page</option><option>Collection page</option></select></div>
+          <div class="field"><label for="rf-score">Steal-worthy (1–5)</label><input id="rf-score" type="number" min="1" max="5" value="4"></div>
+          <div class="field"><label for="rf-tags">Patterns (comma separated)</label><input id="rf-tags" placeholder="sticky ATC, UGC grid"></div>
+          <div class="field full"><label for="rf-note">What works here</label><textarea id="rf-note" rows="2"></textarea></div>
+        </div>
+        <div class="sheetfoot"><span></span><div style="display:flex;gap:8px"><button class="btn ghost" id="rfCancel">Cancel</button><button class="btn primary" id="rfSave">Save reference</button></div></div>
+      </div>
+      <div class="toolbar">
+        <div class="search"><span aria-hidden="true">⌕</span><input id="rq" placeholder="Search references and patterns"></div>
+        <select id="rkind" aria-label="Filter by type"><option value="">All types</option><option>Competitor</option><option>Winning site</option><option>Inspiration</option></select>
+      </div>
+      <div class="grid" id="refGrid"></div>
+    </section>
+
+    <!-- CONCEPTS -->
+    <section class="view" id="v-concepts" hidden>
+      <div class="top">
+        <div><div class="eyebrow">Step 2 · Concepts</div><h1>Concept board</h1><p class="sub">Every concept starts with a hypothesis and the references behind it. Move it forward, then open it in Code Studio to build.</p></div>
+        <button class="btn primary" id="addCon">+ New concept</button>
+      </div>
+      <div class="addbox" id="conForm" hidden>
+        <div class="form">
+          <div class="field wide"><label for="cf-name">Concept name</label><input id="cf-name" placeholder="e.g. Sticky bundle bar on mobile"></div>
+          <div class="field"><label for="cf-page">Page</label><select id="cf-page"><option>Product page</option><option>Homepage</option><option>Landing page</option><option>Collection page</option></select></div>
+          <div class="field"><label for="cf-metric">Metric to move</label><select id="cf-metric"><option>Conversion rate</option><option>Add-to-cart rate</option><option>AOV</option><option>Scroll depth</option></select></div>
+          <div class="field full"><label for="cf-hyp">Hypothesis</label><input id="cf-hyp" placeholder="If we… then… because…"></div>
+        </div>
+        <div class="sheetfoot"><span></span><div style="display:flex;gap:8px"><button class="btn ghost" id="cfCancel">Cancel</button><button class="btn primary" id="cfSave">Add to Ideas</button></div></div>
+      </div>
+      <div class="board" id="board"></div>
+    </section>
+
+    <!-- STUDIO -->
+    <section class="view" id="v-studio" hidden>
+      <div class="top">
+        <div><div class="eyebrow">Step 3 · Code Studio</div><h1 id="studioTitle">Build and preview</h1><p class="sub">Paste HTML, CSS, JavaScript or Liquid into one box. The preview runs the real code as you type. Liquid uses the sample store data below.</p></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="match" id="matchBtn" title="How closely the preview matches your real store"></button>
+          <button class="btn" id="newCode">New blank</button>
+          <select id="starter" aria-label="Load a starter"><option value="">Load a starter…</option></select>
+        </div>
+      </div>
+      <div class="studio">
+        <div class="pane">
+          <div class="panehead"><div class="seg" id="etabs"><button data-p="paneCode" class="on">Code</button><button data-p="paneSettings">Settings</button><button data-p="paneData">Store data</button></div><select id="ctype" aria-label="Code type" style="padding:5px 8px;font-size:12px;font-weight:600"></select><span class="lang" id="lang">HTML</span><span class="grow"></span><button class="btn sm" id="copyCode">Copy code</button><button class="btn sm" id="fmt">Tidy</button></div>
+          <div class="editor epane" id="paneCode"><textarea id="code" spellcheck="false" aria-label="Code"></textarea></div>
+          <div class="settings epane" id="paneSettings" hidden></div>
+          <div class="epane" id="paneData" hidden style="display:flex;flex-direction:column;flex:1"><div class="note" style="margin:10px">Sample product and shop data used by Liquid tags like <code>{{ product.title }}</code>. Edit it to test other products.</div><textarea id="mockdata" spellcheck="false" aria-label="Sample store data"></textarea></div>
+        </div>
+        <div class="pane">
+          <div class="panehead">
+            <div class="seg" id="device"><button data-w="100%" class="on">Desktop</button><button data-w="768px">Tablet</button><button data-w="390px">Mobile</button></div>
+            <span class="grow"></span>
+            <span class="status" id="status"><span class="dot"></span>Live</span>
+            <label class="chk" style="font-size:12px;font-weight:600;display:flex;gap:6px;align-items:center"><input type="checkbox" id="markers" checked>Mark unlinked buttons</label>
+            <button class="btn sm" id="reload">Reload</button>
+          </div>
+          <div class="needbar" id="needbar" hidden></div>
+          <div class="stagebox"><iframe id="preview" title="Live preview" sandbox="allow-scripts"></iframe></div>
+        </div>
+      </div>
+      <div class="sheet">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap"><h2>Save to library</h2><span class="example" id="editing"></span></div>
+        <div class="form">
+          <div class="field wide"><label for="s-name">Name</label><input id="s-name" placeholder="e.g. Violet FAQ accordion"></div>
+          <div class="field"><label for="s-type">Type</label><select id="s-type"><option>Component</option><option>Section</option><option>Page</option><option>Pop-up</option></select></div>
+          <div class="field"><label for="s-cat">Category</label><select id="s-cat"></select></div>
+          <div class="field wide"><span class="lbl">Suitable page types</span><div class="chips" id="s-pages"></div></div>
+          <div class="field"><label for="s-status">Status</label><select id="s-status"><option>Draft</option><option>Design review</option><option>In build</option><option>QA</option><option>Launch review</option><option>Approved</option></select></div>
+          <div class="field"><label for="s-file">File name</label><input id="s-file" placeholder="fl-product-faq.liquid"></div>
+          <div class="field wide"><label for="s-tags">Tags</label><input id="s-tags" placeholder="accordion, mobile-first"></div>
+          <div class="field"><label for="s-date">Date</label><input id="s-date" type="date"></div>
+          <div class="field" style="justify-content:flex-end"><label class="toggle" for="s-reuse"><input type="checkbox" id="s-reuse" checked>Reusable</label></div>
+          <div class="field full"><label for="s-notes">Setup notes</label><textarea id="s-notes" rows="2" placeholder="Where it goes, settings to change, apps it depends on"></textarea></div>
+        </div>
+        <div class="sheetfoot"><span class="example">Version and date are recorded automatically on every save.</span><div style="display:flex;gap:8px"><button class="btn" id="saveCopy">Save as new</button><button class="btn primary" id="save">Save</button></div></div>
+      </div>
+    </section>
+
+    <!-- THEME LIBRARY -->
+    <section class="view" id="v-theme" hidden>
+      <div class="top">
+        <div><div class="eyebrow">Store theme</div><h1>Theme library</h1><p class="sub">Every section, block, snippet and page template from the store's theme, with live previews. Import the theme folder to load the real code; page templates render as the full page.</p></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><label class="btn primary" for="tl-folder">Import theme folder</label><label class="btn" for="tl-files">Add files</label></div>
+        <input type="file" id="tl-folder" webkitdirectory multiple hidden><input type="file" id="tl-files" multiple accept=".liquid,.json,.css" hidden>
+      </div>
+      <div class="pipeline" id="tl-stats"></div>
+      <div class="import" id="tl-hint"></div>
+      <div class="tl" style="margin-top:14px">
+        <div class="tl-list">
+          <div class="head">
+            <div class="search"><span aria-hidden="true">⌕</span><input id="tl-q" placeholder="Search names and files"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><select id="tl-kind" aria-label="Kind"><option value="">Everything</option><option value="page">Pages</option><option value="section">Sections</option><option value="block">Blocks</option><option value="snippet">Snippets</option></select><select id="tl-status" aria-label="Status"><option value="">Every status</option></select></div>
+          </div>
+          <div class="tl-items" id="tl-items"></div>
+        </div>
+        <div class="tl-detail" id="tl-detail"></div>
+      </div>
+    </section>
+
+    <!-- LIBRARY -->
+    <section class="view" id="v-library" hidden>
+      <div class="top">
+        <div><div class="eyebrow">Step 4 · Library</div><h1>Design library</h1><p class="sub">Every saved page, section and component with a live preview. Open one to copy the code, review it or keep building.</p></div>
+        <button class="btn primary" data-go="studio">+ New design</button>
+      </div>
+      <div class="toolbar">
+        <div class="search"><span aria-hidden="true">⌕</span><input id="lq" placeholder="Search names, files, tags"></div>
+        <select id="ltype" aria-label="Type"><option value="">Every type</option><option>Component</option><option>Section</option><option>Page</option><option>Pop-up</option></select>
+        <select id="lcat" aria-label="Category"><option value="">Every category</option></select>
+        <select id="lstatus" aria-label="Status"><option value="">Every status</option><option>Draft</option><option>Design review</option><option>In build</option><option>QA</option><option>Launch review</option><option>Approved</option></select>
+        <label class="toggle" for="lreuse"><input type="checkbox" id="lreuse">Reusable only</label>
+      </div>
+      <div class="grid" id="libGrid"></div>
+    </section>
+  </main>
+</div>
+
+<div id="drawerRoot"></div>
+<div id="modalRoot"></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/liquidjs@10.16.1/dist/liquid.browser.umd.js"></script>
+<script>
+(function(){
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const CATS=["Product blocks","Banners & Video","FAQ","Guarantee & Trust","Testimonials","Header","Footer","Pop-ups","Image & Text","Product pages","Landing pages"];
+const PAGES=["Product page","Homepage","Landing page","Collection page","Cart"];
+const today=()=>new Date().toISOString().slice(0,10);
+const fmtDate=d=>{try{return new Date(d+"T00:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})}catch(e){return d}};
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9);
+
+const MOCK={product:{title:"Everlove Lengthening Mascara",price:2400,compare_at_price:3200,vendor:"Facelove",rating:4.8,review_count:1284,
+ variants:[{title:"Jet Black"},{title:"Brown Black"}],bullets:["Visibly longer lashes in 1 coat","Smudge-proof for 24 hours","Ophthalmologist tested"]},shop:{name:"Facelove"}};
+
+const STARTERS={
+"Facelove guarantee (Shopify section)":"{%- liquid\n  assign bg = '#FFFFFF'\n  assign card = '#F7F3FB'\n  assign heading_color = '#3B2056'\n  assign text_color = '#2A1738'\n  assign accent = '#6B3FA0'\n\n  case section.settings.preset\n    when 'deep'\n      assign bg = '#3B2056'\n    when 'soft'\n      assign bg = '#F3ECFA'\n      assign card = '#FFFFFF'\n    when 'custom'\n      assign bg = section.settings.background\n      assign card = section.settings.card_color\n      assign heading_color = section.settings.heading_color\n      assign text_color = section.settings.text_color\n      assign accent = section.settings.accent\n  endcase\n\n  assign heading = section.blocks | where: 'type', 'heading' | first\n  assign steps = section.blocks | where: 'type', 'step'\n  assign steps_done = false\n  assign visual_block = section.blocks | where: 'type', 'visual' | first\n  assign v = visual_block.settings\n  assign visual_type = v.type | default: 'shield'\n\n  if visual_block == blank and section.settings.icon_image != blank\n    assign visual_type = 'image'\n  endif\n\n  assign use_image = false\n  if visual_type == 'image' and section.settings.icon_image != blank\n    assign use_image = true\n  endif\n-%}\n\n{% style %}\n  {% if section.settings.font_mode == 'custom' %}\n    {{ section.settings.heading_font | font_face: font_display: 'swap' }}\n    {{ section.settings.body_font | font_face: font_display: 'swap' }}\n  {% endif %}\n\n  #FlGuarantee-{{ section.id }} {\n    --fg-bg: {{ bg }};\n    --fg-card: {{ card }};\n    --fg-heading: {{ heading_color }};\n    --fg-text: {{ text_color }};\n    --fg-accent: {{ accent }};\n    --fg-image-width: {{ v.width | default: 35 }}%;\n    --fg-image-share: {{ v.width | default: 35 | divided_by: 100.0 }};\n    --fg-mobile-image-width: {{ v.mobile_width | default: 70 }}%;\n    --fg-image-radius: {{ v.radius | default: 0 }}px;\n    --fg-image-align: {{ v.alignment | default: 'center' }};\n    --fg-mobile-image-align: {{ v.mobile_alignment | default: 'center' }};\n    --fg-image-fit: {{ v.fit | default: 'contain' }};\n    --fg-image-bg: {% if v.background %}{{ v.background_color | default: '#EDE3F6' }}{% else %}transparent{% endif %};\n\n    --fg-width: {{ section.settings.width }}px;\n    --fg-radius: {{ section.settings.radius }}px;\n    --fg-border: {{ section.settings.border_width }}px;\n    --fg-border-color: {{ section.settings.border_color }};\n    --fg-icon: {{ section.settings.icon_size }}px;\n    --fg-icon-bg: {{ section.settings.icon_background }};\n    --fg-gap: {{ section.settings.gap }}px;\n    --fg-block-gap: {{ section.settings.block_gap }}px;\n    --fg-heading-size: {{ section.settings.heading_size }}px;\n    --fg-heading-mobile: {{ section.settings.heading_mobile }}px;\n    --fg-body: {{ section.settings.body_size }}px;\n    --fg-body-mobile: {{ section.settings.body_mobile }}px;\n    --fg-line: {{ section.settings.line_height }};\n    --fg-pad: {{ section.settings.card_padding }}px;\n    --fg-mobile-pad: {{ section.settings.card_mobile_padding }}px;\n    --fg-align: {{ section.settings.alignment }};\n    --fg-mobile-align: {{ section.settings.mobile_alignment }};\n    --fg-justify: {% case section.settings.alignment %}{% when 'left' %}flex-start{% when 'right' %}flex-end{% else %}center{% endcase %};\n    --fg-mobile-justify: {% case section.settings.mobile_alignment %}{% when 'left' %}flex-start{% when 'right' %}flex-end{% else %}center{% endcase %};\n\n    padding-top: {{ section.settings.mobile_top }}px;\n    padding-bottom: {{ section.settings.mobile_bottom }}px;\n\n    {% if section.settings.font_mode == 'brand' %}\n      --fg-h-font: 'Caprasimo',Georgia,serif;\n      --fg-b-font: 'Poppins',Arial,sans-serif;\n      --fg-h-weight: 400;\n      --fg-b-weight: 400;\n      --fg-h-style: normal;\n      --fg-b-style: normal;\n    {% elsif section.settings.font_mode == 'custom' %}\n      --fg-h-font: {{ section.settings.heading_font.family | json }}, {{ section.settings.heading_font.fallback_families }};\n      --fg-b-font: {{ section.settings.body_font.family | json }}, {{ section.settings.body_font.fallback_families }};\n      --fg-h-weight: {{ section.settings.heading_font.weight }};\n      --fg-b-weight: {{ section.settings.body_font.weight }};\n      --fg-h-style: {{ section.settings.heading_font.style }};\n      --fg-b-style: {{ section.settings.body_font.style }};\n    {% else %}\n      --fg-h-font: var(--font-heading-family,Georgia,serif);\n      --fg-b-font: var(--font-body-family,Arial,sans-serif);\n      --fg-h-weight: var(--font-heading-weight,600);\n      --fg-b-weight: var(--font-body-weight,400);\n      --fg-h-style: var(--font-heading-style,normal);\n      --fg-b-style: var(--font-body-style,normal);\n    {% endif %}\n  }\n\n  {% if section.settings.preset == 'theme' %}\n    #FlGuarantee-{{ section.id }} {\n      --fg-bg: var(--gradient-background,rgb(var(--color-background)));\n      --fg-card: rgb(var(--color-background));\n      --fg-heading: rgb(var(--color-foreground));\n      --fg-text: rgb(var(--color-foreground));\n      --fg-accent: rgb(var(--color-foreground));\n    }\n  {% endif %}\n\n  @media (min-width:750px) {\n    #FlGuarantee-{{ section.id }} {\n      padding-top: {{ section.settings.padding_top }}px;\n      padding-bottom: {{ section.settings.padding_bottom }}px;\n    }\n  }\n{% endstyle %}\n\n<fl-guarantee\n  id=\"FlGuarantee-{{ section.id }}\"\n  class=\"fl-g color-{{ section.settings.scheme }}\"\n  data-image=\"{{ use_image }}\"\n  data-image-ratio=\"{{ v.ratio | default: 'auto' }}\"\n  data-steps=\"{{ section.settings.steps_layout | default: 'columns' }}\"\n  data-layout=\"{{ section.settings.layout }}\"\n  data-shadow=\"{{ section.settings.shadow }}\"\n  data-animation=\"{{ section.settings.animation }}\"\n  data-duration=\"{{ section.settings.duration }}\"\n  {% if heading != blank and heading.settings.text != blank %}\n    aria-labelledby=\"FlGuaranteeHeading-{{ section.id }}\"\n  {% endif %}\n>\n  {% if visual_block != blank %}\n    <div hidden {{ visual_block.shopify_attributes }}><\/div>\n  {% endif %}\n\n  <div class=\"fl-g__width\">\n    <div class=\"fl-g__card\">\n      {% if section.settings.show_icon %}\n        <div\n          class=\"fl-g__visual{% unless use_image %} fl-g__icon{% endunless %}\"\n          {% unless use_image %}aria-hidden=\"true\"{% endunless %}\n        >\n          {% if use_image %}\n            {% assign visual_alt = v.alt | default: '' %}\n            {{\n              section.settings.icon_image\n              | image_url: width: 1600\n              | image_tag:\n                loading: 'lazy',\n                alt: visual_alt,\n                widths: '240,400,600,800,1100,1600',\n                sizes: '(min-width:750px) 50vw,100vw'\n            }}\n          {% else %}\n            <svg\n              viewBox=\"0 0 64 64\"\n              fill=\"none\"\n              width=\"80\"\n              height=\"80\"\n              aria-hidden=\"true\"\n            >\n              <path\n                d=\"M32 5 53 13v17c0 14-12 24-21 29C23 54 11 44 11 30V13L32 5Z\"\n                stroke=\"currentColor\"\n                stroke-width=\"2.5\"\n                stroke-linejoin=\"round\"\n              />\n              <path\n                d=\"m22 31 7 7 14-15\"\n                stroke=\"currentColor\"\n                stroke-width=\"3\"\n                stroke-linecap=\"round\"\n                stroke-linejoin=\"round\"\n              />\n            <\/svg>\n          {% endif %}\n        <\/div>\n      {% endif %}\n\n      <div class=\"fl-g__content\">\n        {% for block in section.blocks %}\n          {% case block.type %}\n            {% when 'badge' %}\n              {% if block.settings.text != blank %}\n                <div {{ block.shopify_attributes }}>\n                  <span\n                    class=\"fl-g__badge\"\n                    style=\"--badge-bg:{{ block.settings.background }};--badge-color:{{ block.settings.color }};--badge-size:{{ block.settings.size }}px;\"\n                  >\n                    {{ block.settings.text | escape }}\n                  <\/span>\n                <\/div>\n              {% endif %}\n\n            {% when 'heading' %}\n              {% if block.settings.text != blank %}\n                <{{ block.settings.tag }}\n                  id=\"FlGuaranteeHeading-{{ section.id }}\"\n                  class=\"fl-g__heading\"\n                  data-highlight=\"{{ block.settings.highlight }}\"\n                  {{ block.shopify_attributes }}\n                >\n                  {{ block.settings.text }}\n                <\/{{ block.settings.tag }}>\n              {% endif %}\n\n            {% when 'description' %}\n              {% if block.settings.text != blank %}\n                <div class=\"fl-g__description rte\" {{ block.shopify_attributes }}>\n                  {{ block.settings.text }}\n                <\/div>\n              {% endif %}\n\n            {% when 'step' %}\n              {% unless steps_done %}\n                {% if section.settings.show_steps %}\n                  <div class=\"fl-g__steps\">\n                    {% for step in steps %}\n                      {% if step.settings.title != blank or step.settings.text != blank %}\n                        <div\n                          class=\"fl-g__step\"\n                          data-position=\"{{ step.settings.position | default: 'above' }}\"\n                          data-align=\"{{ step.settings.alignment | default: 'inherit' }}\"\n                          style=\"--step-color:{{ step.settings.color }};--step-size:{{ step.settings.size }}px;--step-icon-size:{{ step.settings.icon_size | default: 32 }}px;--step-icon-color:{{ step.settings.icon_color | default: '#6B3FA0' }};--step-icon-bg:{{ step.settings.icon_background | default: '#E6D8F2' }};\"\n                          {{ step.shopify_attributes }}\n                        >\n                          {% unless step.settings.visual == 'none' %}\n                            <span\n                              class=\"fl-g__step-visual\"\n                              data-shape=\"{{ step.settings.shape | default: 'circle' }}\"\n                              aria-hidden=\"true\"\n                            >\n                              {% if step.settings.visual == 'number' %}\n                                {{ forloop.index }}\n\n                              {% elsif step.settings.visual == 'image' and step.settings.image != blank %}\n                                {{\n                                  step.settings.image\n                                  | image_url: width: 160\n                                  | image_tag:\n                                    loading: 'lazy',\n                                    alt: '',\n                                    widths: '40,80,120,160',\n                                    sizes: '56px'\n                                }}\n\n                              {% else %}\n                                <svg\n                                  viewBox=\"0 0 24 24\"\n                                  fill=\"none\"\n                                  stroke=\"currentColor\"\n                                  stroke-width=\"1.7\"\n                                  stroke-linecap=\"round\"\n                                  stroke-linejoin=\"round\"\n                                  aria-hidden=\"true\"\n                                >\n                                  {% case step.settings.icon %}\n                                    {% when 'shield' %}\n                                      <path d=\"m12 3 8 3v6c0 5-5 8-8 10-3-2-8-5-8-10V6l8-3Z\"/>\n                                      <path d=\"m8 12 3 3 5-6\"/>\n                                    {% when 'message' %}\n                                      <path d=\"M4 4h16v12H9l-5 4V4Z\"/>\n                                      <path d=\"M8 8h8M8 12h5\"/>\n                                    {% when 'calendar' %}\n                                      <rect x=\"4\" y=\"5\" width=\"16\" height=\"16\" rx=\"2\"/>\n                                      <path d=\"M8 3v4m8-4v4M4 10h16m-12 5 2 2 5-4\"/>\n                                    {% when 'heart' %}\n                                      <path d=\"M12 20 4 12C-2 5 7 0 12 7 17 0 26 5 20 12l-8 8Z\"/>\n                                    {% when 'package' %}\n                                      <path d=\"m12 3 9 5-9 5-9-5 9-5Zm-9 5v10l9 5 9-5V8m-9 5v10M7 5l9 5\"/>\n                                    {% when 'refund' %}\n                                      <path d=\"M4 9a8 8 0 1 1 0 8M4 4v5h5\"/>\n                                      <path d=\"M15 8h-4a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4H9m3-10v12\"/>\n                                    {% else %}\n                                      <path d=\"m5 12 4 4L19 6\"/>\n                                  {% endcase %}\n                                <\/svg>\n                              {% endif %}\n                            <\/span>\n                          {% endunless %}\n\n                          <div>\n                            {% if step.settings.title != blank %}\n                              <p class=\"fl-g__step-title\">\n                                {{ step.settings.title | escape }}\n                              <\/p>\n                            {% endif %}\n                            {% if step.settings.text != blank %}\n                              <div class=\"fl-g__step-copy\">{{ step.settings.text }}<\/div>\n                            {% endif %}\n                          <\/div>\n                        <\/div>\n                      {% endif %}\n                    {% endfor %}\n                  <\/div>\n                {% endif %}\n\n                {% assign steps_done = true %}\n              {% endunless %}\n\n            {% when 'button' %}\n              {% if block.settings.label != blank and block.settings.link != blank %}\n                {% liquid\n                  assign button_bg = '#6B3FA0'\n                  assign button_text = '#FFFFFF'\n                  assign hover_bg = '#3B2056'\n                  assign hover_text = '#FFFFFF'\n\n                  case block.settings.colors\n                    when 'lavender'\n                      assign button_bg = '#E6D8F2'\n                      assign button_text = '#3B2056'\n                      assign hover_bg = '#DCC8F0'\n                      assign hover_text = '#3B2056'\n                    when 'white'\n                      assign button_bg = '#FFFFFF'\n                      assign button_text = '#3B2056'\n                      assign hover_bg = '#F7F3FB'\n                      assign hover_text = '#3B2056'\n                    when 'dark'\n                      assign button_bg = '#24182F'\n                      assign hover_bg = '#493058'\n                    when 'custom'\n                      assign button_bg = block.settings.background\n                      assign button_text = block.settings.text_color\n                      assign hover_bg = block.settings.hover_background\n                      assign hover_text = block.settings.hover_text\n                  endcase\n                %}\n\n                <div class=\"fl-g__action\" {{ block.shopify_attributes }}>\n                  <a\n                    class=\"fl-g__button{% if block.settings.colors == 'theme' %} fl-g__button--theme{% endif %}\"\n                    data-style=\"{{ block.settings.style }}\"\n                    data-full=\"{{ block.settings.mobile_full }}\"\n                    href=\"{{ block.settings.link }}\"\n                    style=\"--button-bg:{{ button_bg }};--button-text:{{ button_text }};--button-hover:{{ hover_bg }};--button-hover-text:{{ hover_text }};--button-radius:{{ block.settings.radius }}px;--button-size:{{ block.settings.size }}px;\"\n                    {% if block.settings.new_tab %}\n                      target=\"_blank\" rel=\"noopener noreferrer\"\n                    {% endif %}\n                  >\n                    {{ block.settings.label | escape }}\n                    {% if block.settings.arrow %}\n                      <span aria-hidden=\"true\">&rarr;<\/span>\n                    {% endif %}\n                  <\/a>\n                <\/div>\n              {% endif %}\n\n            {% when 'policy' %}\n              {% if block.settings.label != blank and block.settings.link != blank %}\n                <div\n                  class=\"fl-g__policy\"\n                  style=\"--policy-color:{{ block.settings.color }};--policy-size:{{ block.settings.size }}px;\"\n                  {{ block.shopify_attributes }}\n                >\n                  <a href=\"{{ block.settings.link }}\">\n                    {{ block.settings.label | escape }}\n                  <\/a>\n                <\/div>\n              {% endif %}\n\n            {% when 'note' %}\n              {% if block.settings.text != blank %}\n                <div\n                  class=\"fl-g__note\"\n                  style=\"--note-color:{{ block.settings.color }};--note-size:{{ block.settings.size }}px;\"\n                  {{ block.shopify_attributes }}\n                >\n                  {{ block.settings.text }}\n                <\/div>\n              {% endif %}\n          {% endcase %}\n        {% endfor %}\n      <\/div>\n    <\/div>\n  <\/div>\n<\/fl-guarantee>\n\n{% stylesheet %}\n.fl-g {\n  display:block;\n  background:var(--fg-bg);\n  color:var(--fg-text);\n  font-family:var(--fg-b-font);\n  font-weight:var(--fg-b-weight);\n  font-style:var(--fg-b-style);\n  font-size:var(--fg-body-mobile);\n  line-height:var(--fg-line);\n}\n\n.fl-g * { box-sizing:border-box; }\n\n.fl-g__width {\n  max-width:var(--fg-width);\n  margin-inline:auto;\n  padding-inline:16px;\n}\n\n.fl-g__card {\n  display:flex;\n  flex-direction:column;\n  align-items:center;\n  gap:var(--fg-gap);\n  padding:var(--fg-mobile-pad);\n  border:var(--fg-border) solid var(--fg-border-color);\n  border-radius:var(--fg-radius);\n  background:var(--fg-card);\n}\n\n.fl-g[data-shadow='true'] .fl-g__card {\n  box-shadow:0 12px 36px rgba(42,23,56,.08);\n}\n\n.fl-g__icon {\n  display:grid;\n  place-items:center;\n  flex:0 0 auto;\n  width:var(--fg-icon);\n  height:var(--fg-icon);\n  max-width:100%;\n  border-radius:50%;\n  background:var(--fg-icon-bg);\n  color:var(--fg-accent);\n}\n\n.fl-g__icon svg { width:68%; height:68%; }\n\n.fl-g__icon img {\n  display:block;\n  width:100%;\n  height:100%;\n  object-fit:contain;\n}\n\n.fl-g__content {\n  display:flex;\n  flex-direction:column;\n  gap:var(--fg-block-gap);\n  min-width:0;\n  width:100%;\n  text-align:var(--fg-mobile-align);\n}\n\n.fl-g__content > * {\n  margin:0;\n  min-width:0;\n  overflow-wrap:anywhere;\n}\n\n.fl-g__badge {\n  display:inline-block;\n  padding:8px 14px;\n  border-radius:999px;\n  background:var(--badge-bg);\n  color:var(--badge-color);\n  font-size:var(--badge-size);\n  font-weight:600;\n  letter-spacing:.06em;\n  line-height:1.4;\n  text-transform:uppercase;\n}\n\n.fl-g__heading {\n  font-family:var(--fg-h-font);\n  font-weight:var(--fg-h-weight);\n  font-style:var(--fg-h-style);\n  font-size:var(--fg-heading-mobile);\n  line-height:1.2;\n  color:var(--fg-heading);\n  text-wrap:balance;\n}\n\n.fl-g__heading[data-highlight='color'] em {\n  font-style:inherit;\n  color:var(--fg-accent);\n}\n\n.fl-g__heading[data-highlight='underline'] em {\n  font-style:inherit;\n  text-decoration:underline;\n  text-decoration-color:var(--fg-accent);\n  text-underline-offset:.15em;\n}\n\n.fl-g__heading[data-highlight='mark'] em {\n  font-style:inherit;\n  background:#E6D8F2;\n  padding-inline:.08em;\n  box-decoration-break:clone;\n}\n\n.fl-g .rte {\n  color:inherit;\n  font-size:inherit;\n  line-height:var(--fg-line);\n}\n\n.fl-g :is(.rte,.fl-g__note,.fl-g__step-copy) > :first-child {\n  margin-top:0;\n}\n\n.fl-g :is(.rte,.fl-g__note,.fl-g__step-copy) > :last-child {\n  margin-bottom:0;\n}\n\n.fl-g .rte a { color:inherit; }\n.fl-g .rte :is(img,video,iframe) { max-width:100%; }\n\n.fl-g__steps {\n  display:grid;\n  gap:20px;\n  padding-block:8px;\n}\n\n.fl-g__step {\n  display:flex;\n  flex-direction:column;\n  align-items:var(--fg-mobile-justify);\n  gap:10px;\n  color:var(--step-color);\n  text-align:var(--fg-mobile-align);\n}\n\n.fl-g__step-title {\n  font-size:var(--step-size);\n  line-height:1.4;\n  font-weight:600;\n  margin:0;\n}\n\n.fl-g__step-copy {\n  font-size:14px;\n  line-height:1.6;\n  margin-top:6px;\n}\n\n.fl-g__action {\n  display:flex;\n  justify-content:var(--fg-mobile-justify);\n}\n\n.fl-g__button {\n  display:inline-flex;\n  align-items:center;\n  justify-content:center;\n  gap:12px;\n  max-width:100%;\n  min-height:48px;\n  padding:13px 24px;\n  border:1px solid var(--button-bg);\n  border-radius:var(--button-radius);\n  background:var(--button-bg);\n  color:var(--button-text);\n  font:inherit;\n  font-size:var(--button-size);\n  font-weight:600;\n  line-height:1.4;\n  text-align:center;\n  text-decoration:none;\n  transition:background-color .2s ease,color .2s ease;\n}\n\n.fl-g__button[data-style='outline'] {\n  background:transparent;\n  color:var(--button-bg);\n}\n\n.fl-g__button[data-style='text'] {\n  background:transparent;\n  color:var(--button-bg);\n  border-color:transparent;\n  border-radius:4px;\n  text-decoration:underline;\n  text-underline-offset:4px;\n  padding-inline:4px;\n}\n\n.fl-g__button[data-full='true'] { width:100%; }\n\n.fl-g__button--theme {\n  --button-bg:rgb(var(--color-button))!important;\n  --button-text:rgb(var(--color-button-text))!important;\n  --button-hover:rgb(var(--color-foreground))!important;\n  --button-hover-text:rgb(var(--color-background))!important;\n}\n\n.fl-g__policy {\n  font-size:var(--policy-size);\n  color:var(--policy-color);\n}\n\n.fl-g__policy a {\n  display:inline-block;\n  min-height:44px;\n  padding-block:10px;\n  color:inherit;\n  text-decoration:underline;\n  text-underline-offset:4px;\n}\n\n.fl-g__note {\n  font-size:var(--note-size);\n  color:var(--note-color);\n  line-height:1.6;\n}\n\n.fl-g a:focus-visible {\n  outline:3px solid var(--fg-accent);\n  outline-offset:4px;\n}\n\n@media (hover:hover) and (pointer:fine) {\n  .fl-g__button:hover {\n    background:var(--button-hover);\n    color:var(--button-hover-text);\n    border-color:var(--button-hover);\n  }\n}\n\n@media (min-width:750px) {\n  .fl-g { font-size:var(--fg-body); }\n  .fl-g__width { padding-inline:24px; }\n  .fl-g__card { padding:var(--fg-pad); }\n\n  .fl-g[data-layout='horizontal'] .fl-g__card {\n    flex-direction:row;\n    align-items:center;\n  }\n\n  .fl-g__content { text-align:var(--fg-align); }\n  .fl-g__heading { font-size:var(--fg-heading-size); }\n  .fl-g__steps { grid-template-columns:repeat(3,minmax(0,1fr)); }\n\n  .fl-g__step {\n    align-items:var(--fg-justify);\n    text-align:var(--fg-align);\n  }\n\n  .fl-g__action { justify-content:var(--fg-justify); }\n  .fl-g__button[data-full='true'] { width:auto; }\n\n  .fl-g[data-layout='centered'] .fl-g__content {\n    max-width:800px;\n  }\n}\n\n.fl-g__visual {\n  min-width:0;\n  flex:0 0 auto;\n}\n\n.fl-g[data-image='true'] .fl-g__visual {\n  width:var(--fg-mobile-image-width);\n  max-width:100%;\n  height:auto;\n  align-self:var(--fg-mobile-image-align);\n  border-radius:var(--fg-image-radius);\n  overflow:hidden;\n  background:var(--fg-image-bg);\n}\n\n.fl-g[data-image='true'] .fl-g__visual img {\n  display:block;\n  width:100%;\n  height:auto;\n  object-fit:var(--fg-image-fit);\n}\n\n.fl-g[data-image='true'][data-image-ratio='square'] .fl-g__visual {\n  aspect-ratio:1;\n}\n\n.fl-g[data-image='true'][data-image-ratio='portrait'] .fl-g__visual {\n  aspect-ratio:4/5;\n}\n\n.fl-g[data-image='true']:is([data-image-ratio='square'],[data-image-ratio='portrait']) .fl-g__visual img {\n  height:100%;\n}\n\n.fl-g__step-visual {\n  display:grid;\n  place-items:center;\n  flex:0 0 var(--step-icon-size);\n  width:var(--step-icon-size);\n  height:var(--step-icon-size);\n  color:var(--step-icon-color);\n  background:var(--step-icon-bg);\n  border-radius:50%;\n  font-size:14px;\n  font-weight:600;\n  overflow:hidden;\n}\n\n.fl-g__step-visual[data-shape='rounded'] { border-radius:8px; }\n\n.fl-g__step-visual[data-shape='none'] {\n  background:transparent;\n  border-radius:0;\n}\n\n.fl-g__step-visual svg { width:70%; height:70%; }\n\n.fl-g__step-visual img {\n  display:block;\n  width:100%;\n  height:100%;\n  object-fit:contain;\n}\n\n.fl-g__step > div { min-width:0; }\n\n.fl-g__step[data-position='beside'] {\n  flex-direction:row;\n  align-items:flex-start;\n  justify-content:var(--fg-mobile-justify);\n}\n\n.fl-g__step[data-align='left'] {\n  text-align:left;\n  align-items:flex-start;\n}\n\n.fl-g__step[data-align='center'] {\n  text-align:center;\n  align-items:center;\n}\n\n.fl-g__step[data-align='right'] {\n  text-align:right;\n  align-items:flex-end;\n}\n\n.fl-g__step[data-position='beside'][data-align='left'] {\n  justify-content:flex-start;\n  align-items:flex-start;\n}\n\n.fl-g__step[data-position='beside'][data-align='center'] {\n  justify-content:center;\n  align-items:flex-start;\n}\n\n.fl-g__step[data-position='beside'][data-align='right'] {\n  justify-content:flex-end;\n  align-items:flex-start;\n}\n\n@media (min-width:750px) {\n  .fl-g[data-image='true'] .fl-g__visual {\n    width:var(--fg-image-width);\n    align-self:var(--fg-image-align);\n  }\n\n  .fl-g[data-image='true'][data-layout='horizontal'] .fl-g__visual {\n    flex:0 0 calc((100% - var(--fg-gap))*var(--fg-image-share));\n    width:auto;\n    align-self:center;\n  }\n\n  .fl-g[data-layout='horizontal'] .fl-g__content {\n    flex:1 1 0;\n    width:auto;\n  }\n\n  .fl-g[data-steps='stack'] .fl-g__steps {\n    grid-template-columns:minmax(0,1fr);\n  }\n\n  .fl-g__step[data-position='beside'] {\n    justify-content:var(--fg-justify);\n  }\n\n  .fl-g__step[data-align='left'] {\n    text-align:left;\n    align-items:flex-start;\n  }\n\n  .fl-g__step[data-align='center'] {\n    text-align:center;\n    align-items:center;\n  }\n\n  .fl-g__step[data-align='right'] {\n    text-align:right;\n    align-items:flex-end;\n  }\n\n  .fl-g__step[data-position='beside'][data-align='left'] {\n    justify-content:flex-start;\n    align-items:flex-start;\n  }\n\n  .fl-g__step[data-position='beside'][data-align='center'] {\n    justify-content:center;\n    align-items:flex-start;\n  }\n\n  .fl-g__step[data-position='beside'][data-align='right'] {\n    justify-content:flex-end;\n    align-items:flex-start;\n  }\n}\n\n@media (prefers-reduced-motion:reduce) {\n  .fl-g__button { transition:none; }\n}\n{% endstylesheet %}\n\n{% javascript %}\nif (!customElements.get('fl-guarantee')) {\n  customElements.define('fl-guarantee', class extends HTMLElement {\n    connectedCallback() {\n      this.frame = requestAnimationFrame(() => {\n        if (!this.isConnected || this.dataset.animation === 'none') return;\n\n        this.motion = matchMedia('(prefers-reduced-motion:reduce)');\n        if (this.motion.matches || !('IntersectionObserver' in window)) return;\n\n        this.onMotion = () => {\n          if (this.motion.matches && this.animation) this.animation.cancel();\n        };\n\n        this.motion.addEventListener('change', this.onMotion);\n\n        this.observer = new IntersectionObserver(entries => {\n          if (!entries.some(entry => entry.isIntersecting)) return;\n\n          const card = this.querySelector('.fl-g__card');\n\n          if (card.animate && !this.motion.matches) {\n            this.animation = card.animate(\n              [\n                {\n                  opacity:0,\n                  transform:this.dataset.animation === 'slide'\n                    ? 'translateY(12px)'\n                    : 'none'\n                },\n                {\n                  opacity:1,\n                  transform:'none'\n                }\n              ],\n              {\n                duration:Number(this.dataset.duration) || 350,\n                easing:'ease-out'\n              }\n            );\n          }\n\n          this.observer.disconnect();\n        }, { threshold:.1 });\n\n        this.observer.observe(this);\n      });\n    }\n\n    disconnectedCallback() {\n      cancelAnimationFrame(this.frame);\n      if (this.observer) this.observer.disconnect();\n      if (this.animation) this.animation.cancel();\n\n      if (this.motion && this.onMotion) {\n        this.motion.removeEventListener('change', this.onMotion);\n      }\n    }\n  });\n}\n{% endjavascript %}\n\n{% schema %}\n{\n  \"name\":\"Facelove guarantee\",\n  \"tag\":\"section\",\n  \"disabled_on\":{\"groups\":[\"header\",\"footer\"]},\n  \"settings\":[\n    {\"type\":\"select\",\"id\":\"layout\",\"label\":\"Layout\",\"options\":[{\"value\":\"horizontal\",\"label\":\"Shield beside text\"},{\"value\":\"centered\",\"label\":\"Centered\"}],\"default\":\"horizontal\"},\n    {\"type\":\"select\",\"id\":\"preset\",\"label\":\"Color preset\",\"options\":[{\"value\":\"white\",\"label\":\"White\"},{\"value\":\"soft\",\"label\":\"Soft Lavender\"},{\"value\":\"deep\",\"label\":\"Deep Violet\"},{\"value\":\"theme\",\"label\":\"Theme colors\"},{\"value\":\"custom\",\"label\":\"Custom\"}],\"default\":\"white\"},\n    {\"type\":\"color_scheme\",\"id\":\"scheme\",\"label\":\"Theme color scheme\",\"default\":\"scheme-1\"},\n    {\"type\":\"range\",\"id\":\"width\",\"label\":\"Maximum section width\",\"min\":800,\"max\":1600,\"step\":40,\"default\":1200,\"unit\":\"px\"},\n    {\"type\":\"checkbox\",\"id\":\"show_icon\",\"label\":\"Show guarantee icon\",\"default\":true},\n    {\"type\":\"image_picker\",\"id\":\"icon_image\",\"label\":\"Custom guarantee icon\"},\n    {\"type\":\"range\",\"id\":\"icon_size\",\"label\":\"Guarantee icon size\",\"min\":64,\"max\":160,\"step\":8,\"default\":112,\"unit\":\"px\"},\n    {\"type\":\"color\",\"id\":\"icon_background\",\"label\":\"Icon background\",\"default\":\"#EDE3F6\"},\n    {\"type\":\"select\",\"id\":\"font_mode\",\"label\":\"Font source\",\"options\":[{\"value\":\"theme\",\"label\":\"Theme fonts\"},{\"value\":\"brand\",\"label\":\"Facelove: Caprasimo and Poppins\"},{\"value\":\"custom\",\"label\":\"Choose fonts below\"}],\"default\":\"theme\"},\n    {\"type\":\"font_picker\",\"id\":\"heading_font\",\"label\":\"Heading font and style\",\"default\":\"assistant_n7\"},\n    {\"type\":\"font_picker\",\"id\":\"body_font\",\"label\":\"Body font and style\",\"default\":\"assistant_n4\"},\n    {\"type\":\"range\",\"id\":\"heading_size\",\"label\":\"Desktop heading size\",\"min\":24,\"max\":64,\"step\":1,\"default\":40,\"unit\":\"px\"},\n    {\"type\":\"range\",\"id\":\"heading_mobile\",\"label\":\"Mobile heading size\",\"min\":22,\"max\":44,\"step\":1,\"default\":28,\"unit\":\"px\"},\n    {\"type\":\"range\",\"id\":\"body_size\",\"label\":\"Desktop description size\",\"min\":14,\"max\":24,\"step\":1,\"default\":18,\"unit\":\"px\"},\n    {\"type\":\"range\",\"id\":\"body_mobile\",\"label\":\"Mobile description size\",\"min\":14,\"max\":22,\"step\":1,\"default\":16,\"unit\":\"px\"},\n    {\"type\":\"select\",\"id\":\"line_height\",\"label\":\"Body line spacing\",\"options\":[{\"value\":\"1.4\",\"label\":\"Compact\"},{\"value\":\"1.6\",\"label\":\"Comfortable\"},{\"value\":\"1.8\",\"label\":\"Spacious\"}],\"default\":\"1.6\"},\n    {\"type\":\"select\",\"id\":\"alignment\",\"label\":\"Desktop text alignment\",\"options\":[{\"value\":\"left\",\"label\":\"Left\"},{\"value\":\"center\",\"label\":\"Center\"},{\"value\":\"right\",\"label\":\"Right\"}],\"default\":\"left\"},\n    {\"type\":\"select\",\"id\":\"mobile_alignment\",\"label\":\"Mobile text alignment\",\"options\":[{\"value\":\"left\",\"label\":\"Left\"},{\"value\":\"center\",\"label\":\"Center\"},{\"value\":\"right\",\"label\":\"Right\"}],\"default\":\"center\"},\n    {\"type\":\"color\",\"id\":\"background\",\"label\":\"Custom section background\",\"default\":\"#FFFFFF\"},\n    {\"type\":\"color\",\"id\":\"card_color\",\"label\":\"Custom card background\",\"default\":\"#F7F3FB\"},\n    {\"type\":\"color\",\"id\":\"heading_color\",\"label\":\"Custom heading color\",\"default\":\"#3B2056\"},\n    {\"type\":\"color\",\"id\":\"text_color\",\"label\":\"Custom description color\",\"default\":\"#2A1738\"},\n    {\"type\":\"color\",\"id\":\"accent\",\"label\":\"Custom icon and highlight color\",\"default\":\"#6B3FA0\"},\n    {\"type\":\"range\",\"id\":\"radius\",\"label\":\"Card corner radius\",\"min\":0,\"max\":40,\"step\":2,\"default\":24,\"unit\":\"px\"},\n    {\"type\":\"range\",\"id\":\"border_width\",\"label\":\"Card border width\",\"min\":0,\"max\":4,\"step\":1,\"default\":0,\"unit\":\"px\"},\n    {\"type\":\"color\",\"id\":\"border_color\",\"label\":\"Card border color\",\"default\":\"#DCCEEA\"},\n    {\"type\":\"checkbox\",\"id\":\"shadow\",\"label\":\"Soft card shadow\",\"default\":false},\n    {\"type\":\"range\",\"id\":\"card_padding\",\"label\":\"Desktop card padding\",\"min\":24,\"max\":72,\"step\":4,\"default\":40,\"unit\":\"px\"},\n    {\"type\":\"range\",\"id\":\"card_mobile_padding\",\"label\":\"Mobile card padding\",\"min\":16,\"max\":40,\"step\":2,\"default\":24,\"unit\":\"px\"},\n    {\"type\":\"range\",\"id\":\"gap\",\"label\":\"Icon-to-content gap\",\"min\":16,\"max\":64,\"step\":4,\"default\":32,\"unit\":\"px\"},\n    {\"type\":\"range\",\"id\":\"block_gap\",\"label\":\"Content block spacing\",\"min\":8,\"max\":32,\"step\":2,\"default\":16,\"unit\":\"px\"},\n    {\"type\":\"range\",\"id\":\"padding_top\",\"label\":\"Desktop top spacing\",\"min\":0,\"max\":120,\"step\":4,\"default\":48,\"unit\":\"px\"},\n    {\"type\":\"range\",\"id\":\"padding_bottom\",\"label\":\"Desktop bottom spacing\",\"min\":0,\"max\":120,\"step\":4,\"default\":48,\"unit\":\"px\"},\n    {\"type\":\"range\",\"id\":\"mobile_top\",\"label\":\"Mobile top spacing\",\"min\":0,\"max\":100,\"step\":4,\"default\":28,\"unit\":\"px\"},\n    {\"type\":\"range\",\"id\":\"mobile_bottom\",\"label\":\"Mobile bottom spacing\",\"min\":0,\"max\":100,\"step\":4,\"default\":28,\"unit\":\"px\"},\n    {\"type\":\"select\",\"id\":\"animation\",\"label\":\"Entrance animation\",\"options\":[{\"value\":\"none\",\"label\":\"None\"},{\"value\":\"fade\",\"label\":\"Fade\"},{\"value\":\"slide\",\"label\":\"Gentle slide\"}],\"default\":\"none\"},\n    {\"type\":\"range\",\"id\":\"duration\",\"label\":\"Animation duration\",\"min\":200,\"max\":700,\"step\":50,\"default\":350,\"unit\":\"ms\"},\n    {\"type\":\"checkbox\",\"id\":\"show_steps\",\"label\":\"Show how-it-works row\",\"default\":true},\n    {\"type\":\"select\",\"id\":\"steps_layout\",\"label\":\"Desktop steps layout\",\"options\":[{\"value\":\"columns\",\"label\":\"Three columns\"},{\"value\":\"stack\",\"label\":\"Stacked list\"}],\"default\":\"columns\"}\n  ],\n  \"blocks\":[\n    {\n      \"type\":\"badge\",\"name\":\"Guarantee badge\",\"limit\":1,\n      \"settings\":[\n        {\"type\":\"text\",\"id\":\"text\",\"label\":\"Badge text\",\"default\":\"30-Day Guarantee\"},\n        {\"type\":\"color\",\"id\":\"background\",\"label\":\"Badge background\",\"default\":\"#E6D8F2\"},\n        {\"type\":\"color\",\"id\":\"color\",\"label\":\"Badge text color\",\"default\":\"#3B2056\"},\n        {\"type\":\"range\",\"id\":\"size\",\"label\":\"Badge font size\",\"min\":11,\"max\":18,\"step\":1,\"default\":13,\"unit\":\"px\"}\n      ]\n    },\n    {\n      \"type\":\"heading\",\"name\":\"Heading\",\"limit\":1,\n      \"settings\":[\n        {\"type\":\"inline_richtext\",\"id\":\"text\",\"label\":\"Heading\",\"default\":\"Love Your Lashes\u2014Let Us Make It Right\"},\n        {\"type\":\"select\",\"id\":\"tag\",\"label\":\"Heading tag\",\"options\":[{\"value\":\"h1\",\"label\":\"H1\"},{\"value\":\"h2\",\"label\":\"H2\"},{\"value\":\"h3\",\"label\":\"H3\"},{\"value\":\"h4\",\"label\":\"H4\"}],\"default\":\"h2\"},\n        {\"type\":\"select\",\"id\":\"highlight\",\"label\":\"Italicized heading words\",\"options\":[{\"value\":\"none\",\"label\":\"Keep italic\"},{\"value\":\"color\",\"label\":\"Accent color\"},{\"value\":\"underline\",\"label\":\"Underline\"},{\"value\":\"mark\",\"label\":\"Lavender highlight\"}],\"default\":\"none\"}\n      ]\n    },\n    {\n      \"type\":\"description\",\"name\":\"Description\",\"limit\":1,\n      \"settings\":[\n        {\"type\":\"richtext\",\"id\":\"text\",\"label\":\"Description\",\"default\":\"<p>Your purchase is backed by our 30-day guarantee. Contact our team within the guarantee period to discuss your concern. See our policy for eligibility and refund details.<\/p>\"}\n      ]\n    },\n    {\n      \"type\":\"step\",\"name\":\"How it works step\",\"limit\":3,\n      \"settings\":[\n        {\"type\":\"text\",\"id\":\"title\",\"label\":\"Step title\",\"default\":\"Contact our team\"},\n        {\"type\":\"richtext\",\"id\":\"text\",\"label\":\"Optional explanation\"},\n        {\"type\":\"color\",\"id\":\"color\",\"label\":\"Step text and number color\",\"default\":\"#3B2056\"},\n        {\"type\":\"range\",\"id\":\"size\",\"label\":\"Step title size\",\"min\":14,\"max\":22,\"step\":1,\"default\":16,\"unit\":\"px\"},\n        {\"type\":\"select\",\"id\":\"visual\",\"label\":\"Step visual\",\"options\":[{\"value\":\"number\",\"label\":\"Number\"},{\"value\":\"icon\",\"label\":\"Built-in icon\"},{\"value\":\"image\",\"label\":\"Uploaded icon\"},{\"value\":\"none\",\"label\":\"Text only\"}],\"default\":\"icon\"},\n        {\"type\":\"select\",\"id\":\"icon\",\"label\":\"Built-in icon\",\"options\":[{\"value\":\"shield\",\"label\":\"Shield\"},{\"value\":\"check\",\"label\":\"Checkmark\"},{\"value\":\"message\",\"label\":\"Message\"},{\"value\":\"calendar\",\"label\":\"Calendar\"},{\"value\":\"heart\",\"label\":\"Heart\"},{\"value\":\"package\",\"label\":\"Package\"},{\"value\":\"refund\",\"label\":\"Refund arrow\"}],\"default\":\"check\"},\n        {\"type\":\"image_picker\",\"id\":\"image\",\"label\":\"Uploaded step icon\"},\n        {\"type\":\"range\",\"id\":\"icon_size\",\"label\":\"Icon size\",\"min\":20,\"max\":56,\"step\":2,\"default\":32,\"unit\":\"px\"},\n        {\"type\":\"color\",\"id\":\"icon_color\",\"label\":\"Icon color\",\"default\":\"#6B3FA0\"},\n        {\"type\":\"color\",\"id\":\"icon_background\",\"label\":\"Icon background\",\"default\":\"#E6D8F2\"},\n        {\"type\":\"select\",\"id\":\"shape\",\"label\":\"Icon background shape\",\"options\":[{\"value\":\"circle\",\"label\":\"Circle\"},{\"value\":\"rounded\",\"label\":\"Rounded square\"},{\"value\":\"none\",\"label\":\"No background\"}],\"default\":\"circle\"},\n        {\"type\":\"select\",\"id\":\"position\",\"label\":\"Icon placement\",\"options\":[{\"value\":\"above\",\"label\":\"Above text\"},{\"value\":\"beside\",\"label\":\"Beside text\"}],\"default\":\"above\"},\n        {\"type\":\"select\",\"id\":\"alignment\",\"label\":\"Step text alignment\",\"options\":[{\"value\":\"inherit\",\"label\":\"Follow section\"},{\"value\":\"left\",\"label\":\"Left\"},{\"value\":\"center\",\"label\":\"Center\"},{\"value\":\"right\",\"label\":\"Right\"}],\"default\":\"inherit\"}\n      ]\n    },\n    {\n      \"type\":\"button\",\"name\":\"Primary button\",\"limit\":1,\n      \"settings\":[\n        {\"type\":\"text\",\"id\":\"label\",\"label\":\"Button label\",\"default\":\"Shop Everlove\"},\n        {\"type\":\"url\",\"id\":\"link\",\"label\":\"Button link\"},\n        {\"type\":\"select\",\"id\":\"colors\",\"label\":\"Button color\",\"options\":[{\"value\":\"brand\",\"label\":\"Brand Violet\"},{\"value\":\"lavender\",\"label\":\"Soft Lavender\"},{\"value\":\"white\",\"label\":\"White\"},{\"value\":\"dark\",\"label\":\"Dark\"},{\"value\":\"theme\",\"label\":\"Theme colors\"},{\"value\":\"custom\",\"label\":\"Custom\"}],\"default\":\"brand\"},\n        {\"type\":\"select\",\"id\":\"style\",\"label\":\"Button style\",\"options\":[{\"value\":\"solid\",\"label\":\"Solid\"},{\"value\":\"outline\",\"label\":\"Outline\"},{\"value\":\"text\",\"label\":\"Text link\"}],\"default\":\"solid\"},\n        {\"type\":\"color\",\"id\":\"background\",\"label\":\"Custom background\",\"default\":\"#6B3FA0\"},\n        {\"type\":\"color\",\"id\":\"text_color\",\"label\":\"Custom text\",\"default\":\"#FFFFFF\"},\n        {\"type\":\"color\",\"id\":\"hover_background\",\"label\":\"Custom hover background\",\"default\":\"#3B2056\"},\n        {\"type\":\"color\",\"id\":\"hover_text\",\"label\":\"Custom hover text\",\"default\":\"#FFFFFF\"},\n        {\"type\":\"range\",\"id\":\"size\",\"label\":\"Button font size\",\"min\":14,\"max\":20,\"step\":1,\"default\":16,\"unit\":\"px\"},\n        {\"type\":\"range\",\"id\":\"radius\",\"label\":\"Button corner radius\",\"min\":0,\"max\":50,\"step\":2,\"default\":50,\"unit\":\"px\"},\n        {\"type\":\"checkbox\",\"id\":\"arrow\",\"label\":\"Show arrow\",\"default\":false},\n        {\"type\":\"checkbox\",\"id\":\"mobile_full\",\"label\":\"Full-width button on mobile\",\"default\":true},\n        {\"type\":\"checkbox\",\"id\":\"new_tab\",\"label\":\"Open in new tab\",\"default\":false}\n      ]\n    },\n    {\n      \"type\":\"policy\",\"name\":\"Policy link\",\"limit\":1,\n      \"settings\":[\n        {\"type\":\"text\",\"id\":\"label\",\"label\":\"Policy link text\",\"default\":\"Read our guarantee\"},\n        {\"type\":\"url\",\"id\":\"link\",\"label\":\"Policy URL\"},\n        {\"type\":\"color\",\"id\":\"color\",\"label\":\"Policy link color\",\"default\":\"#6B3FA0\"},\n        {\"type\":\"range\",\"id\":\"size\",\"label\":\"Policy link font size\",\"min\":12,\"max\":18,\"step\":1,\"default\":14,\"unit\":\"px\"}\n      ]\n    },\n    {\n      \"type\":\"note\",\"name\":\"Eligibility note\",\"limit\":1,\n      \"settings\":[\n        {\"type\":\"richtext\",\"id\":\"text\",\"label\":\"Note\"},\n        {\"type\":\"color\",\"id\":\"color\",\"label\":\"Note color\",\"default\":\"#64566F\"},\n        {\"type\":\"range\",\"id\":\"size\",\"label\":\"Note font size\",\"min\":12,\"max\":18,\"step\":1,\"default\":13,\"unit\":\"px\"}\n      ]\n    },\n    {\n      \"type\":\"visual\",\"name\":\"Guarantee image settings\",\"limit\":1,\n      \"settings\":[\n        {\"type\":\"select\",\"id\":\"type\",\"label\":\"Visual type\",\"options\":[{\"value\":\"shield\",\"label\":\"Built-in shield\"},{\"value\":\"image\",\"label\":\"Uploaded image\"}],\"default\":\"shield\"},\n        {\"type\":\"range\",\"id\":\"width\",\"label\":\"Desktop image width\",\"min\":10,\"max\":50,\"step\":5,\"default\":35,\"unit\":\"%\"},\n        {\"type\":\"range\",\"id\":\"mobile_width\",\"label\":\"Mobile image width\",\"min\":20,\"max\":100,\"step\":5,\"default\":70,\"unit\":\"%\"},\n        {\"type\":\"select\",\"id\":\"alignment\",\"label\":\"Stacked image alignment\",\"options\":[{\"value\":\"start\",\"label\":\"Left\"},{\"value\":\"center\",\"label\":\"Center\"},{\"value\":\"end\",\"label\":\"Right\"}],\"default\":\"center\"},\n        {\"type\":\"select\",\"id\":\"mobile_alignment\",\"label\":\"Mobile image alignment\",\"options\":[{\"value\":\"start\",\"label\":\"Left\"},{\"value\":\"center\",\"label\":\"Center\"},{\"value\":\"end\",\"label\":\"Right\"}],\"default\":\"center\"},\n        {\"type\":\"select\",\"id\":\"ratio\",\"label\":\"Image shape\",\"options\":[{\"value\":\"auto\",\"label\":\"Original proportions\"},{\"value\":\"square\",\"label\":\"Square\"},{\"value\":\"portrait\",\"label\":\"Portrait\"}],\"default\":\"auto\"},\n        {\"type\":\"select\",\"id\":\"fit\",\"label\":\"Image fit\",\"options\":[{\"value\":\"contain\",\"label\":\"Contain\"},{\"value\":\"cover\",\"label\":\"Cover\"}],\"default\":\"contain\"},\n        {\"type\":\"range\",\"id\":\"radius\",\"label\":\"Image corner radius\",\"min\":0,\"max\":48,\"step\":2,\"default\":0,\"unit\":\"px\"},\n        {\"type\":\"checkbox\",\"id\":\"background\",\"label\":\"Show image background\",\"default\":false},\n        {\"type\":\"color\",\"id\":\"background_color\",\"label\":\"Image background\",\"default\":\"#EDE3F6\"},\n        {\"type\":\"text\",\"id\":\"alt\",\"label\":\"Image description (blank = decorative)\"}\n      ]\n    }\n  ],\n  \"presets\":[\n    {\n      \"name\":\"Facelove guarantee\",\n      \"blocks\":[\n        {\"type\":\"visual\"},\n        {\"type\":\"badge\"},\n        {\"type\":\"heading\"},\n        {\"type\":\"description\"},\n        {\"type\":\"step\",\"settings\":{\"title\":\"Check your eligibility\",\"visual\":\"icon\",\"icon\":\"shield\"}},\n        {\"type\":\"step\",\"settings\":{\"title\":\"Contact our team\",\"visual\":\"icon\",\"icon\":\"message\"}},\n        {\"type\":\"step\",\"settings\":{\"title\":\"Receive the next steps\",\"visual\":\"icon\",\"icon\":\"check\"}},\n        {\"type\":\"button\"},\n        {\"type\":\"policy\"}\n      ]\n    }\n  ]\n}\n{% endschema %}",
+"Rating bar":`<div class="fl-rating">
+  <div class="stars">★★★★★</div>
+  <span><b>{{ product.rating }}</b> from {{ product.review_count }} reviews</span>
+</div>
+<style>
+.fl-rating{display:flex;align-items:center;gap:10px;font-family:system-ui;padding:16px;color:#2a1530}
+.fl-rating .stars{color:#ff7aa2;letter-spacing:2px;font-size:18px}
+</style>`,
+"FAQ accordion":`<section class="faq">
+  <h2>Questions, answered</h2>
+  <details open><summary>Will it clump?</summary><p>No. The tapered brush separates every lash as you sweep.</p></details>
+  <details><summary>Is it safe for sensitive eyes?</summary><p>Yes. It is ophthalmologist tested and fragrance free.</p></details>
+  <details><summary>How do I remove it?</summary><p>Warm water and gentle pressure. No scrubbing.</p></details>
+</section>
+<style>
+.faq{font-family:system-ui;max-width:640px;margin:24px auto;padding:0 16px;color:#2a1530}
+.faq h2{font-size:26px;margin:0 0 14px}
+.faq details{border:1px solid #e6ddec;border-radius:12px;padding:14px 16px;margin-bottom:10px;background:#fbf8fd}
+.faq summary{cursor:pointer;font-weight:700;list-style:none}
+.faq summary::after{content:"+";float:right;color:#6a35e8;font-size:18px}
+.faq details[open] summary::after{content:"–"}
+.faq p{margin:8px 0 0;color:#6e6178}
+</style>`,
+"Countdown banner":`<div class="cd">Sale ends in <span id="t">02:00:00</span> · Free gift over $40</div>
+<style>
+.cd{font-family:system-ui;background:linear-gradient(90deg,#6a35e8,#ff7aa2);color:#fff;text-align:center;padding:12px;font-weight:700;letter-spacing:.02em}
+#t{font-variant-numeric:tabular-nums;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:6px;margin-left:4px}
+</style>
+<script>
+let s=7200;setInterval(()=>{s=s>0?s-1:7200;const h=String(Math.floor(s/3600)).padStart(2,"0"),m=String(Math.floor(s%3600/60)).padStart(2,"0"),x=String(s%60).padStart(2,"0");document.getElementById("t").textContent=h+":"+m+":"+x},1000);
+<\/script>`,
+"Quantity breaks":`<div class="qb">
+  {% assign base = product.price %}
+  <label class="opt"><input type="radio" name="q"> <span><b>1 mascara</b><small>Try it</small></span><em>{{ base | money }}</em></label>
+  <label class="opt hot"><input type="radio" name="q" checked> <span><b>2 mascaras</b><small>Most popular · save 15%</small></span><em>{{ base | times: 2 | times: 0.85 | money }}</em></label>
+  <label class="opt"><input type="radio" name="q"> <span><b>3 mascaras</b><small>Best value · save 25%</small></span><em>{{ base | times: 3 | times: 0.75 | money }}</em></label>
+</div>
+<style>
+.qb{font-family:system-ui;display:grid;gap:10px;max-width:420px;margin:20px auto;padding:0 12px;color:#2a1530}
+.opt{display:flex;align-items:center;gap:12px;border:1.5px solid #e6ddec;border-radius:12px;padding:12px 14px;cursor:pointer}
+.opt span{flex:1;display:flex;flex-direction:column}.opt small{color:#6e6178}
+.opt em{font-style:normal;font-weight:800}
+.opt.hot{border-color:#6a35e8;background:#f5f0ff}
+.opt:has(input:checked){border-color:#6a35e8}
+</style>`,
+"Guarantee badge":`<div class="g">
+  <div class="seal">30<br><small>DAYS</small></div>
+  <div><h3>Love your lashes or it's free</h3><p>Try {{ product.title }} for 30 days. Not obsessed? We refund every cent.</p></div>
+</div>
+<style>
+.g{font-family:system-ui;display:flex;gap:18px;align-items:center;max-width:560px;margin:24px auto;padding:18px;border-radius:16px;background:#f5f0ff;color:#2a1530}
+.seal{flex:none;width:76px;height:76px;border-radius:50%;background:#6a35e8;color:#fff;display:grid;place-items:center;text-align:center;font-weight:800;font-size:22px;line-height:1}
+.seal small{font-size:10px;letter-spacing:.1em}
+.g h3{margin:0 0 4px}.g p{margin:0;color:#6e6178}
+</style>`,
+"Email pop-up":`<div class="ov"><div class="pop">
+  <button class="x" onclick="this.closest('.ov').remove()">×</button>
+  <p class="k">First order</p><h2>Take 15% off</h2>
+  <p>Join the Facelove list for lash tips and early drops.</p>
+  <input placeholder="Email address"><button class="go">Unlock 15%</button>
+</div></div>
+<style>
+.ov{font-family:system-ui;position:fixed;inset:0;background:rgba(36,21,43,.45);display:grid;place-items:center;padding:16px}
+.pop{position:relative;background:#fff;border-radius:18px;padding:28px;max-width:360px;text-align:center;color:#2a1530}
+.k{color:#ff7aa2;font-weight:800;text-transform:uppercase;font-size:12px;letter-spacing:.1em;margin:0}
+.pop h2{font-size:32px;margin:4px 0}.pop input{width:100%;padding:12px;border:1px solid #e6ddec;border-radius:10px;margin:10px 0}
+.go{width:100%;padding:12px;border:0;border-radius:10px;background:#6a35e8;color:#fff;font-weight:700}
+.x{position:absolute;right:10px;top:8px;border:0;background:none;font-size:22px;cursor:pointer}
+</style>`
+};
+
+const SEED={
+ refs:[
+  {id:uid(),name:"Glossier",url:"https://www.glossier.com",kind:"Competitor",page:"Product page",score:5,tags:["shade swatches","UGC grid"],note:"Shade picker shows the product on real skin tones. Reviews sit right under the price.",example:true},
+  {id:uid(),name:"Rare Beauty",url:"https://www.rarebeauty.com",kind:"Competitor",page:"Product page",score:4,tags:["how-to video","sticky ATC"],note:"Short how-to clip in the gallery; add-to-cart bar sticks on mobile scroll.",example:true},
+  {id:uid(),name:"Thrive Causemetics",url:"https://thrivecausemetics.com",kind:"Winning site",page:"Product page",score:5,tags:["before/after","guarantee"],note:"Lash before/after carousel plus a bold guarantee block near the buy button.",example:true},
+  {id:uid(),name:"Olaplex",url:"https://olaplex.com",kind:"Inspiration",page:"Landing page",score:3,tags:["science proof","comparison table"],note:"Clinical claims laid out as a clean comparison table with footnotes.",example:true}
+ ],
+ concepts:[
+  {id:uid(),name:"Before/after lash slider",page:"Product page",metric:"Conversion rate",hyp:"If shoppers see real lash results above the fold, more will add to cart, because proof beats claims.",stage:"Ideas",refs:"Thrive Causemetics",example:true},
+  {id:uid(),name:"Sticky bundle bar",page:"Product page",metric:"AOV",hyp:"If the 2-pack offer follows the scroll on mobile, AOV rises, because the deal stays visible.",stage:"In design",refs:"Rare Beauty",example:true},
+  {id:uid(),name:"Guarantee seal near price",page:"Product page",metric:"Add-to-cart rate",hyp:"If the 30-day guarantee sits beside the price, hesitation drops, because risk feels lower.",stage:"Review",refs:"Thrive Causemetics",example:true}
+ ],
+ items:[
+  {name:"Facelove guarantee",type:"Section",cat:"Guarantee & Trust",starter:"Facelove guarantee (Shopify section)",file:"sections/fl-guarantee.liquid",status:"Design review",tags:["guarantee","shopify section"],ctype:"section"},
+  {name:"Violet FAQ accordion",type:"Component",cat:"FAQ",starter:"FAQ accordion",file:"fl-faq.liquid",status:"Approved",tags:["accordion"]},
+  {name:"Quantity breaks",type:"Component",cat:"Product blocks",starter:"Quantity breaks",file:"fl-product-quantity-breaks.liquid",status:"Design review",tags:["bundle","AOV"]},
+  {name:"30-day guarantee",type:"Section",cat:"Guarantee & Trust",starter:"Guarantee badge",file:"fl-product-guarantee.liquid",status:"Draft",tags:["trust"]},
+  {name:"Rating bar",type:"Component",cat:"Product blocks",starter:"Rating bar",file:"fl-product-rating-bar.liquid",status:"Approved",tags:["social proof"]},
+  {name:"Countdown banner",type:"Section",cat:"Banners & Video",starter:"Countdown banner",file:"fl-countdown.liquid",status:"Draft",tags:["urgency"]},
+  {name:"First-order pop-up",type:"Pop-up",cat:"Pop-ups",starter:"Email pop-up",file:"fl-popup-email.liquid",status:"Draft",tags:["email capture"]}
+ ].map(x=>({id:uid(),name:x.name,type:x.type,cat:x.cat,code:STARTERS[x.starter],file:x.file,status:x.status,tags:x.tags,pages:["Product page"],reusable:true,date:today(),updated:today(),version:1,notes:"Example item.",example:true,ctype:x.ctype||"auto"}))
+};
+
+const KEY="facelove-studio-v2";
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){S=null}
+if(!S||!S.items){S=JSON.parse(JSON.stringify(SEED))}
+if(!S.kit)S.kit={status:"new",step:0,brandConfirmed:false,brand:{name:"Facelove",primary:"#6B3FA0",secondary:"#3B2056",bg:"#FFFFFF",text:"#2A1738",hfont:"Caprasimo",bfont:"Poppins",logo:null},theme:null,themeName:"",css:"",cssName:"",snippets:{}};
+if(!S.ui)S.ui={theme:"system",markers:true};
+let TH;try{TH=JSON.parse(localStorage.getItem(KEY+"-theme")||"null")}catch(e){TH=null}
+if(!TH||!TH.meta){TH={files:{},meta:{},sel:null,importedAt:null,name:"",needsSeed:true}}
+const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+
+let view="research", editingId=null, pagesSel=new Set(["Product page"]);
+const STAGES=["Ideas","Wireframe","In design","Review","Approved"];
+const STATUSES=["Draft","Design review","In build","QA","Launch review","Approved"];
+/* older saves used "Needs review" */
+S.items.forEach(i=>{if(i.status==="Needs review")i.status="Design review"});
+
+/* ---------- liquid ---------- */
+const PH="data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800"><rect width="800" height="800" fill="#efe8ff"/><path d="M300 520l90-120 70 90 50-60 90 90z" fill="#c9b5f5"/><circle cx="330" cy="330" r="40" fill="#c9b5f5"/></svg>');
+const kw=(args,k)=>{const a=args.find(x=>Array.isArray(x)&&x[0]===k);return a?a[1]:undefined};
+const imgSrc=v=>v&&typeof v==="object"?(v.src||v.url||PH):(typeof v==="string"&&v&&!/^shopify:/.test(v)?v:PH);
+let engine=null;
+const snipKey=n=>/\.liquid$/.test(n)?n:n+".liquid";
+const snipText=n=>{const k=snipKey(n);return (S.kit&&S.kit.snippets[k])||(TH.files["snippets/"+k])||null};
+const hasSnip=n=>snipText(n)!==null;
+const snipFS={sep:"/",dirname:()=>"",resolve:(root,file)=>snipKey(file),contains:()=>true,
+ existsSync:f=>hasSnip(f),exists:async f=>hasSnip(f),readFileSync:f=>prep(snipText(f)||""),readFile:async f=>prep(snipText(f)||"")};
+try{engine=new liquidjs.Liquid({cache:false,fs:snipFS,root:[""],extname:".liquid",relativeReference:false});
+ const money=v=>"$"+(Number(v||0)/100).toFixed(2);
+ const F={money,money_with_currency:v=>money(v)+" USD",money_without_trailing_zeros:v=>money(v).replace(/\.00$/,""),money_without_currency:v=>(Number(v||0)/100).toFixed(2),
+  img_url:v=>imgSrc(v),image_url:v=>imgSrc(v),product_img_url:v=>imgSrc(v),file_url:v=>v,asset_url:v=>v,asset_img_url:v=>PH,shopify_asset_url:v=>v,
+  image_tag:(src,...a)=>`<img src="${esc(src)}" alt="${esc(kw(a,"alt")||"")}" loading="lazy" style="max-width:100%;height:auto"${kw(a,"class")?` class="${esc(kw(a,"class"))}"`:""}>`,
+  img_tag:(src,alt)=>`<img src="${esc(src)}" alt="${esc(alt||"")}">`,
+  placeholder_svg_tag:(n,cls)=>`<svg class="${esc(cls||"placeholder-svg")}" viewBox="0 0 400 300" style="background:#efe8ff"><rect width="400" height="300" fill="#efe8ff"/></svg>`,
+  font_face:()=>"",font_url:()=>"",font_modify:v=>v,
+  stylesheet_tag:v=>`<link rel="stylesheet" href="${esc(v)}">`,script_tag:v=>`<script src="${esc(v)}"><\/script>`,
+  link_to:(t,u)=>`<a href="${esc(u||"#")}">${t}</a>`,handleize:v=>String(v||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""),handle:v=>String(v||"").toLowerCase().replace(/[^a-z0-9]+/g,"-"),
+  t:v=>String(v||"").split(".").pop().replace(/_/g," ").replace(/^\w/,c=>c.toUpperCase()),
+  color_to_rgb:v=>v,color_modify:v=>v,color_lighten:v=>v,color_darken:v=>v,color_brightness:()=>150,
+  within:v=>v,metafield_tag:v=>String(v??""),structured_data:()=>"",payment_type_svg_tag:()=>"",time_tag:v=>String(v||""),
+  inline_asset_content:()=>"",default_errors:()=>"",highlight:v=>v,pluralize:(n,s,p)=>Number(n)===1?s:p};
+ Object.entries(F).forEach(([k,f])=>engine.registerFilter(k,f));
+}catch(e){engine=null}
+const isLiquid=c=>/\{\{|\{%/.test(c);
+const SCHEMA_RE=/\{%-?\s*schema\s*-?%\}([\s\S]*?)\{%-?\s*endschema\s*-?%\}/;
+function parseSchema(c){const m=c.match(SCHEMA_RE);if(!m)return null;try{return JSON.parse(m[1])}catch(e){return {__err:"The {% schema %} block isn't valid JSON: "+e.message}}}
+function prep(c){return c.replace(new RegExp(SCHEMA_RE.source,"g"),"")
+ .replace(/\{%-?\s*stylesheet\s*-?%\}([\s\S]*?)\{%-?\s*endstylesheet\s*-?%\}/g,(m,x)=>"<style>{% raw %}"+x+"{% endraw %}</style>")
+ .replace(/\{%-?\s*javascript\s*-?%\}([\s\S]*?)\{%-?\s*endjavascript\s*-?%\}/g,(m,x)=>"<script>{% raw %}"+x+"{% endraw %}<\/script>")
+ .replace(/\{%-?\s*doc\s*-?%\}[\s\S]*?\{%-?\s*enddoc\s*-?%\}/g,"")
+ .replace(/\{%-?\s*content_for\s+[^%]*%\}/g,"<!-- theme blocks render here in Shopify -->")
+ .replace(/\{%-?\s*style\s*-?%\}/g,"<style>").replace(/\{%-?\s*endstyle\s*-?%\}/g,"</style>")
+ .replace(/\{%-?\s*form\b[^%]*%\}/g,"<form onsubmit=\"return false\">").replace(/\{%-?\s*endform\s*-?%\}/g,"</form>")
+ .replace(/\{%-?\s*(render|include|section|sections)\s+['"]([^'"]+)['"][^%]*%\}/g,(m,t,n)=>((t==="render"||t==="include")&&hasSnip(n))?m:`<!-- ${t} '${n}' is not available in the preview -->`)}
+/* Shopify section context from the schema */
+function fontObj(h){if(!h||typeof h!=="string")h="assistant_n4";const i=h.lastIndexOf("_"),f=i>0?h.slice(0,i):h,v=i>0?h.slice(i+1):"n4";
+ return {family:f.split("_").map(w=>w[0].toUpperCase()+w.slice(1)).join(" "),fallback_families:"sans-serif",weight:(parseInt(v.slice(1))||4)*100,style:v[0]==="i"?"italic":"normal",toString(){return this.family}}}
+function defVal(s){if(s.type==="font_picker")return s.default||"assistant_n4";if("default" in s)return s.default;
+ switch(s.type){case"checkbox":return false;case"url":return"#";case"range":case"number":return s.min??0;case"select":case"radio":return s.options&&s.options[0]?s.options[0].value:"";case"color_scheme":return"scheme-1";case"image_picker":case"video":case"product":case"collection":case"page":case"blog":case"article":case"link_list":return null;default:return""}}
+function blockDefaults(schema,type){const d=(schema.blocks||[]).find(x=>x.type===type);const o={};(d&&d.settings||[]).forEach(s=>{if(s.id)o[s.id]=defVal(s)});return o}
+function initState(schema){const settings={};(schema.settings||[]).forEach(s=>{if(s.id)settings[s.id]=defVal(s)});
+ const pr=(schema.presets&&schema.presets[0])||{};let pb=pr.blocks||[];if(!Array.isArray(pb))pb=Object.values(pb);
+ if(pr.settings)Object.assign(settings,pr.settings);
+ let blocks=pb.map(b=>({type:b.type,on:true,settings:Object.assign(blockDefaults(schema,b.type),b.settings||{})}));
+ if(!blocks.length)blocks=(schema.blocks||[]).filter(b=>b.type&&b.type[0]!=="@").map(b=>({type:b.type,on:true,settings:blockDefaults(schema,b.type)}));
+ return {settings,blocks}}
+function conv(defs,vals){const o={};Object.keys(vals).forEach(k=>{const d=defs.find(x=>x.id===k)||{};let v=vals[k];if(d.type==="font_picker")v=fontObj(v);o[k]=v});return o}
+function sectionCtx(schema,state,base){
+ const sec={id:"template--preview__main",settings:conv(schema.settings||[],state.settings),
+  blocks:state.blocks.filter(b=>b.on).map((b,i)=>{const d=(schema.blocks||[]).find(x=>x.type===b.type)||{};return {id:"block_"+(i+1),type:b.type,settings:conv(d.settings||[],b.settings),shopify_attributes:""}})};
+ sec.index=1;sec.location="template";
+ return Object.assign({},base,{section:sec,request:{design_mode:false,page_type:"product",locale:{iso_code:"en"}},settings:base.settings||{}})}
+function errPage(msg,lang){return `<div style="font-family:system-ui;padding:24px;color:#7a1d31;background:#fff2f4;border:1px solid #f3c3cd;border-radius:12px;margin:16px"><b style="font-size:15px">This ${esc(lang)} code didn't render</b><p style="margin:8px 0 0;font-family:ui-monospace,monospace;font-size:12.5px;white-space:pre-wrap">${esc(msg)}</p><p style="margin:10px 0 0;color:#6e6178;font-size:13px">Fix the line above and the preview updates on its own.</p></div>`}
+const CTYPES={auto:"Auto-detect",section:"Shopify section",block:"Shopify theme block",snippet:"Shopify snippet",liquid:"Liquid template",html:"HTML / CSS / JS",webflow:"Webflow embed",email:"Email HTML"};
+async function render(code,data,state,ctype){
+ ctype=ctype||"auto";
+ const raw=["html","webflow","email"].includes(ctype)||(ctype==="auto"&&!isLiquid(code));
+ if(raw)return {html:code,lang:ctype==="auto"?(/<script/i.test(code)?"HTML + JS":"HTML"):CTYPES[ctype]};
+ const useSchema=["auto","section","block"].includes(ctype);
+ const schema=useSchema?parseSchema(code):null;
+ const lang=ctype==="auto"?(schema?"Shopify section":"Liquid"):CTYPES[ctype];
+ if(!engine)return {html:errPage("The Liquid engine didn't load. Check your connection and reload.",lang),lang,err:"Liquid engine didn't load"};
+ if(schema&&schema.__err)return {html:errPage(schema.__err,lang),lang,err:schema.__err};
+ const ctx=schema?sectionCtx(schema,state||initState(schema),data):data;
+ try{return {html:await engine.parseAndRender(prep(code),ctx),lang,schema}}catch(e){const m=String(e.message||e).split("\n")[0];return {html:errPage(m,lang),lang,err:m}}
+}
+const q=n=>"'"+String(n||"").replace(/['\\<>]/g,"")+"'";
+const rgb=h=>{const x=hex(h).slice(1);return [0,2,4].map(i=>parseInt(x.substr(i,2),16)).join(",")};
+function themeVars(){const k=S.kit,b=k.brand;let hf=b.hfont,bf=b.bfont,hw=400,bw=400;
+ const vars=(c)=>`--color-background:${rgb(c.bg)};--color-foreground:${rgb(c.text)};--color-button:${rgb(c.btn)};--color-button-text:${rgb(c.btnText)};--gradient-background:${c.bg};background:${c.bg};color:${c.text};`;
+ let root={bg:b.bg,text:b.text,btn:b.primary,btnText:"#FFFFFF"},schemes="";
+ const t=k.theme;
+ if(t){if(t.hfont){hf=t.hfont.family;hw=t.hfont.weight}if(t.bfont){bf=t.bfont.family;bw=t.bfont.weight}
+  (t.schemes||[]).forEach((sc,i)=>{const c={bg:sc.background||b.bg,text:sc.text||b.text,btn:sc.button||b.primary,btnText:sc.button_label||"#FFFFFF"};if(i===0)root=c;schemes+=`.color-${sc.id}{${vars(c)}}`})}
+ const fams=[...new Set([hf,bf,b.hfont,b.bfont].filter(Boolean))];
+ const links=fams.map(f=>{const n=encodeURIComponent(f).replace(/%20/g,"+");return `<link rel=stylesheet href="https://fonts.googleapis.com/css2?family=${n}&display=swap"><link rel=stylesheet href="https://fonts.googleapis.com/css2?family=${n}:wght@400;600;700&display=swap">`}).join("");
+ const css=`:root{--font-heading-family:${q(hf)},Georgia,serif;--font-body-family:${q(bf)},Arial,sans-serif;--font-heading-weight:${hw};--font-body-weight:${bw};--font-heading-style:normal;--font-body-style:normal;--brand-primary:${b.primary};--brand-secondary:${b.secondary};${vars(root)}}body{margin:0;font-family:var(--font-body-family)}h1,h2,h3,h4{font-family:var(--font-heading-family)}${schemes}`;
+ const mark=S.ui.markers?`a[href="#"],a[href=""],a:not([href]).fl-g__button{outline:2px dashed #ff7aa2;outline-offset:3px;position:relative}a[href="#"]::after,a[href=""]::after{content:"Link not set";position:absolute;top:-11px;right:-8px;font:700 10px/1 system-ui;letter-spacing:.02em;background:#ff4f86;color:#fff;padding:3px 6px;border-radius:99px;white-space:nowrap;text-decoration:none;pointer-events:none}`:"";
+ return links+"<style>"+css+"</style>"+(k.css?"<style>"+k.css.replace(/<\/style/gi,"")+"</style>":"")+"<style>"+mark+"</style>"}
+const doc=h=>"<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"+themeVars()+h;
+function mock(){try{return JSON.parse($("#mockdata").value)}catch(e){return MOCK}}
+
+/* ---------- appearance ---------- */
+function applyTheme(){const t=S.ui.theme;if(t==="system")document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme",t);$$("#themesw button").forEach(b=>b.classList.toggle("on",b.dataset.t===t))}
+$("#themesw").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;S.ui.theme=b.dataset.t;persist();applyTheme()});
+applyTheme();
+/* ---------- navigation ---------- */
+function go(v){view=v;try{if(parent!==window)parent.postMessage({flView:v},location.origin)}catch(e){};$$(".view").forEach(s=>s.hidden=s.id!=="v-"+v);$$("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.view===v));renderPipeline();
+ if(v==="library")renderLib();if(v==="theme")renderTheme();if(v==="studio"){refresh();if(S.kit.status==="new")openSetup(0)}window.scrollTo({top:0})}
+$("#nav").addEventListener("click",e=>{const b=e.target.closest("button");if(b)go(b.dataset.view)});
+document.addEventListener("click",e=>{const g=e.target.closest("[data-go]");if(g){if(g.dataset.go==="studio")blank();go(g.dataset.go)}});
+
+function renderPipeline(){
+ const inProg=S.concepts.filter(c=>c.stage!=="Approved").length;
+ const appr=S.items.filter(i=>i.status==="Approved").length;
+ const data=[["research",S.refs.length,"References","Sites studied"],["concepts",inProg,"Concepts in play",S.concepts.filter(c=>c.stage==="Review").length+" waiting on review"],["studio",S.items.filter(i=>i.status==="Draft").length,"Drafts in studio","Open and keep building"],["library",S.items.length,"Saved designs",appr+" approved · "+S.items.filter(i=>i.reusable).length+" reusable"]];
+ $("#pipeline").innerHTML=data.map(d=>`<button class="stage ${d[0]===view?"on":""}" data-p="${d[0]}"><span class="n">${d[1]}</span><span class="l">${d[2]}</span><span class="d">${esc(d[3])}</span></button>`).join("");
+ $("#c-research").textContent=S.refs.length;$("#c-concepts").textContent=inProg;$("#c-library").textContent=S.items.length;
+}
+$("#pipeline").addEventListener("click",e=>{const b=e.target.closest(".stage");if(b)go(b.dataset.p)});
+
+/* ---------- research ---------- */
+const HUES=["#6a35e8","#ff7aa2","#2a1530","#b35ad6","#e2557d","#4a2a8a"];
+function renderRefs(){
+ const q=$("#rq").value.toLowerCase(),k=$("#rkind").value;
+ const list=S.refs.filter(r=>(!k||r.kind===k)&&(!q||(r.name+" "+r.note+" "+r.tags.join(" ")).toLowerCase().includes(q)));
+ $("#refGrid").innerHTML=list.length?list.map((r,i)=>`<article class="card">
+  <div class="swatch" style="background:linear-gradient(135deg,${HUES[i%6]},${HUES[(i+1)%6]})">${esc(r.name)}</div>
+  <div class="body"><div class="meta"><span class="pill ${r.kind==="Competitor"?"review":r.kind==="Winning site"?"approved":"reuse"}">${esc(r.kind)}</span><span class="pill">${esc(r.page)}</span>${r.example?'<span class="example">Example</span>':""}</div>
+  <p>${esc(r.note)}</p><div class="meta">${r.tags.map(t=>`<span class="pill">#${esc(t)}</span>`).join("")}</div>
+  <div class="row"><span class="score">Steal-worthy ${r.score}/5<i><b style="width:${r.score*20}%"></b></i></span>
+  <span style="display:flex;gap:6px">${r.url?`<a class="btn sm" href="${esc(r.url)}" target="_blank" rel="noopener">Visit ↗</a>`:""}<button class="btn sm" data-toconcept="${r.id}">→ Concept</button></span></div></div></article>`).join(""):'<div class="empty">No references match. Add a site you want to learn from.</div>';
+}
+$("#rq").oninput=renderRefs;$("#rkind").onchange=renderRefs;
+$("#addRef").onclick=()=>{$("#refForm").hidden=false;$("#rf-name").focus()};
+$("#rfCancel").onclick=()=>$("#refForm").hidden=true;
+$("#rfSave").onclick=()=>{const n=$("#rf-name").value.trim();if(!n){toast("Add a site or brand name first");return}
+ S.refs.unshift({id:uid(),name:n,url:$("#rf-url").value.trim(),kind:$("#rf-kind").value,page:$("#rf-page").value,score:Math.min(5,Math.max(1,+$("#rf-score").value||3)),tags:$("#rf-tags").value.split(",").map(s=>s.trim()).filter(Boolean),note:$("#rf-note").value.trim()});
+ persist();$("#refForm").hidden=true;["#rf-name","#rf-url","#rf-tags","#rf-note"].forEach(s=>$(s).value="");renderRefs();renderPipeline();toast("Reference saved")};
+$("#refGrid").addEventListener("click",e=>{const b=e.target.closest("[data-toconcept]");if(!b)return;const r=S.refs.find(x=>x.id===b.dataset.toconcept);
+ S.concepts.unshift({id:uid(),name:"Idea from "+r.name,page:r.page,metric:"Conversion rate",hyp:"If we adapt "+(r.tags[0]||"this pattern")+" from "+r.name+", then…",stage:"Ideas",refs:r.name});persist();renderBoard();renderPipeline();toast("Added to Ideas");go("concepts")});
+
+/* ---------- concepts ---------- */
+function renderBoard(){
+ $("#board").innerHTML=STAGES.map((st,si)=>{const cs=S.concepts.filter(c=>c.stage===st);
+  return `<div class="col"><h3>${st}<span class="pill">${cs.length}</span></h3>${cs.map(c=>`<div class="ticket">
+   <b>${esc(c.name)}</b><div class="meta" style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill">${esc(c.page)}</span><span class="pill reuse">${esc(c.metric)}</span></div>
+   <div class="hyp">${esc(c.hyp)}</div>${c.refs?`<div class="refs">Refs: ${esc(c.refs)}</div>`:""}
+   <div class="acts">${si>0?`<button class="btn sm" data-mv="${c.id}" data-d="-1">←</button>`:""}${si<STAGES.length-1?`<button class="btn sm" data-mv="${c.id}" data-d="1">Move →</button>`:""}<button class="btn sm" data-build="${c.id}">${st==="Ideas"?"Start wireframe":st==="Wireframe"?"Open wireframe":"Build"}</button></div></div>`).join("")||'<div class="example" style="padding:8px">Nothing here yet</div>'}</div>`}).join("");
+}
+$("#board").addEventListener("click",e=>{const m=e.target.closest("[data-mv]");if(m){const c=S.concepts.find(x=>x.id===m.dataset.mv);c.stage=STAGES[Math.max(0,Math.min(STAGES.length-1,STAGES.indexOf(c.stage)+(+m.dataset.d)))];persist();renderBoard();renderPipeline();return}
+ const b=e.target.closest("[data-build]");if(b){const c=S.concepts.find(x=>x.id===b.dataset.build);blank();$("#s-name").value=c.name;$("#s-notes").value="Concept: "+c.hyp;if(c.stage==="Ideas"){c.stage="Wireframe";persist();toast("Moved to Wireframe: agree sections and text room with the Copywriter")}go("studio")}});
+$("#addCon").onclick=()=>{$("#conForm").hidden=false;$("#cf-name").focus()};
+$("#cfCancel").onclick=()=>$("#conForm").hidden=true;
+$("#cfSave").onclick=()=>{const n=$("#cf-name").value.trim();if(!n){toast("Name the concept first");return}
+ S.concepts.unshift({id:uid(),name:n,page:$("#cf-page").value,metric:$("#cf-metric").value,hyp:$("#cf-hyp").value.trim()||"Add a hypothesis",stage:"Ideas",refs:""});persist();$("#conForm").hidden=true;$("#cf-name").value="";$("#cf-hyp").value="";renderBoard();renderPipeline();toast("Concept added")};
+
+/* ---------- studio ---------- */
+$("#s-cat").innerHTML=CATS.map(c=>`<option>${c}</option>`).join("");
+$("#lcat").innerHTML='<option value="">Every category</option>'+CATS.map(c=>`<option>${c}</option>`).join("");
+$("#starter").innerHTML='<option value="">Load a starter…</option>'+Object.keys(STARTERS).map(k=>`<option>${k}</option>`).join("");
+function drawPages(){$("#s-pages").innerHTML=PAGES.map(p=>`<button type="button" class="chip ${pagesSel.has(p)?"on":""}" data-pg="${p}">${p}</button>`).join("")}
+$("#s-pages").addEventListener("click",e=>{const b=e.target.closest("[data-pg]");if(!b)return;pagesSel.has(b.dataset.pg)?pagesSel.delete(b.dataset.pg):pagesSel.add(b.dataset.pg);drawPages()});
+$("#mockdata").value=JSON.stringify(MOCK,null,2);
+$("#ctype").innerHTML=Object.entries(CTYPES).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
+$("#etabs").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;$$("#etabs button").forEach(x=>x.classList.toggle("on",x===b));$$(".epane").forEach(p=>p.hidden=p.id!==b.dataset.p)});
+$("#ctype").onchange=()=>{secKey=null;refresh();if($("#ctype").value==="section"&&!$("#s-file").value)$("#s-file").placeholder="sections/fl-my-section.liquid"};
+/* ---- theme-editor style settings ---- */
+let curSchema=null,secState=null,secKey=null,pendingState=null;
+function syncSchema(){const code=$("#code").value,ct=$("#ctype").value;const m=["auto","section","block"].includes(ct)?code.match(SCHEMA_RE):null;const key=m?m[1]:"";
+ if(key===secKey)return;secKey=key;const sc=key?parseSchema(code):null;curSchema=sc&&!sc.__err?sc:null;
+ const prev=secState,prevName=prev&&prev.__name;
+ if(curSchema){
+  if(pendingState){secState=pendingState;const fresh=initState(curSchema);Object.keys(fresh.settings).forEach(k=>{if(!(k in secState.settings))secState.settings[k]=fresh.settings[k]})}
+  else{secState=initState(curSchema);
+   /* editing the schema of the same section keeps the values you already set */
+   if(prev&&prevName===(curSchema.name||"")){Object.keys(secState.settings).forEach(k=>{if(k in prev.settings)secState.settings[k]=prev.settings[k]});secState.blocks=prev.blocks.filter(b=>(curSchema.blocks||[]).some(d=>d.type===b.type))}}
+  secState.__name=curSchema.name||"";
+ }else secState=null;
+ const tab=$('#etabs [data-p="paneSettings"]');tab.textContent=curSchema?"Settings ("+((curSchema.settings||[]).filter(x=>x.id).length)+")":"Settings";
+ pendingState=null;drawSettings()}
+const hex=v=>/^#[0-9a-f]{6}$/i.test(v||"")?v:(/^#[0-9a-f]{3}$/i.test(v||"")?"#"+v.slice(1).split("").map(c=>c+c).join(""):"#000000");
+const FONTS=["assistant_n4","assistant_n7","poppins_n4","poppins_n6","caprasimo_n4","playfair_display_n7","dm_sans_n4","montserrat_n7","lora_n4","inter_n4"];
+function control(s,val,path){if(!s.type)return"";
+ if(s.type==="header")return `<div class="sethead">${esc(s.content||"")}</div>`;
+ if(s.type==="paragraph")return `<div class="note">${esc(s.content||"")}</div>`;
+ if(!s.id)return"";const lab=esc(s.label||s.id),p=`data-path="${path}" data-kind="${s.type}"`;
+ switch(s.type){
+  case"checkbox":return `<label class="set"><span class="chk"><input type="checkbox" ${p} ${val?"checked":""}>${lab}</span></label>`;
+  case"select":case"radio":return `<label class="set"><span>${lab}</span><select ${p}>${(s.options||[]).map(o=>`<option value="${esc(o.value)}" ${o.value==val?"selected":""}>${esc(o.label||o.value)}</option>`).join("")}</select></label>`;
+  case"range":return `<label class="set"><span>${lab}</span><span class="rng"><input type="range" ${p} min="${s.min??0}" max="${s.max??100}" step="${s.step??1}" value="${esc(val)}"><output>${esc(val)}${esc(s.unit||"")}</output></span></label>`;
+  case"number":return `<label class="set"><span>${lab}</span><input type="text" inputmode="decimal" ${p} value="${esc(val??"")}"></label>`;
+  case"color":case"color_background":return `<label class="set"><span>${lab}</span><span class="clr"><input type="color" ${p} value="${hex(val)}"><input type="text" ${p} value="${esc(val||"")}"></span></label>`;
+  case"richtext":case"textarea":case"html":case"liquid":return `<label class="set"><span>${lab}</span><textarea ${p}>${esc(val||"")}</textarea></label>`;
+  case"font_picker":{const opts=FONTS.includes(val)?FONTS:[val,...FONTS];return `<label class="set"><span>${lab}</span><select ${p}>${opts.map(f=>`<option value="${f}" ${f===val?"selected":""}>${fontObj(f).family} ${fontObj(f).weight}${fontObj(f).style==="italic"?" italic":""}</option>`).join("")}</select></label>`}
+  case"image_picker":return `<label class="set"><span>${lab}</span><input type="file" accept="image/*" ${p}>${val?`<span class="chk">Image loaded <button type="button" class="btn sm" data-clear="${path}">Remove</button></span>`:'<span class="example">Upload to preview your own image</span>'}</label>`;
+  case"color_scheme":return `<label class="set"><span>${lab}</span><select ${p}>${["scheme-1","scheme-2","scheme-3","scheme-4"].map(o=>`<option ${o===val?"selected":""}>${o}</option>`).join("")}</select></label>`;
+  default:return `<label class="set"><span>${lab}</span><input type="text" ${p} value="${esc(val??"")}"></label>`}}
+function drawSettings(){const el=$("#paneSettings");const openSet=new Set($$("#paneSettings details[open]").map(d=>d.dataset.i));
+ if(!curSchema){el.innerHTML=`<div id="needsInPanel">${needsHtml()}</div><div class="note">No <code>{% schema %}</code> found. When you paste a Shopify section or theme block, its settings and blocks appear here, just like the theme editor, and changes update the preview live.</div>`;return}
+ const sc=curSchema,st=secState;
+ const addable=(sc.blocks||[]).filter(b=>b.type&&b.type[0]!=="@");
+ el.innerHTML=`<div class="note"><b>${esc(sc.name||"Section")}</b> · values start from the schema defaults and first preset. Changes here are saved with the design.</div>
+  <div id="needsInPanel">${needsHtml()}</div>
+  <h4>Section settings</h4>${(sc.settings||[]).map(s=>control(s,st.settings[s.id],"s."+s.id)).join("")}
+  ${addable.length?`<h4>Blocks (${st.blocks.filter(b=>b.on).length} shown)</h4>`+st.blocks.map((b,i)=>{const d=addable.find(x=>x.type===b.type)||{};const title=b.settings.title||b.settings.text||b.settings.label||"";
+   return `<details class="blk ${b.on?"":"off"}" data-i="${i}" ${openSet.has(String(i))?"open":""}><summary><span class="grow">${esc(d.name||b.type)}${title?` <span class="example">· ${esc(String(title).replace(/<[^>]+>/g,"").slice(0,28))}</span>`:""}</span>${b.on?"":'<span class="pill">Hidden</span>'}</summary>
+   <div class="inner"><div class="chk" style="gap:8px;flex-wrap:wrap"><label class="chk"><input type="checkbox" data-on="${i}" ${b.on?"checked":""}>Show this block</label><span style="flex:1"></span><button type="button" class="btn sm" data-up="${i}">Move up</button><button type="button" class="btn sm danger" data-rm="${i}">Remove</button></div>${(d.settings||[]).map(s=>control(s,b.settings[s.id],"b."+i+"."+s.id)).join("")||'<span class="example">This block has no settings.</span>'}</div></details>`}).join("")+
+   `<div class="chk" style="gap:8px"><select id="addBlockType">${addable.map(b=>`<option value="${esc(b.type)}">${esc(b.name||b.type)}</option>`).join("")}</select><button type="button" class="btn sm" id="addBlock">+ Add block</button></div>`:""}
+  <button type="button" class="btn sm" id="resetSec">Reset to schema defaults</button>`}
+function setPath(path,val){const parts=path.split(".");if(parts[0]==="s")secState.settings[parts[1]]=val;else secState.blocks[+parts[1]].settings[parts.slice(2).join(".")]=val}
+const ps=$("#paneSettings");
+ps.addEventListener("input",e=>{const x=e.target;if(!x.dataset.path||x.type==="file")return;let v=x.value;
+ if(x.dataset.kind==="range"){v=Number(v);const o=x.parentNode.querySelector("output");if(o)o.textContent=v+(o.textContent.replace(/^[-\d.]+/,""))}
+ if(x.dataset.kind==="number")v=v===""?null:Number(v);
+ if(x.type==="checkbox")v=x.checked;
+ if(x.type==="color"){const tx=x.parentNode.querySelector('input[type=text]');if(tx)tx.value=v}
+ if((x.dataset.kind==="color"||x.dataset.kind==="color_background")&&x.type==="text"){const c=x.parentNode.querySelector('input[type=color]');if(c&&/^#[0-9a-f]{6}$/i.test(v))c.value=v}
+ setPath(x.dataset.path,v);clearTimeout(t);t=setTimeout(refresh,150)});
+ps.addEventListener("change",e=>{const x=e.target;
+ if(x.type==="file"&&x.files[0]){const fr=new FileReader();fr.onload=()=>{setPath(x.dataset.path,{src:fr.result,alt:"",width:1600,height:1600,aspect_ratio:1});drawSettings();refresh()};fr.readAsDataURL(x.files[0]);return}
+ if(x.dataset.on!==undefined){secState.blocks[+x.dataset.on].on=x.checked;drawSettings();refresh()}});
+ps.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+ if(b.dataset.clear){setPath(b.dataset.clear,null);drawSettings();refresh()}
+ else if(b.dataset.rm!==undefined){e.preventDefault();secState.blocks.splice(+b.dataset.rm,1);drawSettings();refresh()}
+ else if(b.dataset.up!==undefined){e.preventDefault();const i=+b.dataset.up;if(i>0){const a=secState.blocks;[a[i-1],a[i]]=[a[i],a[i-1]];drawSettings();refresh()}}
+ else if(b.id==="addBlock"){const ty=$("#addBlockType").value;secState.blocks.push({type:ty,on:true,settings:blockDefaults(curSchema,ty)});drawSettings();refresh()}
+ else if(b.id==="resetSec"){secState=initState(curSchema);drawSettings();refresh()}});
+/* ---- what the preview still needs from you ---- */
+const isShopify=()=>["auto","section","block","snippet","liquid"].includes($("#ctype").value)&&isLiquid($("#code").value);
+function needsList(){const out=[],code=$("#code").value,k=S.kit;if(!isShopify())return out;
+ const sc=curSchema,st=secState,secName=sc&&sc.name||"this section";
+ const linkHelp="Paste a store path, for example <b>/products/everlove-mascara</b> or <b>/pages/guarantee</b>. Find it in Shopify admin: <b>Products</b> → open the product → copy the end of its URL, or <b>Online Store → Pages</b>.";
+ if(sc&&st){
+  (sc.settings||[]).forEach(s=>{if(s.type==="url"&&(!st.settings[s.id]||st.settings[s.id]==="#"))out.push({t:`${s.label||s.id}: link not set`,w:`Works here as a placeholder; Shopify hides it until it has a real link. Set it in <b>Online Store → Themes → Customize → ${esc(secName)} → ${esc(s.label||s.id)}</b>. ${linkHelp}`})});
+  st.blocks.forEach((b,i)=>{if(!b.on)return;const d=(sc.blocks||[]).find(x=>x.type===b.type)||{};(d.settings||[]).forEach(s=>{const v=b.settings[s.id];
+   if(s.type==="url"&&(!v||v==="#"))out.push({t:`${d.name||b.type} → ${s.label||s.id}: link not set`,w:`The button stays clickable in this preview but goes nowhere. In Shopify it stays hidden until you set <b>Customize → ${esc(secName)} → ${esc(d.name||b.type)} → ${esc(s.label||s.id)}</b>. ${linkHelp}`});
+   if(s.type==="image_picker"&&!v&&b.settings.visual==="image")out.push({t:`${d.name||b.type} → ${s.label||s.id}: no image`,w:"Upload one in the Settings tab to preview it. In Shopify, pick it from <b>Content → Files</b> or upload in the theme editor.",o:1})})});
+  (sc.settings||[]).forEach(s=>{if(s.type==="image_picker"&&!st.settings[s.id])out.push({t:`${s.label||s.id}: no image`,w:"Optional. The section falls back to its built-in visual. Upload in the Settings tab to preview your own.",o:1})});
+  if((sc.settings||[]).some(s=>s.type==="color_scheme")&&!k.theme)out.push({t:"Theme color schemes not loaded",w:"Settings that say <b>Theme colors</b> use your brand colors here as a stand-in. Add <b>config/settings_data.json</b> in Theme setup for the exact schemes.",o:1});
+ }
+ const refs=[...code.matchAll(/\{%-?\s*(?:render|include)\s+['"]([^'"]+)['"]/g)].map(m=>m[1]);
+ [...new Set(refs)].filter(n=>!hasSnip(n)).forEach(n=>out.push({t:`Snippet ${snipKey(n)} missing`,w:`This part is left out of the preview. Add it in Theme setup → Snippets. Find it in <b>Online Store → Themes → ⋯ → Edit code → snippets/${esc(snipKey(n))}</b>.`}));
+ return out}
+function drawNeeds(){const n=needsList(),bar=$("#needbar");const req=n.filter(x=>!x.o).length;
+ if(!n.length){bar.hidden=true}else{bar.hidden=false;bar.innerHTML=`<b>${req?req+" item"+(req>1?"s":"")+" need your input":"Preview is ready"}</b><span class="example">${n.length-req?(n.length-req)+" optional":""}</span><span style="flex:1"></span><button class="btn sm" id="seeNeeds">See what to do</button>`;
+  $("#seeNeeds").onclick=()=>{$('#etabs [data-p="paneSettings"]').click();$("#paneSettings").scrollTop=0}}
+ return n}
+function needsHtml(){const n=needsList();if(!n.length)return"";return `<div class="needs"><h5>Needs from you (${n.length})</h5>${n.map(x=>`<div class="need ${x.o?"opt":""}"><b>${esc(x.t)}</b><div class="w">${x.w}</div></div>`).join("")}</div>`}
+/* ---- theme match score ---- */
+function kitParts(){const k=S.kit;return [k.brandConfirmed,!!(k.theme||k.css),Object.keys(k.snippets).length>0]}
+function drawMatch(){const p=kitParts(),n=p.filter(Boolean).length;$("#matchBtn").innerHTML=`<i>${p.map(x=>`<b class="${x?"on":""}"></b>`).join("")}</i>Theme match ${n}/3 · ${["Basic","Fair","Good","Close"][n]}`}
+$("#matchBtn").onclick=()=>openSetup(S.kit.brandConfirmed?(S.kit.theme||S.kit.css?2:1):0);
+/* ---- setup wizard ---- */
+let wstep=0;
+function openSetup(step){wstep=step||0;drawSetup()}
+function closeSetup(){$("#modalRoot").innerHTML="";drawMatch();refresh()}
+function drawSetup(){const k=S.kit,b=k.brand,p=kitParts();
+ const names=["Brand basics","Theme files","Snippets"];
+ const body=[
+ `<p class="sub">Your brand fills in anything a section borrows from the theme: colors, fonts and the logo.</p>
+  <div class="form" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+   <div class="field"><label for="k-name">Store name</label><input id="k-name" value="${esc(b.name)}"></div>
+   <div class="field"><label for="k-logo">Logo</label><input type="file" id="k-logo" accept="image/*">${b.logo?`<img class="logo-prev" src="${b.logo}" alt="Current logo">`:""}</div>
+   ${[["primary","Primary (buttons, accents)"],["secondary","Secondary (headings, dark areas)"],["bg","Page background"],["text","Body text"]].map(([id,l])=>`<div class="field"><label for="k-${id}">${l}</label><div class="clr set"><span class="clr"><input type="color" id="k-${id}" value="${hex(b[id])}"><input type="text" data-mirror="k-${id}" value="${esc(b[id])}"></span></div></div>`).join("")}
+   <div class="field"><label for="k-hfont">Heading font (Google Fonts name)</label><input id="k-hfont" value="${esc(b.hfont)}"></div>
+   <div class="field"><label for="k-bfont">Body font (Google Fonts name)</label><input id="k-bfont" value="${esc(b.bfont)}"></div>
+  </div>
+  <div class="where">Where to find these: <b>Shopify admin → Settings → Brand</b> has your logo and colors. Fonts are in <b>Online Store → Themes → Customize → Theme settings → Typography</b>.${k.brandConfirmed?"":" These start filled in from your Facelove guarantee section, so check them and save."}</div>`,
+ `<p class="sub">These two files make the preview use your theme's real color schemes, fonts and base styles.</p>
+  <div class="field"><label for="k-sd">config/settings_data.json</label><input type="file" id="k-sd" accept=".json,application/json">${k.theme?`<span class="found">✓ ${esc(k.themeName)}: ${k.theme.schemes.length} color schemes${k.theme.hfont?", heading font "+esc(k.theme.hfont.family):""}</span>`:""}</div>
+  <div class="field"><label for="k-css">Theme stylesheet (assets/base.css or theme.css)</label><input type="file" id="k-css" accept=".css,text/css">${k.css?`<span class="found">✓ ${esc(k.cssName)} loaded (${Math.round(k.css.length/1024)} KB)</span>`:""}</div>
+  <div class="where">Where to find them: <b>Online Store → Themes</b> → on your live theme click <b>⋯ → Edit code</b>. Open <b>config/settings_data.json</b> and <b>assets/base.css</b> (Dawn-based themes) or <b>assets/theme.css</b>, then copy each into a file and upload it. You can also use <b>⋯ → Download theme file</b> to get everything as a zip by email.</div>`,
+ `<p class="sub">Add the snippets your sections pull in with <code>{% render %}</code>. Without them, those parts are left out of the preview.</p>
+  <div class="field"><label for="k-snips">Snippet files (.liquid, choose several)</label><input type="file" id="k-snips" accept=".liquid,text/plain" multiple></div>
+  ${Object.keys(k.snippets).length?`<div class="chips">${Object.keys(k.snippets).map(n=>`<span class="pill approved">${esc(n)} <button class="btn sm ghost" style="padding:0 2px" data-rmsnip="${esc(n)}" aria-label="Remove ${esc(n)}">✕</button></span>`).join("")}</div>`:""}
+  ${(()=>{const refs=[...new Set([...$("#code").value.matchAll(/\{%-?\s*(?:render|include)\s+['"]([^'"]+)['"]/g)].map(m=>snipKey(m[1])))];return refs.length?`<div class="note">The code in the studio uses: ${refs.map(r=>`<b>${esc(r)}</b> ${hasSnip(r)?"✓":"(missing)"}`).join(", ")}</div>`:'<div class="note">The code in the studio right now doesn\'t render any snippets, so you can skip this step.</div>'})()}
+  <div class="where">Where to find them: <b>Online Store → Themes → ⋯ → Edit code → Snippets</b>. Only add the ones your sections render.</div>`][wstep];
+ $("#modalRoot").innerHTML=`<div class="modalwrap"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="setupTitle">
+  <header><div class="eyebrow">Theme setup · step ${wstep+1} of 3</div><h2 id="setupTitle" style="font-size:22px;margin-top:4px">${names[wstep]}</h2>
+  <div class="steps">${names.map((n,i)=>`<span class="${i===wstep?"on":p[i]?"done":""}">${p[i]?"✓ ":""}${n}</span>`).join("")}</div></header>
+  <div class="mbody">${body}</div>
+  <footer><button class="btn ghost" id="wSkipAll">Proceed without setup</button><span style="flex:1"></span>${wstep>0?'<button class="btn" id="wBack">Back</button>':""}<button class="btn" id="wSkip">Skip this step</button><button class="btn primary" id="wNext">${wstep===2?"Finish":"Save and continue"}</button></footer></div></div>`;
+ $$("#modalRoot [data-mirror]").forEach(tx=>{const c=$("#"+tx.dataset.mirror);c.oninput=()=>tx.value=c.value;tx.oninput=()=>{if(/^#[0-9a-f]{6}$/i.test(tx.value))c.value=tx.value}});
+ const lg=$("#k-logo");if(lg)lg.onchange=()=>{const f=lg.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{b.logo=r.result;persist();toast("Logo added")};r.readAsDataURL(f)};
+ const sd=$("#k-sd");if(sd)sd.onchange=()=>{const f=sd.files[0];if(!f)return;f.text().then(txt=>{try{k.theme=parseSettingsData(txt);k.themeName=f.name;persist();drawSetup();toast("Theme settings loaded")}catch(e){toast("That file isn't a valid settings_data.json")}})};
+ const cs=$("#k-css");if(cs)cs.onchange=()=>{const f=cs.files[0];if(!f)return;f.text().then(txt=>{k.css=txt;k.cssName=f.name;try{persist()}catch(e){}drawSetup();toast("Stylesheet loaded")})};
+ const sn=$("#k-snips");if(sn)sn.onchange=()=>{Promise.all([...sn.files].map(f=>f.text().then(t=>[f.name,t]))).then(list=>{list.forEach(([n,t])=>k.snippets[snipKey(n)]=t);persist();drawSetup();toast(list.length+" snippet"+(list.length>1?"s":"")+" added")})};
+ $$("#modalRoot [data-rmsnip]").forEach(x=>x.onclick=()=>{delete k.snippets[x.dataset.rmsnip];persist();drawSetup()});
+ $("#wSkipAll").onclick=()=>{if(k.status==="new")k.status="skipped";persist();closeSetup();toast("You can finish setup anytime from Theme match")};
+ $("#wSkip").onclick=()=>{if(wstep<2){wstep++;drawSetup()}else{if(k.status==="new")k.status="skipped";persist();closeSetup()}};
+ if($("#wBack"))$("#wBack").onclick=()=>{wstep--;drawSetup()};
+ $("#wNext").onclick=()=>{if(wstep===0){Object.assign(b,{name:$("#k-name").value.trim()||b.name,primary:$("#k-primary").value,secondary:$("#k-secondary").value,bg:$("#k-bg").value,text:$("#k-text").value,hfont:$("#k-hfont").value.trim(),bfont:$("#k-bfont").value.trim()});k.brandConfirmed=true}
+  persist();if(wstep<2){wstep++;drawSetup()}else{k.status="done";persist();closeSetup();toast("Theme setup saved")}};
+}
+function parseSettingsData(txt){const d=JSON.parse(txt.replace(/^\s*\/\*[\s\S]*?\*\//,""));let cur=d.current;if(typeof cur==="string")cur=(d.presets||{})[cur]||{};cur=cur||{};
+ const sch=cur.color_schemes||{};const schemes=Object.keys(sch).map(id=>Object.assign({id},(sch[id]||{}).settings||{}));
+ return {schemes,hfont:cur.type_header_font?fontObj(cur.type_header_font):null,bfont:cur.type_body_font?fontObj(cur.type_body_font):null}}
+$("#markers").checked=S.ui.markers!==false;$("#markers").onchange=e=>{S.ui.markers=e.target.checked;persist();refresh()};
+let t=null;
+async function refresh(){syncSchema();const r=await render($("#code").value,mock(),secState,$("#ctype").value);$("#lang").textContent=r.lang;
+ const st=$("#status");st.className="status"+(r.err?" err":"");st.innerHTML=r.err?esc(r.err):'<span class="dot"></span>Live · updated '+new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit",second:"2-digit"});
+ $("#preview").srcdoc=doc(r.html);drawNeeds();const nb=$("#needsInPanel");if(nb)nb.outerHTML='<div id="needsInPanel">'+needsHtml()+'</div>'}
+$("#code").addEventListener("input",()=>{clearTimeout(t);t=setTimeout(refresh,300)});
+$("#mockdata").addEventListener("input",()=>{clearTimeout(t);t=setTimeout(refresh,400)});
+$("#code").addEventListener("keydown",e=>{if(e.key==="Tab"){e.preventDefault();const a=e.target,s=a.selectionStart;a.setRangeText("  ",s,a.selectionEnd,"end");a.dispatchEvent(new Event("input"))}});
+$("#reload").onclick=refresh;
+$("#device").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;$$("#device button").forEach(x=>x.classList.toggle("on",x===b));$("#preview").style.width=b.dataset.w});
+$("#starter").onchange=e=>{const k=e.target.value;if(!k)return;$("#code").value=STARTERS[k];secKey=null;if(!$("#s-name").value)$("#s-name").value=k;e.target.value="";refresh()};
+$("#fmt").onclick=()=>{$("#code").value=$("#code").value.replace(/[ \t]+$/gm,"").replace(/\n{3,}/g,"\n\n").trim()+"\n";refresh()};
+$("#copyCode").onclick=e=>copy($("#code").value);
+function blank(){editingId=null;secKey=null;pendingState=null;$("#ctype").value="auto";$("#code").value="<section class=\"hero\">\n  <h1>{{ product.title }}</h1>\n  <p>Now {{ product.price | money }}</p>\n</section>\n<style>\n.hero{font-family:system-ui;padding:40px 20px;text-align:center;background:#f5f0ff;color:#2a1530}\n</style>\n";
+ ["#s-name","#s-file","#s-tags","#s-notes"].forEach(s=>$(s).value="");$("#s-type").value="Component";$("#s-status").value="Draft";$("#s-date").value=today();$("#s-reuse").checked=true;pagesSel=new Set(["Product page"]);drawPages();
+ $("#editing").textContent="New design";$("#studioTitle").textContent="Build and preview"}
+$("#newCode").onclick=()=>{blank();refresh()};
+function openInStudio(it){editingId=it.id;$("#code").value=it.code;$("#ctype").value=it.ctype||"auto";secKey=null;pendingState=it.state?JSON.parse(JSON.stringify(it.state)):null;$("#s-name").value=it.name;$("#s-type").value=it.type;$("#s-cat").value=it.cat;$("#s-status").value=it.status;$("#s-file").value=it.file||"";$("#s-tags").value=(it.tags||[]).join(", ");$("#s-notes").value=it.notes||"";$("#s-date").value=it.date;$("#s-reuse").checked=!!it.reusable;pagesSel=new Set(it.pages||[]);drawPages();
+ $("#editing").textContent="Editing v"+it.version+" · last saved "+fmtDate(it.updated);$("#studioTitle").textContent=it.name;go("studio")}
+function collect(){return {name:$("#s-name").value.trim(),type:$("#s-type").value,cat:$("#s-cat").value,status:$("#s-status").value,file:$("#s-file").value.trim(),tags:$("#s-tags").value.split(",").map(s=>s.trim()).filter(Boolean),notes:$("#s-notes").value.trim(),date:$("#s-date").value||today(),reusable:$("#s-reuse").checked,pages:[...pagesSel],code:$("#code").value,ctype:$("#ctype").value,state:secState?JSON.parse(JSON.stringify(secState)):null}}
+function save(asNew){const d=collect();if(!d.name){toast("Give the design a name first");$("#s-name").focus();return}
+ const ex=!asNew&&editingId&&S.items.find(i=>i.id===editingId);
+ if(ex){Object.assign(ex,d,{updated:today(),version:ex.version+1,example:false});toast("Saved · v"+ex.version)}
+ else{const it=Object.assign({id:uid(),version:1,updated:today()},d);S.items.unshift(it);editingId=it.id;toast("Saved to library")}
+ persist();const cur=S.items.find(i=>i.id===editingId);$("#editing").textContent="Editing v"+cur.version+" · last saved "+fmtDate(cur.updated);$("#studioTitle").textContent=cur.name;renderPipeline()}
+$("#save").onclick=()=>save(false);$("#saveCopy").onclick=()=>save(true);
+
+/* ---------- library ---------- */
+const pillFor=s=>s==="Approved"?"approved":s==="Draft"?"draft":(s==="Design review"||s==="Launch review")?"review":"reuse";
+async function thumb(frame,it){const r=await render(it.code,MOCK,it.state,it.ctype);frame.srcdoc=doc(r.html)}
+function renderLib(){
+ const q=$("#lq").value.toLowerCase(),ty=$("#ltype").value,ca=$("#lcat").value,st=$("#lstatus").value,ru=$("#lreuse").checked;
+ const list=S.items.filter(i=>(!ty||i.type===ty)&&(!ca||i.cat===ca)&&(!st||i.status===st)&&(!ru||i.reusable)&&(!q||(i.name+" "+i.file+" "+(i.tags||[]).join(" ")).toLowerCase().includes(q)));
+ $("#libGrid").innerHTML=list.length?list.map(i=>`<button class="card libcard" data-open="${i.id}">
+  <div class="thumb"><span class="pill reuse type">${esc(i.type)}</span><iframe sandbox="allow-scripts" tabindex="-1" aria-hidden="true" data-th="${i.id}"></iframe></div>
+  <div class="body"><span class="name">${esc(i.name)}</span><span class="mono">${esc(i.file||"no file name")}</span>
+  <div class="meta"><span class="pill ${pillFor(i.status)}">${esc(i.status)}</span><span class="pill">${esc(i.cat)}</span>${i.ctype&&i.ctype!=="auto"?`<span class="pill">${esc(CTYPES[i.ctype])}</span>`:""}${i.reusable?'<span class="pill reuse">Reusable</span>':""}</div>
+  <div class="row"><span class="example">v${i.version} · ${fmtDate(i.updated)}${i.example?" · Example":""}</span></div></div></button>`).join(""):'<div class="empty">No designs match these filters.</div>';
+ list.forEach(i=>{const f=document.querySelector(`[data-th="${i.id}"]`);if(f)thumb(f,i)});
+}
+["#lq","#ltype","#lcat","#lstatus","#lreuse"].forEach(s=>$(s).addEventListener(s==="#lq"?"input":"change",renderLib));
+$("#libGrid").addEventListener("click",e=>{const b=e.target.closest("[data-open]");if(b)drawer(b.dataset.open)});
+
+function drawer(id){const i=S.items.find(x=>x.id===id);if(!i)return;
+ $("#drawerRoot").innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-label="${esc(i.name)}">
+ <header><div class="grow"><div class="eyebrow">${esc(i.type)} · ${esc(i.cat)}</div><h2 style="font-size:22px;margin:4px 0">${esc(i.name)}</h2><div class="mono">${esc(i.file||"")}</div></div><button class="btn sm" data-close aria-label="Close">✕</button></header>
+ <div class="scroll">
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary sm" id="dEdit">Open in Code Studio</button><button class="btn sm" id="dCopy">Copy code</button>
+   <select id="dStatus" aria-label="Status">${STATUSES.map(s=>`<option ${s===i.status?"selected":""}>${s}</option>`).join("")}</select>
+   <span style="flex:1"></span><button class="btn sm danger" id="dDel">Delete</button></div>
+  <div id="dConfirm"></div>
+  <iframe sandbox="allow-scripts" title="Preview" id="dFrame"></iframe>
+  <div class="kv"><div><span>Status</span><span class="pill ${pillFor(i.status)}">${esc(i.status)}</span></div><div><span>Reusable</span>${i.reusable?"Yes":"No"}</div><div><span>Code type</span>${esc(CTYPES[i.ctype||"auto"])}</div><div><span>Version</span>v${i.version}</div>
+   <div><span>Created</span>${fmtDate(i.date)}</div><div><span>Updated</span>${fmtDate(i.updated)}</div><div><span>Pages</span>${esc((i.pages||[]).join(", ")||"Any")}</div></div>
+  ${i.tags&&i.tags.length?`<div class="meta" style="display:flex;gap:6px;flex-wrap:wrap">${i.tags.map(t=>`<span class="pill">#${esc(t)}</span>`).join("")}</div>`:""}
+  ${i.notes?`<div><div class="navlabel" style="padding:0">Setup notes</div><p style="margin:4px 0 0">${esc(i.notes)}</p></div>`:""}
+  <div><div class="navlabel" style="padding:0">Code</div><pre class="code">${esc(i.code)}</pre></div>
+ </div></aside>`;
+ thumb($("#dFrame"),i);
+ $$("#drawerRoot [data-close]").forEach(b=>b.onclick=closeDrawer);
+ $("#dEdit").onclick=()=>{closeDrawer();openInStudio(i)};
+ $("#dCopy").onclick=()=>copy(i.code);
+ $("#dStatus").onchange=e=>{i.status=e.target.value;i.updated=today();persist();renderLib();renderPipeline();toast("Marked "+i.status)};
+ $("#dDel").onclick=()=>{$("#dConfirm").innerHTML=`<div class="confirm">Delete “${esc(i.name)}” from the library? This can't be undone.<span style="flex:1"></span><button class="btn sm" id="dNo">Keep it</button><button class="btn sm primary" id="dYes">Delete</button></div>`;
+  $("#dNo").onclick=()=>$("#dConfirm").innerHTML="";$("#dYes").onclick=()=>{S.items=S.items.filter(x=>x.id!==i.id);persist();closeDrawer();renderLib();renderPipeline();toast("Deleted")}};
+}
+function closeDrawer(){$("#drawerRoot").innerHTML=""}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDrawer()});
+
+/* ---------- theme library ---------- */
+function themeKind(p){if(/^templates\/.*\.json$/.test(p))return"page";if(/^sections\//.test(p))return"section";if(/^blocks\//.test(p))return"block";if(/^snippets\//.test(p))return"snippet";return"other"}
+const KIND_LABEL={page:"Page template",section:"Section",block:"Theme block",snippet:"Snippet"};
+function guessCat(p,code){const n=p.toLowerCase();if(/^templates\/product/.test(n))return"Product pages";if(/header/.test(n))return"Header";if(/footer/.test(n))return"Footer";if(/faq/.test(n))return"FAQ";if(/guarantee|trust/.test(n))return"Guarantee & Trust";if(/review|testimonial/.test(n))return"Testimonials";if(/image|before/.test(n))return"Image & Text";if(/banner|video|media|slideshow/.test(n))return"Banners & Video";if(/product/.test(n))return"Product blocks";if(/^templates\//.test(n))return"Landing pages";return"Product blocks"}
+function prettyName(p){const sc=TH.files[p]?parseSchema(TH.files[p]):null;if(sc&&!sc.__err&&sc.name&&typeof sc.name==="string"&&!/^t:/.test(sc.name))return sc.name;const b=p.split("/").pop().replace(/\.(liquid|json)$/,"").replace(/^fl-(product-)?/,"").replace(/[-_.]/g," ");return b.charAt(0).toUpperCase()+b.slice(1)}
+const parseJSONC=t=>JSON.parse(String(t).replace(/^\s*\/\*[\s\S]*?\*\//,""));
+const SEED_THEME=[["Banner","blocks/fl-product-banner.liquid","Product blocks"],["Bullets","blocks/fl-product-bullets.liquid","Product blocks"],["Buy Buttons","blocks/fl-product-buy-buttons.liquid","Product blocks"],["Collapsible","blocks/fl-product-collapsible.liquid","Product blocks"],["Countdown","blocks/fl-product-countdown.liquid","Product blocks"],["Delivery","blocks/fl-product-delivery.liquid","Product blocks"],["Everlove mascara template","templates/product.everlove-mascara.json","Product pages"],["Everlove product page","templates/product.everlove.json","Product pages"],["Free Gift","blocks/fl-product-free-gift.liquid","Product blocks"],["Native Offers","blocks/fl-product-native-offers.liquid","Product blocks"],["Notice","blocks/fl-product-notice.liquid","Product blocks"],["Price","blocks/fl-product-price.liquid","Product blocks"],["Product page coordinator","sections/fl-main-product.liquid","Product blocks"],["Quantity Breaks","blocks/fl-product-quantity-breaks.liquid","Product blocks"],["Rating Bar","blocks/fl-product-rating-bar.liquid","Product blocks"],["Scarcity","blocks/fl-product-scarcity.liquid","Product blocks"],["Stock","blocks/fl-product-stock.liquid","Product blocks"],["Subtitle","blocks/fl-product-subtitle.liquid","Product blocks"],["Title","blocks/fl-product-title.liquid","Product blocks"],["Trust","blocks/fl-product-trust.liquid","Product blocks"],["Upsell","blocks/fl-product-upsell.liquid","Product blocks"],["Variant Picker","blocks/fl-product-variant-picker.liquid","Product blocks"],["30-day guarantee","sections/fl-product-guarantee.liquid","Guarantee & Trust"],["Image & text / before–after","sections/fl-image-with-text.liquid","Image & Text"],["Media showcase","sections/fl-media-showcase.liquid","Banners & Video"],["Native bundle offers","sections/fl-native-offers.liquid","Product blocks"],["Store footer","sections/footer.liquid","Footer"],["Store header & mega menu","sections/header.liquid","Header"],["Testimonial panels","sections/fl-product-reviews.liquid","Testimonials"],["Violet FAQ accordion","sections/fl-faq.liquid","FAQ"]];
+if(TH.needsSeed){SEED_THEME.forEach(([n,p,c])=>{TH.meta[p]={name:n,cat:c,status:"Draft",example:true}});TH.files["sections/fl-product-guarantee.liquid"]=STARTERS["Facelove guarantee (Shopify section)"];TH.meta["sections/fl-product-guarantee.liquid"].updated=today();TH.sel="sections/fl-product-guarantee.liquid";delete TH.needsSeed}
+function thPersist(){try{localStorage.setItem(KEY+"-theme",JSON.stringify(TH))}catch(e){TH.unsaved=true}}
+function thItems(){const paths=new Set([...Object.keys(TH.meta),...Object.keys(TH.files).filter(p=>themeKind(p)!=="other")]);return [...paths].map(p=>{const m=TH.meta[p]||(TH.meta[p]={});return {path:p,kind:themeKind(p),name:m.name||prettyName(p),cat:m.cat||guessCat(p),status:m.status||"Draft",reusable:!!m.reusable,notes:m.notes||"",hasCode:!!TH.files[p],updated:m.updated||"",example:!!m.example}})}
+function renderTheme(){
+ const items=thItems();$("#c-theme").textContent=items.length;
+ if(!$("#tl-status").options.length||$("#tl-status").options.length<2)$("#tl-status").innerHTML='<option value="">Every status</option>'+STATUSES.map(x=>`<option>${x}</option>`).join("");
+ const pages=items.filter(i=>i.kind==="page").length,comps=items.length-pages,appr=items.filter(i=>i.status==="Approved").length,rev=items.filter(i=>/review/.test(i.status)).length,loaded=items.filter(i=>i.hasCode).length;
+ $("#tl-stats").innerHTML=[[pages,"Page templates","Assembled from sections"],[comps,"Sections, blocks, snippets",items.filter(i=>i.reusable).length+" marked reusable"],[appr,"Approved","Launch approved"],[loaded+" / "+items.length,"Code loaded","Import to load the rest"]].map(d=>`<div class="stage"><span class="n">${d[0]}</span><span class="l">${d[1]}</span><span class="d">${esc(d[2])}</span></div>`).join("");
+ $("#tl-hint").innerHTML=TH.importedAt?`<span><b>Theme imported</b> ${esc(TH.name||"")} · ${Object.keys(TH.files).length} files · ${fmtDate(TH.importedAt)}${TH.unsaved?' · <span style="color:var(--bad)">too large to keep in this browser; re-import after reload</span>':""}</span><span style="flex:1"></span><button class="btn sm" id="tl-clear">Remove imported files</button>`:`<span><b>Load your real theme code.</b> Download the theme (Online Store → Themes → ⋯ → Download theme file), unzip it, then choose <b>Import theme folder</b>. Files are read in this browser only and never uploaded. Until then, these entries come from your local design library and show their details only.</span>`;
+ if($("#tl-clear"))$("#tl-clear").onclick=()=>{TH.files={};TH.importedAt=null;TH.name="";thPersist();renderTheme()};
+ const q=$("#tl-q").value.toLowerCase(),k=$("#tl-kind").value,st=$("#tl-status").value;
+ const list=items.filter(i=>(!k||i.kind===k)&&(!st||i.status===st)&&(!q||(i.name+" "+i.path).toLowerCase().includes(q)));
+ const groups={};list.forEach(i=>(groups[i.cat]=groups[i.cat]||[]).push(i));
+ if(!TH.sel||!items.find(i=>i.path===TH.sel))TH.sel=(list.find(i=>i.hasCode)||list[0]||{}).path;
+ $("#tl-items").innerHTML=Object.keys(groups).sort().map(g=>`<div class="tl-group">${esc(g)} · ${groups[g].length}</div>`+groups[g].sort((a,b)=>a.name.localeCompare(b.name)).map(i=>`<button class="tl-item ${i.path===TH.sel?"on":""}" data-tl="${esc(i.path)}"><span class="tl-ico">${i.hasCode&&i.kind==="section"?`<iframe sandbox="allow-scripts" tabindex="-1" aria-hidden="true" data-tlth="${esc(i.path)}"></iframe>`:esc(i.kind==="page"?"PAGE":i.kind.slice(0,3).toUpperCase())}</span><span style="min-width:0"><b>${esc(i.name)}</b><span class="mono">${esc(i.path.split("/").pop())}</span><span class="meta" style="display:flex;gap:4px;margin-top:3px"><span class="pill ${pillFor(i.status)}">${esc(i.status)}</span>${i.hasCode?"":'<span class="pill">no code yet</span>'}</span></span></button>`).join("")).join("")||'<div class="empty">Nothing matches.</div>';
+ list.forEach(async i=>{const f=document.querySelector(`[data-tlth="${CSS.escape(i.path)}"]`);if(f){const r=await render(TH.files[i.path],MOCK,null,"section");f.srcdoc=doc(r.html)}});
+ drawThemeDetail();
+}
+let tlTab="preview";
+async function renderTemplatePage(path){let j;try{j=parseJSONC(TH.files[path])}catch(e){return {html:errPage("This template isn't valid JSON: "+e.message,"Page template"),deps:[]}}
+ const order=j.order||Object.keys(j.sections||{});let html="";const deps=[];
+ for(const id of order){const s=(j.sections||{})[id];if(!s)continue;const f="sections/"+s.type+".liquid";const code=TH.files[f];deps.push({name:s.type,path:f,ok:!!code,off:!!s.disabled});if(s.disabled)continue;
+  if(!code){html+=`<div style="font-family:system-ui;margin:12px;padding:14px;border:1.5px dashed #c9b5f5;border-radius:10px;color:#6e6178">Section <b>${esc(s.type)}</b> isn't in the imported files.</div>`;continue}
+  const sc=parseSchema(code);let state=null;
+  if(sc&&!sc.__err){state=initState(sc);Object.assign(state.settings,s.settings||{});const bo=s.block_order||Object.keys(s.blocks||{});state.blocks=bo.map(bid=>{const b=(s.blocks||{})[bid]||{};return {type:b.type,on:!b.disabled,settings:Object.assign(blockDefaults(sc,b.type),b.settings||{})}})}
+  const r=await render(code,mock(),state,"section");html+=r.html}
+ return {html,deps}}
+function codeDeps(code){const out=[];[...code.matchAll(/\{%-?\s*(?:render|include)\s+['"]([^'"]+)['"]/g)].forEach(m=>{const k=snipKey(m[1]);if(!out.find(o=>o.name===k))out.push({name:k,path:"snippets/"+k,ok:hasSnip(m[1])})});const sc=parseSchema(code);if(sc&&!sc.__err)(sc.blocks||[]).forEach(b=>{if(b.type&&b.type[0]!=="@")out.push({name:"block: "+(b.name||b.type),path:"",ok:true,inline:true})});return out}
+async function drawThemeDetail(){const el=$("#tl-detail");const i=thItems().find(x=>x.path===TH.sel);if(!i){el.innerHTML='<div class="empty" style="margin:16px">Choose an item on the left.</div>';return}
+ const code=TH.files[i.path]||"";
+ el.innerHTML=`<header><div style="flex:1;min-width:0"><div class="eyebrow">${esc(KIND_LABEL[i.kind]||i.kind)} · ${esc(i.cat)}</div><h2 style="font-size:22px;margin:4px 0">${esc(i.name)}</h2><div class="mono">${esc(i.path)}</div></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><select id="tl-st" aria-label="Status">${STATUSES.map(x=>`<option ${x===i.status?"selected":""}>${x}</option>`).join("")}</select><label class="toggle" for="tl-re"><input type="checkbox" id="tl-re" ${i.reusable?"checked":""}>Reusable</label>${code&&i.kind!=="page"?'<button class="btn sm primary" id="tl-open">Open in Code Studio</button>':""}${code?'<button class="btn sm" id="tl-copy">Copy code</button>':""}</div></header>
+  <div class="tl-tabs">${[["preview","Live preview"],["code","Code"],["deps","Dependencies"],["notes","Setup & notes"]].map(([k,l])=>`<button data-tab="${k}" class="${tlTab===k?"on":""}">${l}</button>`).join("")}</div>
+  <div class="tl-body" id="tl-body"></div>`;
+ const body=$("#tl-body");
+ if(!code&&tlTab!=="notes"){body.innerHTML=`<div class="empty">The code for <b>${esc(i.path.split("/").pop())}</b> lives in your theme. Import the theme folder to see its live preview, code and dependencies.</div>`}
+ else if(tlTab==="preview"){body.innerHTML=`<div class="seg" id="tl-dev"><button data-w="100%" class="on">Desktop</button><button data-w="768px">Tablet</button><button data-w="390px">Mobile</button></div><div class="stagebox" style="min-height:0;padding:12px"><iframe class="pv" id="tl-pv" sandbox="allow-scripts" title="Live preview"></iframe></div><span class="example">Live render with sample product data and your Theme setup. Shopify-only parts (apps, checkout, real product data) show in the real theme preview.</span>`;
+  $("#tl-dev").onclick=e=>{const b=e.target.closest("button");if(!b)return;$$("#tl-dev button").forEach(x=>x.classList.toggle("on",x===b));$("#tl-pv").style.width=b.dataset.w};
+  const r=i.kind==="page"?await renderTemplatePage(i.path):await render(code,mock(),null,i.kind==="snippet"?"snippet":"section");if($("#tl-pv"))$("#tl-pv").srcdoc=doc(r.html)}
+ else if(tlTab==="code"){body.innerHTML=`<pre class="code" style="max-height:600px">${esc(code)}</pre>`}
+ else if(tlTab==="deps"){const deps=i.kind==="page"?(await renderTemplatePage(i.path)).deps:codeDeps(code);body.innerHTML=deps.length?`<p class="sub">${i.kind==="page"?"Sections this page uses, in order.":"Snippets this file renders and the blocks it offers."}</p>`+deps.map(d=>`<div class="dep"><span class="pill ${d.inline?"reuse":d.ok?"approved":"review"}">${d.inline?"in file":d.ok?"loaded":"missing"}</span><span class="mono">${esc(d.name)}${d.off?" (hidden)":""}</span>${d.ok&&d.path&&TH.files[d.path]?`<button class="btn sm" data-goto="${esc(d.path)}">Open</button>`:""}</div>`).join(""):'<div class="empty">No dependencies found.</div>'}
+ else{body.innerHTML=`<div class="kv"><div><span>Kind</span>${esc(KIND_LABEL[i.kind]||i.kind)}</div><div><span>Category</span>${esc(i.cat)}</div><div><span>Code updated</span>${i.updated?fmtDate(i.updated):"Not imported"}</div></div>
+  <div class="field"><label for="tl-cat">Category</label><select id="tl-cat">${CATS.map(c=>`<option ${c===i.cat?"selected":""}>${c}</option>`).join("")}</select></div>
+  <div class="field"><label for="tl-notes">Setup notes</label><textarea id="tl-notes" rows="6" placeholder="Where it's used, settings to change, apps it depends on">${esc(i.notes)}</textarea></div><span class="example">Saved as you type.</span>`;
+  $("#tl-notes").oninput=e=>{TH.meta[i.path].notes=e.target.value;thPersist()};$("#tl-cat").onchange=e=>{TH.meta[i.path].cat=e.target.value;thPersist();renderTheme()}}
+ $$("#tl-detail [data-tab]").forEach(b=>b.onclick=()=>{tlTab=b.dataset.tab;drawThemeDetail()});
+ $$("#tl-detail [data-goto]").forEach(b=>b.onclick=()=>{TH.sel=b.dataset.goto;tlTab="preview";renderTheme()});
+ $("#tl-st").onchange=e=>{TH.meta[i.path].status=e.target.value;thPersist();renderTheme();toast("Marked "+e.target.value)};
+ $("#tl-re").onchange=e=>{TH.meta[i.path].reusable=e.target.checked;thPersist();renderTheme()};
+ if($("#tl-copy"))$("#tl-copy").onclick=()=>copy(code);
+ if($("#tl-open"))$("#tl-open").onclick=()=>{blank();$("#code").value=code;$("#ctype").value=i.kind==="block"?"block":i.kind==="snippet"?"snippet":"section";$("#s-name").value=i.name;$("#s-type").value=i.kind==="page"?"Page":"Section";$("#s-file").value=i.path;if(CATS.includes(i.cat))$("#s-cat").value=i.cat;secKey=null;go("studio")};
+}
+$("#tl-items").addEventListener("click",e=>{const b=e.target.closest("[data-tl]");if(!b)return;TH.sel=b.dataset.tl;$$("#tl-items .tl-item").forEach(x=>x.classList.toggle("on",x===b));drawThemeDetail()});
+["#tl-q","#tl-kind","#tl-status"].forEach(s=>$(s).addEventListener(s==="#tl-q"?"input":"change",renderTheme));
+async function importThemeFiles(fl,isFolder){const files=[...fl];let n=0;let root="";
+ for(const f of files){let p=(f.webkitRelativePath||f.name).replace(/\\/g,"/");if(isFolder){const parts=p.split("/");root=parts[0];p=parts.slice(1).join("/")}
+  if(!isFolder){const k=/\.json$/.test(f.name)?"templates/":/\.css$/.test(f.name)?"assets/":(TH.files["blocks/"+f.name]!==undefined||TH.meta["blocks/"+f.name]?"blocks/":TH.meta["snippets/"+f.name]?"snippets/":"sections/");p=k+f.name}
+  if(!/^(sections|blocks|snippets|templates|config|assets|layout)\//.test(p))continue;
+  if(/^assets\//.test(p)&&!/\.css$/.test(p))continue;if(/^config\//.test(p)&&!/settings_data\.json$/.test(p))continue;
+  const txt=await f.text();
+  if(/^config\/settings_data\.json$/.test(p)){try{S.kit.theme=parseSettingsData(txt);S.kit.themeName=p;persist()}catch(e){}continue}
+  if(/^assets\/(base|theme)\.css$/.test(p)){if(!S.kit.css){S.kit.css=txt;S.kit.cssName=p;try{persist()}catch(e){}}continue}
+  if(/^assets\//.test(p)||/^layout\//.test(p))continue;
+  TH.files[p]=txt;const m=TH.meta[p]||(TH.meta[p]={});m.updated=new Date(f.lastModified||Date.now()).toISOString().slice(0,10);delete m.example;n++}
+ TH.importedAt=today();if(root)TH.name=root;thPersist();drawMatch();renderTheme();toast(n+" theme files loaded")}
+$("#tl-folder").onchange=e=>{importThemeFiles(e.target.files,true);e.target.value=""};
+$("#tl-files").onchange=e=>{importThemeFiles(e.target.files,false);e.target.value=""};
+
+/* ---------- util ---------- */
+function copy(txt){navigator.clipboard.writeText(txt).then(()=>toast("Code copied")).catch(()=>{const a=$("#code");a.focus();a.select();toast("Press Ctrl/Cmd+C to copy")})}
+let tt;function toast(m){const el=$("#toast");el.textContent=m;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,2000)}
+
+blank();$("#code").value=STARTERS["Facelove guarantee (Shopify section)"];$("#ctype").value="section";$("#s-name").value="Facelove guarantee";$("#s-type").value="Section";$("#s-cat").value="Guarantee & Trust";$("#s-file").value="sections/fl-guarantee.liquid";
+renderRefs();renderBoard();drawMatch();$("#c-theme").textContent=thItems().length;
+const VIEWS=["research","concepts","studio","library","theme"];const startView=()=>{const h=location.hash.slice(1);return VIEWS.includes(h)?h:"studio"};
+go(startView());window.addEventListener("hashchange",()=>go(startView()));
+})();
+</script>
+<script>
+/* Embedded mode: when opened inside the Agency app, hide this page's own menu and follow the app's theme */
+(function(){const q=new URLSearchParams(location.search);if(!q.has("embed"))return;const R=document.documentElement;R.classList.add("embed");
+const set=t=>{if(!t||t==="system")R.removeAttribute("data-theme");else R.setAttribute("data-theme",t)};set(q.get("theme"));
+addEventListener("message",e=>{if(e.origin===location.origin&&e.data&&e.data.flTheme)set(e.data.flTheme)});})();
+</script>
+
+</html>

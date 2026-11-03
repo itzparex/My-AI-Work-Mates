@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>My AI Work Mates</title>
+<meta name="description" content="An AI marketing agency: one dashboard per department, supervised by an AI Project Director, with the CEO deciding everything.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%236a35e8'/%3E%3Cstop offset='1' stop-color='%23ff7aa2'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Ctext x='32' y='42' font-family='Arial' font-weight='800' font-size='26' fill='white' text-anchor='middle'%3EAI%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+/* App shell: top bar with a mega menu of every department, a submenu row for the current department, and the department's dashboard below */
+:root{--bg:#f8f5fa;--surface:#fff;--sunk:#f1ecf5;--line:#e6ddec;--ink:#24152b;--muted:#6e6178;--accent:#6a35e8;--accent-ink:#fff;--accent-soft:#efe8ff;--blush:#ff7aa2;--blush-soft:#ffe8ef;--good:#15845b;--good-soft:#dff5ea;--warn:#a86300;--warn-soft:#fff1d6;--bad:#c2334d;
+ --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;--f-body:"Manrope","Segoe UI",system-ui,sans-serif;--shadow:0 12px 40px rgba(36,21,43,.14);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#140d19;--surface:#1d1424;--sunk:#251a2e;--line:#352841;--ink:#f3ecf7;--muted:#a798b2;--accent:#9b74ff;--accent-ink:#140d19;--accent-soft:#2c2045;--blush:#ff8fb1;--blush-soft:#3a1f2b;--good:#4fd39a;--good-soft:#163428;--warn:#f2b54b;--warn-soft:#382a12;--bad:#ff7b92;--shadow:0 12px 40px rgba(0,0,0,.5);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#140d19;--surface:#1d1424;--sunk:#251a2e;--line:#352841;--ink:#f3ecf7;--muted:#a798b2;--accent:#9b74ff;--accent-ink:#140d19;--accent-soft:#2c2045;--blush:#ff8fb1;--blush-soft:#3a1f2b;--good:#4fd39a;--good-soft:#163428;--warn:#f2b54b;--warn-soft:#382a12;--bad:#ff7b92;--shadow:0 12px 40px rgba(0,0,0,.5);color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+button{font:inherit;color:inherit}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.bar{background:var(--surface);border-bottom:1px solid var(--line);position:relative;z-index:20;padding-top:env(safe-area-inset-top,0px)}
+.bar .in{display:flex;align-items:center;gap:8px;padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px))}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;margin-right:10px}
+.mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--blush));display:grid;place-items:center;color:#fff;font-family:var(--f-display);font-weight:800;font-size:13px;flex:none}
+.brand b{font-family:var(--f-display);font-weight:800;font-size:17px;letter-spacing:-.01em;white-space:nowrap}
+.nb{all:unset;cursor:pointer;padding:8px 12px;border-radius:10px;font-weight:700;font-size:13.5px;color:var(--muted);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.nb:hover,.nb.on{color:var(--ink);background:var(--sunk)}
+.nb .chev{transition:transform .15s}.nb[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.nb:focus-visible{outline:2px solid var(--accent)}
+.sp{flex:1}
+.seg{display:inline-flex;background:var(--sunk);border-radius:10px;padding:3px}
+.seg button{all:unset;cursor:pointer;padding:5px 10px;border-radius:8px;font-weight:700;font-size:12px;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+/* mega menu */
+.mega{position:absolute;left:0;right:0;top:100%;background:var(--surface);border-bottom:1px solid var(--line);box-shadow:var(--shadow);max-height:calc(100dvh - 70px);overflow:auto}
+.mega[hidden]{display:none}
+.mega .in{max-width:1320px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-left,0px));display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px 18px;align-items:start}
+.mega .lead2{grid-column:span 1}
+.mtheme{display:none;grid-column:1/-1;align-items:center;justify-content:space-between;padding-top:6px;font-weight:700}
+.grp{grid-column:1/-1;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--blush);font-weight:800;margin-top:4px;display:flex;align-items:center;gap:10px}
+.grp::after{content:"";flex:1;height:1px;background:var(--line)}
+.dcol{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dhead{display:flex;gap:10px;align-items:flex-start;text-decoration:none;padding:8px;border-radius:10px;margin-bottom:2px}
+.dhead:hover{background:var(--sunk)}
+.dico{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-size:15px;flex:none;background:var(--accent-soft);color:var(--accent)}
+.dhead b{display:block;font-size:14px}.dhead small{display:block;color:var(--muted);font-size:12px;line-height:1.35}
+.dsub{text-decoration:none;padding:4px 8px 4px 50px;border-radius:8px;color:var(--muted);font-size:13px;font-weight:600}
+.dsub:hover{color:var(--accent);background:var(--accent-soft)}
+.dcol.off .dico{background:var(--sunk);color:var(--muted)}.dcol.off{opacity:.6}
+.tag{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:99px;background:var(--sunk);color:var(--muted);margin-left:6px;vertical-align:1px}
+.doclink{text-decoration:none;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-weight:600;font-size:13px;display:flex;justify-content:space-between;gap:8px}
+.doclink:hover{border-color:var(--accent);color:var(--accent)}
+/* submenu */
+.subbar{background:var(--surface);border-bottom:1px solid var(--line);z-index:10}
+.subbar .in{display:flex;align-items:center;gap:4px;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));overflow-x:auto;scrollbar-width:none}
+.subbar .in::-webkit-scrollbar{display:none}
+.subbar .crumb{font-weight:800;font-family:var(--f-display);font-size:14px;white-space:nowrap;margin-right:10px;display:flex;align-items:center;gap:8px}
+.subbar .crumb .dico{width:24px;height:24px;font-size:12px;border-radius:7px}
+.tab{all:unset;cursor:pointer;padding:12px 10px;font-weight:700;font-size:13px;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tab:hover{color:var(--ink)}.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.subbar a.rb{margin-left:auto;font-size:12.5px;font-weight:700;color:var(--accent);text-decoration:none;white-space:nowrap;padding:12px 0 12px 10px}
+.stage{flex:1;min-height:0;position:relative}
+iframe{border:0;width:100%;height:100%;display:block;background:var(--bg)}
+.home{height:100%;overflow:auto}
+.home .in{max-width:1180px;margin:0 auto;padding:28px max(16px,env(safe-area-inset-left,0px)) 48px}
+.eyebrow{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--blush);font-weight:800}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(28px,4vw,42px);line-height:1.05;margin:6px 0 8px;letter-spacing:-.02em;text-wrap:balance}
+.lead{color:var(--muted);max-width:62ch;margin:0 0 22px;font-size:15px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;text-decoration:none}
+a.kpi:hover{border-color:var(--accent)}
+.kpi .n{font-family:var(--f-display);font-size:30px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.kpi .l{font-weight:700;margin-top:6px}.kpi .d{color:var(--muted);font-size:12px}
+.flow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 22px;font-size:12.5px;font-weight:700}
+.flow span{background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:5px 11px}
+.flow i{color:var(--muted);font-style:normal}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;text-decoration:none;display:flex;flex-direction:column;gap:8px}
+a.card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.card .top{display:flex;align-items:center;gap:10px}
+.card b{font-size:15px}.card p{margin:0;color:var(--muted);font-size:13px}
+.card .meta{font-size:12px;font-weight:700;color:var(--accent);margin-top:auto}
+h2{font-family:var(--f-display);font-size:19px;margin:28px 0 12px}
+.note{font-size:12.5px;color:var(--muted);background:var(--sunk);border-radius:10px;padding:10px 12px;margin-top:22px}
+/* mobile */
+.burger{display:none}
+@media (max-width:1100px){.mega .in{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:900px){.mega .in{grid-template-columns:repeat(2,minmax(0,1fr))}.kpis{grid-template-columns:repeat(2,1fr)}.quick{display:none}}
+@media (max-width:560px){.mega .in{grid-template-columns:1fr}.brand b{font-size:15px}.nb{padding:8px}.bar>.in>.seg{display:none}.mtheme{display:flex}}
+@media (max-width:360px){.brand b{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="bar">
+ <div class="in">
+  <a class="brand" href="#/home" aria-label="My AI Work Mates home"><span class="mark" aria-hidden="true">AI</span><b>My AI Work Mates</b></a>
+  <button class="nb" id="megaBtn" aria-expanded="false" aria-controls="mega">Departments <span class="chev" aria-hidden="true">▾</span></button>
+  <a class="nb quick" data-q="ceo" href="#/ceo/decisions">CEO</a>
+  <a class="nb quick" data-q="director" href="#/director/timeline">Project Director</a>
+  <span class="sp"></span>
+  <div class="seg themeseg" role="group" aria-label="Page background"><button data-t="light">Light</button><button data-t="dark">Dark</button><button data-t="system">Auto</button></div>
+ </div>
+ <nav class="mega" id="mega" hidden aria-label="All departments"><div class="in" id="megaIn"></div></nav>
+</header>
+<nav class="subbar" id="subbar" hidden aria-label="Department pages"><div class="in" id="subIn"></div></nav>
+<div class="stage" id="stage">
+ <div class="home" id="home"></div>
+ <iframe id="frame" title="Department dashboard" hidden></iframe>
+</div>
+<script>
+(function(){
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const DOC=id=>"https://claude.ai/artifact/"+id;
+const MENU=[
+ {id:"ceo",group:"Leadership",name:"CEO",ico:"★",role:"You decide: approvals, overrides, projects",page:"hq",subs:[["decisions","Decisions waiting"],["projects","Projects"],["departments","Departments"],["issues","Open issues"]],doc:"YTuDLcyoaVpKuywSddfqbo",docName:"Product brief"},
+ {id:"director",group:"Leadership",name:"Project Director",ico:"◎",role:"Plans, assigns, reviews, reports to CEO",page:"hq",subs:[["timeline","Timeline"],["tasks","Tasks"],["review","Review queue"],["workload","Workload"],["issues","Issues log"],["lessons","Lessons log"]],doc:"YH9YbXXmmt3Ao15JNPgkzq"},
+ {id:"research",group:"Departments",name:"Research & Strategist",ico:"⌕",role:"Nine documents and the Marketer's Booklet",page:"dept",subs:[["overview","Overview"],["briefs","Research briefs"],["documents","Nine documents"],["evidence","Evidence ledger"],["persontasks","Person tasks"]],doc:"NqSeg4uwA49BV4JhZd8X8Z"},
+ {id:"copy",group:"Departments",name:"Copywriter",ico:"✎",role:"Page copy from the Booklet, claims checked",page:"dept",subs:[["overview","Overview"],["copymaps","Copy maps"],["claims","Claims check"],["swipe","Voice & swipe"]],doc:"V8r1tStkg3uDkpdzcVF489"},
+ {id:"uiux",group:"Departments",name:"UI/UX Designer",ico:"◧",role:"Wireframes, designs and live Shopify code",page:"studio",subs:[["research","Research"],["concepts","Concepts"],["studio","Code Studio"],["library","Library"],["theme","Theme library"]],doc:"LrwprikVGXu4yXpEmkh1HF"},
+ {id:"graphic",group:"Departments",name:"Graphic Designer",ico:"▣",role:"Carousel and website images",page:"dept",subs:[["overview","Overview"],["images","Image sets"],["aiimages","AI image approvals"],["assets","Brand assets"]],doc:"XjeF4sWgPd5rxTz5VD8PvJ"},
+ {id:"shopify",group:"Departments",name:"Shopify Developer",ico:"⟨⟩",role:"Builds on a duplicate theme, QA, hand-over",page:"dept",subs:[["overview","Overview"],["builds","Builds"],["qa","QA checklist"],["backups","Theme backups"]],doc:"DLH5vsgeZ3Wow6nmZiwp28"},
+];
+const PAUSED=[["Video Editor","▶"],["Email Marketing","✉"],["Social Media","♥"],["Media Buyer","$"]];
+const byId=Object.fromEntries(MENU.map(m=>[m.id,m]));
+/* theme */
+let theme="system";try{theme=localStorage.getItem("mawm-theme")||"system"}catch(e){}
+function applyTheme(){if(theme==="system")document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme",theme);$$(".themeseg button").forEach(b=>b.classList.toggle("on",b.dataset.t===theme));try{frame.contentWindow&&frame.contentWindow.postMessage({flTheme:theme},location.origin)}catch(e){}}
+document.addEventListener("click",e=>{const b=e.target.closest(".themeseg button");if(!b)return;e.stopPropagation();theme=b.dataset.t;try{localStorage.setItem("mawm-theme",theme)}catch(e){}applyTheme()},true);
+const frame=$("#frame");
+/* mega menu */
+function megaHTML(){let html="",g="";
+ MENU.forEach(m=>{if(m.group!==g){g=m.group;html+=`<div class="grp">${g}</div>`}
+  html+=`<div class="dcol"><a class="dhead" href="#/${m.id}/${m.subs[0][0]}"><span class="dico" aria-hidden="true">${m.ico}</span><span><b>${esc(m.name)}</b><small>${esc(m.role)}</small></span></a>${m.subs.map(([s,l])=>`<a class="dsub" href="#/${m.id}/${s}">${esc(l)}</a>`).join("")}<a class="dsub" href="${DOC(m.doc)}" target="_blank" rel="noopener">${m.docName||"Rulebook"} ↗</a></div>`});
+ html+=`<div class="grp">Paused for now</div>`+PAUSED.map(([n,i])=>`<div class="dcol off"><div class="dhead"><span class="dico" aria-hidden="true">${i}</span><span><b>${esc(n)}<span class="tag">Paused</span></b><small>Turns on when you add it back</small></span></div></div>`).join("");
+ html+=`<div class="mtheme"><span>Page background</span><div class="seg themeseg" role="group" aria-label="Page background"><button data-t="light">Light</button><button data-t="dark">Dark</button><button data-t="system">Auto</button></div></div>`;
+ return html}
+$("#megaIn").innerHTML=megaHTML();
+const mega=$("#mega"),megaBtn=$("#megaBtn");
+const openMega=o=>{mega.hidden=!o;megaBtn.setAttribute("aria-expanded",o)};
+let hov,hovAt=0;megaBtn.onclick=e=>{e.stopPropagation();if(Date.now()-hovAt<600&&!mega.hidden)return;openMega(mega.hidden)};
+megaBtn.addEventListener("mouseenter",()=>{if(matchMedia("(hover:hover)").matches){clearTimeout(hov);if(mega.hidden){hovAt=Date.now();openMega(true)}}});
+$(".bar").addEventListener("mouseleave",()=>{if(matchMedia("(hover:hover)").matches)hov=setTimeout(()=>openMega(false),250)});
+$(".bar").addEventListener("mouseenter",()=>clearTimeout(hov));
+mega.addEventListener("click",e=>{if(e.target.closest("a"))openMega(false)});
+document.addEventListener("click",e=>{if(!e.target.closest(".bar"))openMega(false)});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!mega.hidden){openMega(false);megaBtn.focus()}});
+/* routing */
+let curPage=null;
+function parse(){const [,d,s]=(location.hash.match(/^#\/([^/]+)\/?([^/]*)/)||[]);return byId[d]?{d,s:s||byId[d].subs[0][0]}:null}
+function src(m,s,withTheme){const t=withTheme?"&theme="+theme:"";if(m.page==="hq")return {base:"hq.html",q:"?embed=1"+t,h:"#"+m.id+":"+s};if(m.page==="studio")return {base:"studio.html",q:"?embed=1"+t,h:"#"+s};return {base:"dept.html",q:"?embed=1&d="+m.id+t,h:"#"+s}}
+function route(){openMega(false);const r=parse();
+ $$(".quick").forEach(a=>a.classList.toggle("on",!!r&&a.dataset.q===r.d));
+ if(!r){$("#subbar").hidden=true;frame.hidden=true;$("#home").hidden=false;curPage=null;drawHome();document.title="My AI Work Mates";return}
+ const m=byId[r.d],sl=(m.subs.find(x=>x[0]===r.s)||m.subs[0]);
+ document.title=m.name+" · "+sl[1]+" · My AI Work Mates";
+ $("#subIn").innerHTML=`<span class="crumb"><span class="dico" aria-hidden="true">${m.ico}</span>${esc(m.name)}</span>${m.subs.map(([s,l])=>`<a class="tab ${s===r.s?"on":""}" href="#/${m.id}/${s}" ${s===r.s?'aria-current="page"':""}>${esc(l)}</a>`).join("")}<a class="rb" href="${DOC(m.doc)}" target="_blank" rel="noopener">${m.docName||"Rulebook"} ↗</a>`;
+ $("#subbar").hidden=false;$("#home").hidden=true;frame.hidden=false;
+ const p=src(m,r.s),key=p.base+p.q;
+ if(curPage===key){try{if(frame.contentWindow.location.hash!==p.h)frame.contentWindow.location.hash=p.h}catch(e){frame.src=src(m,r.s,true).base+src(m,r.s,true).q+p.h}}
+ else{curPage=key;const w=src(m,r.s,true);frame.src=w.base+w.q+p.h}
+ const on=$("#subIn .tab.on");on&&on.scrollIntoView({block:"nearest",inline:"nearest"})}
+window.addEventListener("hashchange",route);
+/* keep the submenu in sync when a dashboard changes its own page */
+window.addEventListener("message",e=>{if(e.origin!==location.origin||!e.data)return;const r=parse();if(!r)return;
+ if(e.data.flView&&r.d==="uiux"&&e.data.flView!==r.s){history.replaceState(null,"","#/uiux/"+e.data.flView);route()}
+ if(e.data.flSub&&e.data.flSub!==r.s){history.replaceState(null,"","#/"+r.d+"/"+e.data.flSub);route()}});
+frame.addEventListener("load",()=>{try{frame.contentWindow.postMessage({flTheme:theme},location.origin)}catch(e){}});
+/* home */
+function readHQ(){try{return JSON.parse(localStorage.getItem("facelove-hq-v1")||"null")}catch(e){return null}}
+function drawHome(){const hq=readHQ();const projects=hq?hq.projects:[],decisions=hq?hq.decisions.length:3,issues=hq?hq.issues.filter(i=>i.status!=="Resolved").length:1;
+ const open=projects.filter(p=>p.status!=="Closed").length;const tasks=projects.flatMap(p=>p.tasks||[]);
+ const openBy=n=>tasks.filter(t=>t.dept===n&&t.status!=="Done").length;
+ $("#home").innerHTML=`<div class="in">
+  <div class="eyebrow">Your AI agency</div><h1>Good to see you, CEO.</h1>
+  <p class="lead">Each department is an AI work mate with its own rulebook and dashboard. The Project Director plans and checks the work; nothing publishes, spends money or reaches a client without your yes.</p>
+  <div class="kpis">
+   <a class="kpi" href="#/ceo/decisions"><div class="n">${decisions}</div><div class="l">Decisions waiting</div><div class="d">Open the CEO dashboard</div></a>
+   <a class="kpi" href="#/ceo/projects"><div class="n">${hq?open:2}</div><div class="l">Open projects</div><div class="d">${hq?"":"Example data until you start"}</div></a>
+   <a class="kpi" href="#/director/review"><div class="n">${tasks.filter(t=>t.status==="Waiting on approval").length}</div><div class="l">Waiting for review</div><div class="d">Project Director queue</div></a>
+   <a class="kpi" href="#/director/issues"><div class="n">${issues}</div><div class="l">Open issues</div><div class="d">Issues log</div></a>
+  </div>
+  <div class="flow" aria-label="How a project flows"><span>CEO brief</span><i>→</i><span>Research</span><i>→</i><span>Wireframe</span><i>→</i><span>Copy</span><i>→</i><span>Design + images</span><i>→</i><span>Design approval</span><i>→</i><span>Build</span><i>→</i><span>QA</span><i>→</i><span>Launch approval</span><i>→</i><span>CEO publishes</span></div>
+  <h2>Your work mates</h2>
+  <div class="cards">${MENU.map(m=>`<a class="card" href="#/${m.id}/${m.subs[0][0]}"><div class="top"><span class="dico" aria-hidden="true">${m.ico}</span><b>${esc(m.name)}</b></div><p>${esc(m.role)}</p><span class="meta">${m.group==="Departments"?openBy(m.name)+" open tasks · ":""}Open dashboard →</span></a>`).join("")}</div>
+  <div class="note">Your work is saved in this browser on this device. Open the same address on another device and it starts fresh there. Rulebooks open in Claude Docs.</div>
+ </div>`}
+applyTheme();route();
+/* first visit: let Agency HQ create its example data so every dashboard shares it */
+if(!readHQ()){const f=document.createElement("iframe");f.hidden=true;f.src="hq.html?embed=1";f.onload=()=>{if(!parse())drawHome();f.remove()};document.body.appendChild(f)}
+})();
+</script>
+</body>
+</html>
