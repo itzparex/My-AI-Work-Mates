@@ -1,0 +1,20 @@
+{
+  "name": "My AI Work Mates",
+  "short_name": "AI Work Mates",
+  "description": "Your AI marketing agency: one dashboard per department, supervised by an AI Project Director, with the CEO deciding everything.",
+  "start_url": "./index.html#/home",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f8f5fa",
+  "theme_color": "#6a35e8",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ],
+  "shortcuts": [
+    {"name": "CEO decisions", "url": "./index.html#/ceo/decisions"},
+    {"name": "Project timeline", "url": "./index.html#/director/timeline"},
+    {"name": "Code Studio", "url": "./index.html#/uiux/studio"}
+  ]
+}

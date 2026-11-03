@@ -1,0 +1,28 @@
+{
+  "name": "my-ai-work-mates",
+  "productName": "My AI Work Mates",
+  "version": "1.0.0",
+  "description": "Your AI marketing agency: one dashboard per department, supervised by an AI Project Director.",
+  "author": "itzparex",
+  "license": "UNLICENSED",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --publish never"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "com.itzparex.myaiworkmates",
+    "productName": "My AI Work Mates",
+    "artifactName": "My-AI-Work-Mates-${os}-${arch}.${ext}",
+    "files": ["main.js", "app/**/*"],
+    "directories": { "buildResources": "build", "output": "dist" },
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }] },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "shortcutName": "My AI Work Mates" },
+    "mac": { "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }], "category": "public.app-category.productivity" },
+    "linux": { "target": ["AppImage"], "category": "Office" }
+  }
+}

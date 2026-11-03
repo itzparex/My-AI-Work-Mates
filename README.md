@@ -4,6 +4,25 @@ An AI marketing agency in your browser. Each department is an AI work mate with 
 
 **Open it:** https://itzparex.github.io/My-AI-Work-Mates/
 
+## Desktop app (Windows, Mac, Linux)
+
+Download the installer from the **Releases** page (right side of the repo page → "My AI Work Mates (desktop)").
+GitHub builds new installers automatically every time the code changes.
+
+- **Windows:** run the `.exe`. If Windows says "Windows protected your PC", click **More info → Run anyway** (the app isn't code-signed yet).
+- **Mac:** open the `.dmg` and drag the app to Applications. The first time, right-click the app → **Open** → **Open** (it isn't notarized yet).
+- **Linux:** make the `.AppImage` executable and run it.
+
+The desktop app keeps its own data, separate from the website. Live previews and fonts need an internet connection.
+
+## Install it from the browser (no download)
+
+1. Open https://itzparex.github.io/My-AI-Work-Mates/ in Chrome or Edge.
+2. Click the install icon at the right end of the address bar (or menu ⋮ → "Install My AI Work Mates").
+3. It opens in its own window with a desktop and taskbar icon, and works offline.
+
+On iPhone: open it in Safari → Share → "Add to Home Screen". On Android: Chrome menu → "Install app".
+
 ## What's inside
 
 | Page | File | What it does |

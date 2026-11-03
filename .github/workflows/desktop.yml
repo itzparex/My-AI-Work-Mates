@@ -1,0 +1,61 @@
+# Builds the desktop installers (Windows, Mac, Linux) and publishes them on the Releases page.
+name: Build desktop app
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Copy the web app into the desktop app
+        shell: bash
+        run: |
+          mkdir -p desktop/app
+          cp index.html hq.html studio.html dept.html manifest.webmanifest sw.js desktop/app/
+          cp -r icons desktop/app/
+      - name: Install and build
+        working-directory: desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: |
+          npm install --no-audit --no-fund
+          npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.os }}
+          path: |
+            desktop/dist/*.exe
+            desktop/dist/*.dmg
+            desktop/dist/*.AppImage
+          if-no-files-found: error
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: installers
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-latest
+          name: My AI Work Mates (desktop)
+          body: |
+            Download the installer for your computer:
+            - Windows: My-AI-Work-Mates-win-x64.exe
+            - Mac (Apple chip M1/M2/M3/M4): My-AI-Work-Mates-mac-arm64.dmg
+            - Mac (Intel): My-AI-Work-Mates-mac-x64.dmg
+            - Linux: the .AppImage file
+          files: installers/*
+          make_latest: true
