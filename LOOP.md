@@ -36,7 +36,7 @@ The loop works through this backlog one item per round, top to bottom, and stops
 
 ### 3. Free sync across devices
 - [ ] **3a. Export and import** of all data as one file (backup, and a manual way to move data between devices).
-- [ ] **3b. GitHub sync.** Optional: the CEO connects a private data repo with a fine-grained token stored only on that device; the app saves and loads all data there, so laptop, phone and desktop app share projects. Clear status (last synced, conflicts: newest wins, with a warning).
+- [ ] **3b. GitHub sync.** Optional: the CEO connects a private data repo with a fine-grained token stored only on that device; the app saves and loads all data there, so laptop, phone and desktop app share projects. Clear status (last synced, conflicts: newest wins, with a warning). Open pages refresh the data by themselves every few minutes and when the tab comes back into view, so new agent work appears without reloading.
 
 ### 3½. Make the work mates work
 Each work mate becomes a real AI agent: Claude, on the CEO's existing subscription (no paid API keys), runs the department's rulebook against the app's shared data in the GitHub data repo from 3b. The app shows what each agent did. Agents never publish, send, spend or contact anyone, and everything goes through the Project Director to the CEO.
@@ -69,3 +69,4 @@ Each work mate becomes a real AI agent: Claude, on the CEO's existing subscripti
 - 2026-11-04: Added W1b, a CEO-only Auto-work switch to pause or resume the agents (CEO request).
 - 2026-11-04: Added W8, a token usage dashboard with budgets and auto-pause (CEO request).
 - 2026-11-04: Added section 0, the CEO command center as the main page with a Claude panel, to be done first (CEO request).
+- 2026-11-04: Open pages now notice new versions (refresh bar, or automatic refresh when idle); 3b also refreshes data automatically.

@@ -194,6 +194,16 @@ function drawHome(){const hq=readHQ();const projects=hq?hq.projects:[],decisions
  </div>`}
 applyTheme();route();
 if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))navigator.serviceWorker.register("sw.js").catch(()=>{});
+/* New version check: every 3 minutes (and when you come back to the tab) compare the live app files with the ones loaded.
+   If the build loop pushed an update, show a bar to refresh, or refresh by itself if the page is idle. */
+(function(){if(location.protocol==="file:"||location.protocol==="app:")return;
+ const FILES=["index.html","hq.html","studio.html","dept.html"];let base=null,lastInput=Date.now(),shown=false;
+ ["pointerdown","keydown","input"].forEach(t=>addEventListener(t,()=>lastInput=Date.now(),true));
+ const sig=async()=>{const parts=await Promise.all(FILES.map(f=>fetch(f+"?v="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.text():"").catch(()=>null)));if(parts.some(p=>p===null))return null;let h=0;for(const s of parts)for(let k=0;k<s.length;k+=7)h=(h*31+s.charCodeAt(k))|0;return h+":"+parts.reduce((n,s)=>n+s.length,0)};
+ const bar=()=>{if(shown)return;shown=true;const d=document.createElement("div");d.setAttribute("role","status");d.style.cssText="position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:100;background:var(--ink);color:var(--bg);padding:10px 12px 10px 16px;border-radius:12px;display:flex;gap:12px;align-items:center;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:calc(100% - 32px)";d.innerHTML='<span>A new version of My AI Work Mates is ready.</span><button style="all:unset;cursor:pointer;background:var(--accent);color:var(--accent-ink);padding:6px 12px;border-radius:8px;font-weight:700">Refresh</button>';d.querySelector("button").onclick=()=>location.reload();document.body.appendChild(d)};
+ const check=async()=>{const s=await sig();if(!s)return;if(base===null){base=s;return}if(s!==base){const idle=Date.now()-lastInput>5*60*1000;if(document.hidden||idle)location.reload();else bar()}};
+ check();setInterval(check,3*60*1000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)check()});
+})();
 /* first visit: let Agency HQ create its example data so every dashboard shares it */
 if(!readHQ()){const f=document.createElement("iframe");f.hidden=true;f.src="hq.html?embed=1";f.onload=()=>{if(!parse())drawHome();f.remove()};document.body.appendChild(f)}
 })();
