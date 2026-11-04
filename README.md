@@ -15,6 +15,8 @@ GitHub builds new installers automatically every time the code changes.
 
 The desktop app opens the live website inside its own window, so every update the build loop pushes shows up in the desktop app straight away (with the same "new version" refresh bar as the website). When the computer is offline it uses the last copy it saved, then the copy built into the app, and shows a small "Offline" label. The desktop app keeps its own data, separate from the website, and that data stays where it was across updates. Live previews and fonts need an internet connection.
 
+On Windows and Linux (AppImage) the app itself also updates itself: it checks the Releases page when it opens and every 4 hours, downloads a new version in the background, then asks **Restart to update** (it never restarts on its own; choose **Later** and it installs the next time you close the app). Every build gets a higher version number (1.0.<build number>).
+
 ## Install it from the browser (no download)
 
 1. Open https://itzparex.github.io/My-AI-Work-Mates/ in Chrome or Edge.

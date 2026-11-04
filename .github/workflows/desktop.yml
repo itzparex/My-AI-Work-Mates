@@ -26,9 +26,12 @@ jobs:
           cp -r icons desktop/app/
       - name: Install and build
         working-directory: desktop
+        shell: bash
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: |
+          # A rising version number on every build, so installed apps know an update is newer (D1b).
+          npm version --no-git-tag-version --allow-same-version "1.0.${{ github.run_number }}"
           npm install --no-audit --no-fund
           npm run dist
       - uses: actions/upload-artifact@v4
@@ -38,6 +41,8 @@ jobs:
             desktop/dist/*.exe
             desktop/dist/*.dmg
             desktop/dist/*.AppImage
+            desktop/dist/latest*.yml
+            desktop/dist/*.blockmap
           if-no-files-found: error
   release:
     needs: build
@@ -57,5 +62,7 @@ jobs:
             - Mac (Apple chip M1/M2/M3/M4): My-AI-Work-Mates-mac-arm64.dmg
             - Mac (Intel): My-AI-Work-Mates-mac-x64.dmg
             - Linux: the .AppImage file
+
+            Installed apps on Windows and Linux update themselves from this page (the latest*.yml and .blockmap files are for that).
           files: installers/*
           make_latest: true

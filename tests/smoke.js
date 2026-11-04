@@ -37,6 +37,7 @@ const ROUTES = ["#/home", "#/ceo/home",
   }
   await browser.close(); server.close();
   try { console.log("OK: " + await require("./desktop")()); } catch (e) { errors.push("desktop: " + (e.stack || e)); }
+  try { console.log("OK: " + await require("./updater")()); } catch (e) { errors.push("updater: " + (e.stack || e)); }
   if (errors.length) { console.error("FAILED\n" + errors.join("\n")); process.exit(1); }
   console.log(`OK: ${ROUTES.length} pages × 2 screen sizes, no errors`);
 })();

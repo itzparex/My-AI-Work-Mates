@@ -10,6 +10,9 @@
     "start": "electron .",
     "dist": "electron-builder --publish never"
   },
+  "dependencies": {
+    "electron-updater": "6.3.9"
+  },
   "devDependencies": {
     "electron": "33.2.1",
     "electron-builder": "25.1.8"
@@ -18,11 +21,55 @@
     "appId": "com.itzparex.myaiworkmates",
     "productName": "My AI Work Mates",
     "artifactName": "My-AI-Work-Mates-${os}-${arch}.${ext}",
-    "files": ["main.js", "serve.js", "app/**/*"],
-    "directories": { "buildResources": "build", "output": "dist" },
-    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }] },
-    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "shortcutName": "My AI Work Mates" },
-    "mac": { "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }], "category": "public.app-category.productivity" },
-    "linux": { "target": ["AppImage"], "category": "Office" }
+    "files": [
+      "main.js",
+      "serve.js",
+      "updater.js",
+      "app/**/*"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "My AI Work Mates"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Office"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/itzparex/My-AI-Work-Mates/releases/download/desktop-latest"
+      }
+    ]
   }
 }
