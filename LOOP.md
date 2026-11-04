@@ -40,6 +40,12 @@ Each work mate becomes a real AI agent: Claude, on the CEO's existing subscripti
 - [ ] **W5. Graphic Designer work mate:** a carousel plan and image briefs from the approved copy. Image generation only with free tools; AI product images need CEO approval.
 - [ ] **W6. Shopify Developer work mate:** section code built in the Design Studio format, the QA checklist and a hand-over note. It never touches the live store; the CEO publishes.
 - [ ] **W7. "Run" buttons and schedules.** From each department page the CEO can copy a one-line command to run that work mate now, or set it on a schedule. The app shows each agent's last run, what it produced, and anything waiting on the CEO.
+- [ ] **W8. Token usage dashboard (CEO).** Every agent run (and every build loop run) records its token use at the end (input, output, total, from the session's own usage report) into the shared data, with agent, project, task and date. A "Usage" page on the CEO dashboard shows:
+  - A **budget meter** at the top: tokens used this week against a weekly budget the CEO sets, with the percentage, a projection ("at this pace you'll hit the budget on Friday") and the date of the next reset the CEO sets.
+  - A **stacked bar chart by day**, one color per work mate, with a 7-day / 30-day toggle and hover details.
+  - A **per-agent table**: runs, total tokens, average per run, tokens per approved deliverable (efficiency), a 7-day trend sparkline, and its own budget.
+  - **Alerts and auto-pause:** a warning at 80% of a budget; at 100% that agent is paused through the Auto-work switch (W1b) and a CEO decision is created to raise the budget or keep it paused.
+  - **Available allowance:** Claude doesn't share a remaining-tokens number with apps, so the page shows the CEO's own budget remaining, plus a link to the Claude usage page and a box to note the plan's current percentage used and reset time.
 
 ### 4. Rulebooks inside the app
 - [ ] **4a. Rulebooks and product brief saved in the repo** as Markdown (`rulebooks/`), exported from Claude Docs.
@@ -53,3 +59,4 @@ Each work mate becomes a real AI agent: Claude, on the CEO's existing subscripti
 - 2026-11-03: Loop set up. App, desktop installers and website live.
 - 2026-11-04: Added section 3½ "Make the work mates work" (CEO approved).
 - 2026-11-04: Added W1b, a CEO-only Auto-work switch to pause or resume the agents (CEO request).
+- 2026-11-04: Added W8, a token usage dashboard with budgets and auto-pause (CEO request).
