@@ -163,6 +163,8 @@ a.stat:hover{border-color:var(--accent)}
 .uform .acts{grid-column:1/-1;justify-content:flex-end}
 .uform .quickp{grid-column:1/-1}
 .spark{display:flex;align-items:flex-end;gap:3px;height:22px;margin-top:2px}.spark i{width:6px;border-radius:2px;background:var(--accent);opacity:.55;min-height:2px}.spark i:last-child{opacity:1}
+.spark i.a{background:var(--blush)}.src{font-weight:600;color:var(--ink)}.src.auto{color:var(--accent)}
+.reader{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:10px 12px;margin:12px 0 4px;border-radius:10px;background:var(--sunk);line-height:1.45}.reader>span:nth-child(2){flex:1 1 260px;min-width:0}.rdot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none;opacity:.6}.rdot.on{background:var(--good);opacity:1}
 a.btn{text-decoration:none;color:inherit}
 @media (max-width:640px){.usage{gap:12px}.ring{width:80px;height:80px}.ring>div{width:62px;height:62px}.ring b{font-size:20px}.uform{grid-template-columns:1fr}}
 .runrow{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;padding:8px 0}
@@ -284,16 +286,36 @@ const ago=t=>{const m=Math.round((Date.now()-new Date(t))/6e4);if(m<1)return "ju
 const until=t=>{const m=Math.round((new Date(t)-Date.now())/6e4);if(m<60)return "in "+Math.max(m,0)+" min";const h=Math.round(m/60);if(h<48)return "in "+plural(h,"hour");return "in "+plural(Math.round(h/24),"day")};
 const when=t=>new Date(t).toLocaleString(undefined,{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
 const localDT=d=>{const z=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate())+"T"+z(d.getHours())+":"+z(d.getMinutes())};
-function usageHTML(){const C=S.claude||{},u=C.usage,hist=(C.history||[]).slice(-12);
- if(!u)return `<div class="usage"><div class="ring blank" style="--p:0"><div><b>—</b><span>used</span></div></div><div class="ufacts"><span class="big">Plan usage not noted yet</span><span class="small muted">Claude doesn't share a usage number with apps. Open the usage page, then note the percentage here in one tap.</span><div class="row" style="margin-top:4px"><button class="btn sm primary" id="uEdit">Note usage</button></div></div></div><div id="uForm"></div>`;
+/* C2c: an optional "Usage reader" scheduled task on the CEO's computer reads the usage page and saves readings in runs/usage.json
+   (agents/usage-reader.md). The panel shows whichever reading is newest and says how it got there. */
+const USAGE_REMOTE="https://raw.githubusercontent.com/itzparex/My-AI-Work-Mates/main/runs/usage.json";
+const READER_DOC="https://github.com/itzparex/My-AI-Work-Mates/blob/main/agents/usage-reader.md";
+const READER_PROMPT='You are the optional "Usage reader" for My AI Work Mates (repo itzparex/My-AI-Work-Mates). Follow agents/usage-reader.md in that repo exactly.';
+let AUTO=null;try{AUTO=JSON.parse(localStorage.getItem(KEY+"-usage")||"null")}catch(e){}
+async function loadUsage(){const get=u=>fetch(u,{cache:"no-cache"}).then(r=>r.ok?r.json():null).catch(()=>null);
+ const [a,b]=await Promise.all([get("runs/usage.json"),get(USAGE_REMOTE)]);
+ const ok=[a,b].filter(x=>x&&Array.isArray(x.readings)).sort((x,y)=>(y.updated||"")>(x.updated||"")?1:-1)[0];
+ if(ok){AUTO=ok;try{localStorage.setItem(KEY+"-usage",JSON.stringify(AUTO))}catch(e){}}
+ const box=$("#usageBox");if(box&&!($("#uForm")||{}).innerHTML){box.innerHTML=usageHTML();$("#uEdit")&&($("#uEdit").onclick=usageForm);wireReader()}}
+const autoLast=()=>AUTO&&AUTO.readings&&AUTO.readings.length?AUTO.readings[AUTO.readings.length-1]:null;
+function readerHTML(){const a=autoLast();
+ return `<div class="reader small"><span class="rdot ${a?"on":""}" aria-hidden="true"></span><span>${a?`Automatic reading: last read <b>${ago(a.at)}</b>${a.note?` <span class="muted">· ${esc(a.note)}</span>`:""}`:`<b>Automatic reading is off</b> <span class="muted">(optional)</span>. When your computer and the Claude desktop app are on, a scheduled task can read your usage page and save the number here.`}</span>
+  <span class="row"><button class="btn sm" id="rdCopy" type="button">Copy task prompt</button><a class="btn sm" href="${READER_DOC}" target="_blank" rel="noopener">${a?"How it works":"How to set up"} ↗</a></span></div>`}
+function wireReader(){const b=$("#rdCopy");if(b)b.onclick=()=>{const done=()=>toast("Prompt copied. Paste it into a new scheduled task in the Claude desktop app");
+ (navigator.clipboard?navigator.clipboard.writeText(READER_PROMPT):Promise.reject()).then(done).catch(()=>{const t=document.createElement("textarea");t.value=READER_PROMPT;document.body.appendChild(t);t.select();try{document.execCommand("copy");done()}catch(e){toast("Copy failed. Open How to set up instead")}t.remove()})}}
+function usageHTML(){const C=S.claude||{},man=C.usage,auto=autoLast();
+ const u=man&&auto?(new Date(auto.at)>new Date(man.at)?auto:man):man||auto;
+ const hist=[...(C.history||[]).map(h=>({...h,src:"CEO"})),...((AUTO&&AUTO.readings)||[]).map(h=>({pct:h.pct,at:h.at,src:"auto"}))].sort((a,b)=>a.at<b.at?-1:1).slice(-12);
+ if(!u)return `<div class="usage"><div class="ring blank" style="--p:0"><div><b>—</b><span>used</span></div></div><div class="ufacts"><span class="big">Plan usage not noted yet</span><span class="small muted">Claude doesn't share a usage number with apps. Open the usage page, then note the percentage here in one tap.</span><div class="row" style="margin-top:4px"><button class="btn sm primary" id="uEdit">Note usage</button></div></div></div><div id="uForm"></div>${readerHTML()}`;
+ const isAuto=u.source==="auto";
  const pct=Math.max(0,Math.min(100,+u.pct||0)),col=pct>=90?"var(--bad)":pct>=70?"var(--warn)":"var(--accent)";
  const passed=u.reset&&new Date(u.reset)<Date.now(),stale=Date.now()-new Date(u.at)>24*36e5;
  return `<div class="usage"><div class="ring" style="--p:${pct};--c:${col}" role="img" aria-label="${pct}% of plan used"><div><div><b>${pct}<small>%</small></b><br><span>used</span></div></div></div>
   <div class="ufacts"><span class="big">${pct>=90?"Almost at the plan limit":pct>=70?"Getting close to the limit":"Plenty of room left"}</span>
    <span class="small">${u.reset?(passed?`<span class="stale">Reset time passed (${esc(when(u.reset))}); usage has likely restarted. Note the new number.</span>`:`Resets <b>${esc(when(u.reset))}</b> · ${until(u.reset)}`):'<span class="muted">Reset time not noted</span>'}</span>
-   <span class="small ${stale?"stale":"muted"}">Last updated ${ago(u.at)} · noted by ${esc(u.by||"CEO")}</span>
-   ${hist.length>1?`<div class="spark" title="Last ${hist.length} readings" aria-hidden="true">${hist.map(h=>`<i style="height:${Math.max(2,h.pct)}%"></i>`).join("")}</div>`:""}
-   <div class="row" style="margin-top:2px"><button class="btn sm primary" id="uEdit">Update</button><a class="btn sm" href="https://claude.ai/settings/usage" target="_blank" rel="noopener">Open usage page ↗</a></div></div></div><div id="uForm"></div>`}
+   <span class="small ${stale?"stale":"muted"}">Last updated ${ago(u.at)} · <span class="src ${isAuto?"auto":""}">${isAuto?"read automatically":"noted by "+esc(u.by||"CEO")}</span>${isAuto&&u.note?" · "+esc(u.note):""}</span>
+   ${hist.length>1?`<div class="spark" title="Last ${hist.length} readings (lighter bars were read automatically)" aria-hidden="true">${hist.map(h=>`<i class="${h.src==="auto"?"a":""}" style="height:${Math.max(2,h.pct)}%"></i>`).join("")}</div>`:""}
+   <div class="row" style="margin-top:2px"><button class="btn sm primary" id="uEdit">Update</button><a class="btn sm" href="https://claude.ai/settings/usage" target="_blank" rel="noopener">Open usage page ↗</a></div></div></div><div id="uForm"></div>${readerHTML()}`}
 function usageForm(){const box=$("#uForm");if(!box)return;if(box.innerHTML){box.innerHTML="";return}
  const u=(S.claude||{}).usage||{},def=u.reset&&new Date(u.reset)>Date.now()?localDT(new Date(u.reset)):"";
  box.innerHTML=`<div class="uform"><div class="field"><label for="u-pct">Percent used</label><input id="u-pct" type="number" min="0" max="100" inputmode="numeric" value="${u.pct??""}" placeholder="e.g. 42"></div>
@@ -312,8 +334,8 @@ function usageForm(){const box=$("#uForm");if(!box)return;if(box.innerHTML){box.
    and remembers the last good copy for offline use. Next run is worked out from each agent's saved schedule. */
 const RUNS_REMOTE="https://raw.githubusercontent.com/itzparex/My-AI-Work-Mates/main/runs/runs.json";
 const RUNS_PAGE="https://github.com/itzparex/My-AI-Work-Mates/blob/main/runs/runs.json";
-const AGENTS=["Build loop","Project Director",...DEPTS.map(d=>d[0])];
-const RICO={"Build loop":"⚙",...ICO};
+const AGENTS=["Build loop","Usage reader","Project Director",...DEPTS.map(d=>d[0])];
+const RICO={"Build loop":"⚙","Usage reader":"◔",...ICO};
 let RUNS=null,runsFrom="";try{RUNS=JSON.parse(localStorage.getItem(KEY+"-runs")||"null");if(RUNS)runsFrom="saved copy"}catch(e){}
 async function loadRuns(){const get=u=>fetch(u,{cache:"no-cache"}).then(r=>r.ok?r.json():null).catch(()=>null);
  const [a,b]=await Promise.all([get("runs/runs.json"),get(RUNS_REMOTE)]);
@@ -335,7 +357,7 @@ const fmtT=t=>new Date(t).toLocaleDateString(undefined,{month:"short",day:"numer
 const tok=n=>n==null?null:n>=1e6?(n/1e6).toFixed(n>=1e7?0:1)+"M":n>=1e3?Math.round(n/1e3)+"k":String(n);
 function runsHTML(){
  if(!RUNS)return `<div class="cl-row"><span class="k">Scheduled runs</span><span class="muted small">Run records couldn't be loaded yet. They load from the repo when you're online.</span></div>`;
- const sch=RUNS.schedules||{},shown=AGENTS.filter(n=>sch[n]||lastRunOf(n)),idle=AGENTS.filter(n=>!shown.includes(n)&&n!=="Build loop");
+ const sch=RUNS.schedules||{},shown=AGENTS.filter(n=>sch[n]||lastRunOf(n)),idle=AGENTS.filter(n=>!shown.includes(n)&&n!=="Build loop"&&n!=="Usage reader");
  const wk=Date.now()-7*864e5,recent=RUNS.runs.filter(r=>new Date(r.finished)>wk),withTok=recent.filter(r=>r.tokens&&r.tokens.total!=null);
  const byAgent=AGENTS.map(n=>[n,withTok.filter(r=>r.agent===n).reduce((s,r)=>s+r.tokens.total,0),recent.filter(r=>r.agent===n).length]).filter(x=>x[2]);
  const rows=shown.map(n=>{const r=lastRunOf(n),nx=nextRun(sch[n]),res=r&&RES[r.result]||null;
@@ -353,8 +375,8 @@ function runsHTML(){
    <span class="small muted">Run records from ${esc(runsFrom||"the repo")}${RUNS.updated?" · updated "+ago(RUNS.updated):""} · <a href="${RUNS_PAGE}" target="_blank" rel="noopener">see the file ↗</a></span></div>`}
 function paintRuns(){const box=$("#runsBox");if(box)box.innerHTML=runsHTML();
  $$("[data-mrun]").forEach(el=>{const r=lastRunOf(el.dataset.mrun),res=r&&RES[r.result];el.innerHTML=r?`Last run: <span class="${r.result==="success"?"t-good":r.result==="failure"?"t-bad":""}">${res[0]}</span> ${esc(fmtT(r.finished))}`:"Last run: none yet"})}
-document.addEventListener("visibilitychange",()=>{if(!document.hidden&&route()==="ceo")loadRuns()});
-setInterval(()=>{if(!document.hidden&&route()==="ceo")loadRuns()},5*6e4);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&route()==="ceo"){loadRuns();loadUsage()}});
+setInterval(()=>{if(!document.hidden&&route()==="ceo"){loadRuns();loadUsage()}},5*6e4);
 function drawCEO(){
  const active=S.projects.filter(p=>p.status!=="Closed");
  const waiting=S.decisions.length;
@@ -411,7 +433,7 @@ function drawCEO(){
   <p class="hint" style="margin:10px 0 0">Last run comes from the run records in the repo; each work mate starts recording when it becomes an agent. The Auto-work switch fills in later.</p></section>
  <div class="cols cols-b" style="margin-top:16px">
   <section class="card claude" data-sec="claude"><h2><span class="cmark" aria-hidden="true">✳</span>Claude <a class="more" href="https://claude.ai/settings/usage" target="_blank" rel="noopener">Usage page ↗</a></h2>
-   ${usageHTML()}
+   <div id="usageBox">${usageHTML()}</div>
    <div id="runsBox">${runsHTML()}</div>
    ${LINKS.map(([g,ls])=>`<div class="lgroup"><span class="k">${g}</span><div class="links">${ls.map(([l,u])=>`<a href="${u}" target="_blank" rel="noopener">${l} ↗</a>`).join("")}</div></div>`).join("")}</section>
   <section class="card" data-sec="issues"><h2>Open issues <span class="pill ${openIssues.length?"p-wait":"p-done"}">${openIssues.length}</span><a class="more" href="index.html#/director/issues" target="_top">Issues log →</a></h2>
@@ -429,7 +451,7 @@ function drawCEO(){
   <div class="flow" aria-label="How a project flows">${["CEO brief","Research","Wireframe","Copy","Design + images","Design approval","Build","QA","Launch approval","CEO publishes"].map(x=>`<span>${x}</span>`).join("<i>→</i>")}</div>
  </section>`;
  $("#newProj").onclick=openCreate;
- $("#uEdit")&&($("#uEdit").onclick=usageForm);
+ $("#uEdit")&&($("#uEdit").onclick=usageForm);wireReader();
  paintRuns();
  $$("#main a[href^='#ceo:']").forEach(a=>a.onclick=e=>{e.preventDefault();const sub=a.getAttribute("href").split(":")[1];if(parent!==window)parent.location.hash="#/ceo/"+sub;else location.hash="ceo:"+sub});
  $$("[data-open]").forEach(b=>b.onclick=()=>{S.sel=b.dataset.open;save();if(parent!==window)parent.location.hash="#/director/timeline";else location.hash="director"});
@@ -513,7 +535,7 @@ function quickAdd(kind){const p=proj(S.sel);const isI=kind==="issue";
   save();$("#modalRoot").innerHTML="";toast("Saved");drawDirector()};
  $("#qa-what").focus()}
 document.addEventListener("keydown",e=>{if(e.key==="Escape")$("#modalRoot").innerHTML=""});
-applyTheme();draw();loadRuns();
+applyTheme();draw();loadRuns();loadUsage();
 })();
 </script>
 <script>

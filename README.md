@@ -51,6 +51,8 @@ Everything you add is saved in the browser on the device you use (localStorage).
 
 Every scheduled run (the build loop now, each work mate later) records itself in `runs/runs.json` with `node tools/record-run.js` (what ran, when, success or failure, what it produced, token use when the session reports it, and the agent's schedule). The Claude panel on the CEO page reads it to show each agent's last run, next run, recent runs and token use. Format and options: see the top of `tools/record-run.js`.
 
+Plan usage on the Claude panel can be noted by the CEO in one tap, or read automatically by an optional "Usage reader" scheduled task that runs on the CEO's computer when the Claude desktop app is on. It reads the CEO's own usage page (read only) and saves the number with the time it was read in `runs/usage.json` (`node tools/record-usage.js`). The panel shows the newest reading and labels it "read automatically" or "noted by CEO". Setup and steps: `agents/usage-reader.md`.
+
 ## Rulebooks
 
 The rulebooks and product brief live in Claude Docs and open from the menu ("Rulebook ↗").

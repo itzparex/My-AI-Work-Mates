@@ -14,7 +14,7 @@
 const fs = require("fs"), path = require("path");
 const FILE = path.resolve(__dirname, "..", "runs", "runs.json");
 const KEEP = 500;
-const AGENTS = ["Build loop", "Project Director", "Research & Strategist", "Copywriter", "UI/UX Designer", "Graphic Designer", "Shopify Developer"];
+const AGENTS = ["Build loop", "Usage reader", "Project Director", "Research & Strategist", "Copywriter", "UI/UX Designer", "Graphic Designer", "Shopify Developer"];
 
 const args = {}; const list = process.argv.slice(2);
 for (let i = 0; i < list.length; i++) {
