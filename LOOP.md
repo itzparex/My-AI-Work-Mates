@@ -15,6 +15,14 @@ The loop works through this backlog one item per round, top to bottom, and stops
 
 ## Backlog
 
+### 0. CEO command center (do first: this is the CEO's main page)
+- [ ] **C1. CEO page becomes the home page and looks great.** Opening the app lands on the CEO command center (the current home merges into it). Use the frontend-design skill and aim for a polished, premium look in light and dark, on desktop and phone. Top to bottom: a greeting with today's date and one-line status ("3 decisions need you · 1 project at risk"); decisions waiting, with Allow / Disallow / Allow with a note; project health cards (progress, next step, due date, at-risk flag); a work mates strip (each work mate's status, current task, last run, Auto-work state once W1b exists); a "Claude" panel (see C2); open issues; this week's summary.
+- [ ] **C2. Claude panel on the CEO page.** Everything about the CEO's Claude in one place, honestly labeled:
+  - **Plan usage:** the percentage used and reset time from Claude's usage page. Claude doesn't offer apps a usage feed, so either the CEO updates it in one tap, or an optional browser step (when the CEO's computer and Claude desktop app are on) reads the CEO's own usage page and saves the number with the time it was read. Always shows "last updated".
+  - **Agent token use** from every run (feeds into W8).
+  - **Scheduled tasks:** each run records its own result (what ran, when, success or failure, what it produced), so the panel shows the build loop and every work mate's last and next run.
+  - **Quick links:** Claude usage page, scheduled tasks, the rulebooks and the product brief, the GitHub repo and Releases.
+
 ### 1. Full department dashboards
 - [ ] **1a. Research & Strategist.** Research brief with the question bank (new product: mine competitors; existing product: use our data). Each of the nine documents opens as a structured editor with its required sections. Evidence ledger IDs can be picked from inside the documents. A Marketer's Booklet builder assembles the Booklet from the documents.
 - [ ] **1b. Copywriter.** Copy map editor: one block per page section (from the wireframe), in page order, with versions. Claims check flags any claim whose ledger entry is "Do not use" or grade C/D. Alt text and image words for the Graphic Designer.
@@ -60,3 +68,4 @@ Each work mate becomes a real AI agent: Claude, on the CEO's existing subscripti
 - 2026-11-04: Added section 3½ "Make the work mates work" (CEO approved).
 - 2026-11-04: Added W1b, a CEO-only Auto-work switch to pause or resume the agents (CEO request).
 - 2026-11-04: Added W8, a token usage dashboard with budgets and auto-pause (CEO request).
+- 2026-11-04: Added section 0, the CEO command center as the main page with a Claude panel, to be done first (CEO request).
