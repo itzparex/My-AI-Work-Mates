@@ -33,6 +33,7 @@ The loop works through this backlog one item per round, top to bottom, and stops
 ### 3½. Make the work mates work
 Each work mate becomes a real AI agent: Claude, on the CEO's existing subscription (no paid API keys), runs the department's rulebook against the app's shared data in the GitHub data repo from 3b. The app shows what each agent did. Agents never publish, send, spend or contact anyone, and everything goes through the Project Director to the CEO.
 - [ ] **W1. Agent playbooks in the repo.** One instruction file per work mate (`agents/<department>.md`): what it reads from the app data, the rulebook steps it follows, what it writes back (deliverable, task status, issues), and when it must stop and ask. Plus a Project Director playbook that reviews submitted work against the department checklist.
+- [ ] **W1b. Auto-work switch (CEO only).** On the CEO dashboard, one main switch, "Auto-work: On / Paused", plus an On/Paused switch per work mate, also shown on each department page. Saved in the shared app data so every device and every agent sees it. Every playbook checks the switch first: when paused, scheduled runs do nothing and only log "Skipped: paused by CEO"; a "Run now" started by the CEO still works. The header shows a clear "Auto-work paused" badge while paused. Turning it back on resumes from where each agent stopped. Every change is recorded with date and time.
 - [ ] **W2. Research work mate, end to end.** From a CEO brief in the app, it produces real research documents with free sources only, fills the evidence ledger with sources and grades, creates person tasks for anything it can't reach, and submits the Booklet for Project Director review. Proven on one real project.
 - [ ] **W3. Project Director agent.** Reviews submitted deliverables, approves or returns them with comments, logs issues and lessons, and adds anything needing the CEO to the decisions list.
 - [ ] **W4. Copywriter work mate:** a copy map from the approved Booklet, with the claims check.
@@ -51,3 +52,4 @@ Each work mate becomes a real AI agent: Claude, on the CEO's existing subscripti
 
 - 2026-11-03: Loop set up. App, desktop installers and website live.
 - 2026-11-04: Added section 3½ "Make the work mates work" (CEO approved).
+- 2026-11-04: Added W1b, a CEO-only Auto-work switch to pause or resume the agents (CEO request).
