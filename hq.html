@@ -107,6 +107,68 @@ td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:60}
 .empty{padding:24px;text-align:center;color:var(--muted);border:1.5px dashed var(--line);border-radius:10px}
 .inline-input{display:flex;gap:6px;margin-top:6px}.inline-input input{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px}
+/* CEO command center */
+.hero{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:20px;padding:24px 24px 18px;margin-bottom:16px;background:radial-gradient(120% 140% at 100% 0%,var(--blush-soft) 0%,transparent 45%),radial-gradient(90% 120% at 0% 100%,var(--accent-soft) 0%,transparent 55%),var(--surface);box-shadow:var(--shadow)}
+.hero::after{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--blush));opacity:.09;pointer-events:none}
+.hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;position:relative;z-index:1}
+.hello{font-size:clamp(30px,4.4vw,48px);letter-spacing:-.025em;margin:6px 0 10px;line-height:1.02}
+.status{margin:0;font-weight:700;font-size:15px;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.status .dot{color:var(--muted)}
+.st{display:inline-flex;align-items:center;gap:7px;text-decoration:none;color:var(--ink)}
+.st::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.st-warn::before{background:var(--warn)}.st-bad::before{background:var(--bad)}.st-good::before{background:var(--good)}
+a.st:hover{text-decoration:underline;text-underline-offset:3px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:20px;position:relative;z-index:1}
+.stat{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--surface) 72%,transparent);border:1px solid var(--line);text-decoration:none;color:inherit;backdrop-filter:blur(6px)}
+a.stat:hover{border-color:var(--accent)}
+.stat .n{font-family:var(--f-display);font-weight:800;font-size:28px;line-height:1;font-variant-numeric:tabular-nums}
+.stat .n small{font-size:15px;color:var(--muted);font-weight:700}
+.stat .l{font-size:12px;font-weight:700;color:var(--muted)}
+.t-bad{color:var(--bad)!important}.t-good{color:var(--good)!important}
+.hint{margin:-6px 0 12px;font-size:12.5px;color:var(--muted)}
+.card>h2 .more{margin-left:auto;font-family:var(--f-body);font-size:12.5px;font-weight:700;color:var(--accent);text-decoration:none}
+.proj{color:inherit;font:inherit;width:100%}
+.proj.risk{border-color:color-mix(in srgb,var(--bad) 45%,var(--line));box-shadow:inset 3px 0 0 var(--bad)}
+.pbar{display:flex;align-items:center;gap:10px}.pbar .bar{flex:1}.pbar b{font-family:var(--f-display);font-size:15px;font-variant-numeric:tabular-nums;min-width:38px;text-align:right}
+.pfacts{display:grid;grid-template-columns:1.4fr 1fr;gap:10px}
+.pfacts>div{display:flex;flex-direction:column;gap:1px;min-width:0;font-weight:600}
+.k{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.riskline{font-size:12.5px;font-weight:700;color:var(--bad);background:var(--bad-soft);border-radius:8px;padding:6px 10px}
+.mates{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.mate{border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;text-decoration:none;color:inherit;background:var(--surface);transition:border-color .15s,transform .15s}
+.mate:hover{border-color:var(--accent);transform:translateY(-1px)}
+.mate .ico{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-size:14px;flex:none}
+.mate b{font-size:13.5px;line-height:1.25}
+.mstate{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;align-self:flex-start;padding:3px 9px;border-radius:99px;background:var(--sunk);color:var(--muted)}
+.mstate i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.m-prog{background:var(--accent-soft);color:var(--accent)}.m-prog i{animation:pulse 1.6s ease-in-out infinite}
+.m-wait{background:var(--warn-soft);color:var(--warn)}.m-person{background:var(--blush-soft);color:var(--blush)}.m-bad{background:var(--bad-soft);color:var(--bad)}
+@keyframes pulse{50%{opacity:.35}}
+.mtask{min-height:36px;line-height:1.4}
+.mfoot{display:flex;flex-direction:column;gap:1px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);padding-top:7px;margin-top:auto}
+.cols-b{grid-template-columns:minmax(0,1fr) minmax(0,1.35fr)}
+.claude{background:linear-gradient(160deg,var(--accent-soft),var(--surface) 60%)}
+.cmark{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--blush));color:#fff;font-size:14px}
+.cl-row{display:flex;flex-direction:column;gap:2px;padding:9px 0;border-bottom:1px solid var(--line)}
+.links{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.links a{font-size:12px;font-weight:700;text-decoration:none;color:var(--accent);background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:5px 10px}
+.links a:hover{border-color:var(--accent)}
+.ilist{display:flex;flex-direction:column}
+.iss{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px 0;border-bottom:1px solid var(--line)}
+.iss:last-child{border-bottom:0}
+.wk{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.wkn{background:var(--sunk);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column}
+.wkn .n{font-family:var(--f-display);font-weight:800;font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums}.wkn .l{font-size:12px;font-weight:700;color:var(--muted)}
+.wkcols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.wkcols .k{margin-bottom:6px}
+.wkitem{display:flex;gap:10px;padding:5px 0;font-size:13px;font-weight:600}
+.wkdate{flex:none;min-width:48px;font-size:12px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+.flow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:12px;font-weight:700}
+.flow span{background:var(--sunk);border-radius:99px;padding:4px 10px}.flow i{color:var(--muted);font-style:normal}
+@media (max-width:1180px){.mates{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:980px){.cols-b{grid-template-columns:1fr}}
+@media (max-width:640px){.hero{padding:18px 16px 14px;border-radius:16px}.hero-top .btn{width:100%;justify-content:center}.stats,.wk{grid-template-columns:repeat(2,1fr)}.mates{grid-template-columns:repeat(2,minmax(0,1fr))}.wkcols{grid-template-columns:1fr}.pfacts{grid-template-columns:1fr 1fr}.iss{grid-template-columns:auto minmax(0,1fr)}.iss>.pill:last-child{grid-column:2;justify-self:start}}
+@media (prefers-reduced-motion:reduce){.m-prog i{animation:none}}
 @media (max-width:980px){.cols{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:560px){.form{grid-template-columns:1fr}.field.wide{grid-column:auto}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -126,13 +188,14 @@ td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const uid=()=>Math.random().toString(36).slice(2,8);
-const TODAY="2026-11-03";
+const TODAY=(()=>{const n=new Date();return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0")})();
 const D=s=>new Date(s+"T00:00:00Z");const iso=d=>d.toISOString().slice(0,10);
 const addWork=(s,n)=>{let d=D(s);let left=Math.max(1,Math.round(n));while(left>1){d.setUTCDate(d.getUTCDate()+1);const w=d.getUTCDay();if(w!==0&&w!==6)left--}return iso(d)};
 const nextWork=s=>{let d=D(s);do{d.setUTCDate(d.getUTCDate()+1)}while([0,6].includes(d.getUTCDay()));return iso(d)};
 const days=(a,b)=>Math.round((D(b)-D(a))/864e5);
 const fmt=s=>s?D(s).toLocaleDateString(undefined,{month:"short",day:"numeric",timeZone:"UTC"}):"";
 const STUDIO="index.html#/uiux/studio";
+const ICO={"Project Director":"◎","Research & Strategist":"⌕","Copywriter":"✎","UI/UX Designer":"◧","Graphic Designer":"▣","Shopify Developer":"⟨⟩"};
 const DEPTS=[["Research & Strategist","index.html#/research/overview"],["Copywriter","index.html#/copy/overview"],["UI/UX Designer",STUDIO],["Graphic Designer","index.html#/graphic/overview"],["Shopify Developer","index.html#/shopify/overview"]];
 const PAUSED=["Video Editor","Email Marketing Manager","Social Media Manager","Media Buyer"];
 const STATUSES=["Not started","In progress","Waiting on approval","Waiting on a person","Done","Blocked"];
@@ -173,38 +236,98 @@ $("#roles").onclick=e=>{const b=e.target.closest("button");if(!b)return;location
 window.addEventListener("hashchange",draw);
 
 /* ================= CEO ================= */
+/* CEO command center: greeting and status, decisions, project health, work mates, Claude panel, open issues, this week */
+const plural=(n,w)=>n+" "+w+(n===1?"":"s");
+function riskOf(p){if(p.status==="Closed"||p.status==="Launched")return null;
+ const open=p.tasks.filter(t=>t.status!=="Done");
+ const late=open.filter(t=>t.due<TODAY);if(late.length)return late[0].name+" is "+plural(days(late[0].due,TODAY),"day")+" late";
+ const bl=open.find(t=>t.status==="Blocked");if(bl)return bl.name+" is blocked";
+ const hi=S.issues.find(i=>i.project===p.code&&i.sev==="High"&&i.status!=="Resolved");if(hi)return "High issue: "+hi.what;
+ return null}
+function mateState(n){const ts=S.projects.filter(p=>p.status!=="Closed").flatMap(p=>p.tasks.map(t=>({...t,project:p.code}))).filter(t=>t.dept===n&&t.status!=="Done");
+ const pick=st=>ts.find(t=>t.status===st);
+ const order=[["Blocked","Blocked","bad"],["Waiting on a person","Needs a person","person"],["Waiting on approval","In review","wait"],["In progress","Working","prog"]];
+ for(const [st,label,cls] of order){const t=pick(st);if(t)return {label,cls,task:t}}
+ const next=ts.filter(t=>t.status==="Not started").sort((a,b)=>a.start<b.start?-1:1)[0];
+ return {label:"Idle",cls:"idle",task:null,next}}
+function weekBounds(){const d=D(TODAY),w=(d.getUTCDay()+6)%7;const s=new Date(d);s.setUTCDate(d.getUTCDate()-w);const e=new Date(s);e.setUTCDate(s.getUTCDate()+6);return [iso(s),iso(e)]}
 function drawCEO(){
  const active=S.projects.filter(p=>p.status!=="Closed");
  const waiting=S.decisions.length;
- const high=S.issues.filter(i=>i.sev==="High"&&i.status!=="Resolved").length;
+ const risky=active.map(p=>[p,riskOf(p)]).filter(x=>x[1]);
+ const openIssues=S.issues.filter(i=>i.status!=="Resolved");
  const dueSoon=active.flatMap(p=>p.tasks.filter(t=>t.status!=="Done"&&days(TODAY,t.due)<=3&&days(TODAY,t.due)>=0)).length;
+ const h=new Date().getHours(),greet=h<5?"Working late":h<12?"Good morning":h<18?"Good afternoon":"Good evening";
+ const dateLong=new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"});
+ const status=[waiting?`<a href="#ceo:decisions" class="st st-warn">${plural(waiting,"decision")} need${waiting===1?"s":""} you</a>`:`<span class="st st-good">Nothing waiting on you</span>`,
+  risky.length?`<a href="#ceo:projects" class="st st-bad">${plural(risky.length,"project")} at risk</a>`:`<span class="st st-good">All projects on track</span>`].join('<span class="dot" aria-hidden="true">·</span>');
+ const [ws,we]=weekBounds(),inWeek=d=>d&&d>=ws&&d<=we;
+ const allTasks=S.projects.flatMap(p=>p.tasks.map(t=>({...t,project:p.code})));
+ const doneWeek=allTasks.filter(t=>t.status==="Done"&&inWeek(t.doneAt||t.due));
+ const decidedWeek=S.issues.filter(i=>i.dept==="CEO decision"&&inWeek(i.date));
+ const issuesWeek=S.issues.filter(i=>i.dept!=="CEO decision"&&inWeek(i.date));
+ const lessonsWeek=S.lessons.filter(l=>inWeek(l.date));
+ const upcoming=allTasks.filter(t=>t.status!=="Done"&&t.due>=TODAY&&t.due<=we).sort((a,b)=>a.due<b.due?-1:1);
+ const mates=["Project Director",...DEPTS.map(d=>d[0])];
+ const mateUrl=n=>n==="Project Director"?"index.html#/director/timeline":(DEPTS.find(d=>d[0]===n)||[])[1];
+ const runs=S.runs||{};
  $("#main").innerHTML=`
- <div class="head"><div><div class="eyebrow">CEO dashboard · ${fmt(TODAY)}</div><h1>${waiting?waiting+" decision"+(waiting>1?"s":"")+" need you":"Nothing waiting on you"}</h1><p class="sub">Approvals, guardrail overrides and escalations from the Project Director come here first. Nothing that publishes, spends or reaches a client moves without your yes.</p></div><button class="btn primary" id="newProj">+ Create project</button></div>
- <div class="kpis">
-  <div class="kpi"><div class="n">${waiting}</div><div class="l">Decisions waiting</div><div class="d">No reply means disallowed</div></div>
-  <div class="kpi"><div class="n">${active.length}</div><div class="l">Open projects</div><div class="d">${active.filter(p=>p.status==="Active").length} active · ${active.filter(p=>p.status==="Planning").length} planning</div></div>
-  <div class="kpi"><div class="n">${dueSoon}</div><div class="l">Tasks due in 3 days</div><div class="d">Across all projects</div></div>
-  <div class="kpi"><div class="n" style="color:${high?"var(--bad)":"inherit"}">${high}</div><div class="l">High-severity issues</div><div class="d">Open in the issues log</div></div>
- </div>
+ <section class="hero">
+  <div class="hero-top"><div>
+   <div class="eyebrow">CEO command center · ${esc(dateLong)}</div>
+   <h1 class="hello">${greet}, CEO.</h1>
+   <p class="status">${status}</p></div>
+   <button class="btn primary" id="newProj">+ Create project</button></div>
+  <div class="stats">
+   <a class="stat" href="#ceo:decisions"><span class="n">${waiting}</span><span class="l">Decisions waiting</span></a>
+   <a class="stat" href="#ceo:projects"><span class="n ${risky.length?"t-bad":""}">${risky.length}<small>/${active.length}</small></span><span class="l">Projects at risk</span></a>
+   <span class="stat"><span class="n">${dueSoon}</span><span class="l">Tasks due in 3 days</span></span>
+   <a class="stat" href="#ceo:issues"><span class="n ${openIssues.some(i=>i.sev==="High")?"t-bad":""}">${openIssues.length}</span><span class="l">Open issues</span></a>
+  </div>
+ </section>
  <div class="cols">
-  <section class="card" data-sec="decisions"><h2>Decisions waiting</h2><div class="grid" id="decisions">${S.decisions.map(d=>`
+  <section class="card" data-sec="decisions"><h2>Decisions waiting <span class="pill ${waiting?"p-wait":"p-done"}">${waiting}</span></h2><p class="hint">No reply means disallowed. The Project Director has already checked each one.</p><div class="grid" id="decisions">${S.decisions.map(d=>`
    <article class="decision ${d.type.toLowerCase()}" data-id="${d.id}">
     <div class="meta"><span class="pill ${d.type==="Approval"?"p-wait":d.type==="Override"?"p-person":"p-block"}">${esc(d.type)}</span><span class="mono">${esc(d.project)}</span>${d.example?'<span class="example">Example</span>':""}</div>
     <b>${esc(d.title)}</b><p class="small">${esc(d.detail)}</p><div class="rec"><b>Project Director recommends:</b> ${esc(d.rec)}</div>
     <div class="acts"><button class="btn sm good" data-dec="allow">Allow</button><button class="btn sm bad" data-dec="disallow">Disallow</button><button class="btn sm" data-dec="note">Allow with a note</button></div>
    </article>`).join("")||'<div class="empty">You\'re all caught up. New decisions from the Project Director will appear here.</div>'}</div></section>
-  <div class="grid">
-   <section class="card" data-sec="projects"><h2>Projects</h2><div class="grid">${S.projects.map(p=>{const g=prog(p),n=nextTask(p);return `<button class="proj" data-open="${p.code}">
-    <div class="row"><b style="flex:1">${esc(p.name)}</b><span class="pill ${p.status==="Active"?"p-prog":p.status==="Closed"?"p-done":"p-wait"}">${esc(p.status)}</span></div>
+  <section class="card" data-sec="projects"><h2>Project health <span class="pill">${active.length} open</span></h2><div class="grid">${S.projects.map(p=>{const g=prog(p),n=nextTask(p),risk=riskOf(p),left=days(TODAY,p.due);return `<button class="proj ${risk?"risk":""}" data-open="${p.code}">
+    <div class="row"><b style="flex:1;font-size:15px">${esc(p.name)}</b>${risk?'<span class="pill p-block">⚠ At risk</span>':`<span class="pill ${p.status==="Active"?"p-prog":p.status==="Closed"||p.status==="Launched"?"p-done":"p-wait"}">${esc(p.status)}</span>`}</div>
     <div class="row small muted"><span class="mono">${esc(p.code)}</span><span>${esc(p.client)}</span><span>·</span><span>${esc(p.markets.join(", "))}</span><span>·</span><span>${esc(p.priority)} priority</span>${p.example?'<span class="example">Example</span>':""}</div>
-    <div class="bar" aria-label="${g.pct}% done"><i style="width:${g.pct}%"></i></div>
-    <div class="row small"><span>${g.d} of ${g.n} tasks done</span><span class="muted" style="margin-left:auto">${n?`Next: ${esc(n.name)} · due ${fmt(n.due)}`:"Complete"}</span></div>
-    <div class="small muted">Launch due ${fmt(p.due)}</div></button>`}).join("")}</div></section>
-   <section class="card" data-sec="departments"><h2>Department dashboards</h2><div class="deps">${DEPTS.map(([n,u])=>{const open=S.projects.flatMap(p=>p.tasks).filter(t=>t.dept===n&&t.status!=="Done").length;return u?`<a class="dept" href="${u}" target="_top"><b>${esc(n)}</b><span class="small muted">${open} open tasks</span><span class="small" style="color:var(--accent);font-weight:700">Open dashboard ↗</span></a>`:`<div class="dept"><b>${esc(n)}</b><span class="small muted">${open} open tasks</span><span class="small muted">Dashboard coming next</span></div>`}).join("")}${PAUSED.map(n=>`<div class="dept off"><b>${esc(n)}</b><span class="small muted">Paused</span></div>`).join("")}</div></section>
-  </div>
+    <div class="pbar"><div class="bar" aria-label="${g.pct}% done"><i style="width:${g.pct}%"></i></div><b>${g.pct}%</b></div>
+    <div class="pfacts"><div><span class="k">Next step</span><span>${n?esc(n.name):"Complete"}</span>${n?`<span class="small muted">${esc(n.dept)} · due ${fmt(n.due)}</span>`:""}</div><div><span class="k">Launch due</span><span>${fmt(p.due)}</span><span class="small ${left<0?"t-bad":"muted"}">${left<0?plural(-left,"day")+" late":left===0?"Today":"in "+plural(left,"day")}</span></div></div>
+    ${risk?`<div class="riskline">${esc(risk)}</div>`:""}</button>`}).join("")||'<div class="empty">No projects yet. Create one to get started.</div>'}</div></section>
  </div>
- <section class="card" data-sec="issues" style="margin-top:16px"><h2>Issues needing attention</h2>${issuesTable(S.issues.filter(i=>i.status!=="Resolved"))}</section>`;
+ <section class="card" data-sec="departments" style="margin-top:16px"><h2>Work mates <a class="more" href="index.html#/director/workload" target="_top">Workload →</a></h2>
+  <div class="mates">${mates.map(n=>{const m=mateState(n),r=runs[n];return `<a class="mate" href="${mateUrl(n)}" target="_top">
+   <div class="row"><span class="ico" aria-hidden="true">${ICO[n]||"•"}</span><b style="flex:1">${esc(n)}</b></div>
+   <span class="mstate m-${m.cls}"><i aria-hidden="true"></i>${m.label}</span>
+   <div class="small mtask">${m.task?`<span class="mono">${esc(m.task.project)}</span> ${esc(m.task.name)}`:m.next?`Next: ${esc(m.next.name)} · ${fmt(m.next.start)}`:"No open tasks"}</div>
+   <div class="mfoot"><span>Last run: ${r&&r.at?esc(fmt(r.at)):"none yet"}</span><span>Auto-work: ${S.autowork?esc(S.autowork[n]||"On"):"not set up"}</span></div></a>`}).join("")}</div>
+  <p class="hint" style="margin:10px 0 0">Work mates become real agents in a later step; their last run and the Auto-work switch fill in then.</p></section>
+ <div class="cols cols-b" style="margin-top:16px">
+  <section class="card claude" data-sec="claude"><h2><span class="cmark" aria-hidden="true">✳</span>Claude</h2>
+   <div class="cl-row"><span class="k">Plan usage</span><span class="muted small">Not recorded yet. You'll be able to note it in one tap in the next update.</span></div>
+   <div class="cl-row"><span class="k">Agent tokens</span><span class="muted small">Recorded once work mates run as agents.</span></div>
+   <div class="cl-row"><span class="k">Scheduled tasks</span><span class="muted small">The build loop runs on a schedule; each run's result will show here.</span></div>
+   <div class="links">${[["Claude usage","https://claude.ai/settings/usage"],["Product brief","https://claude.ai/artifact/YTuDLcyoaVpKuywSddfqbo"],["GitHub repo","https://github.com/itzparex/My-AI-Work-Mates"],["Releases","https://github.com/itzparex/My-AI-Work-Mates/releases"]].map(([l,u])=>`<a href="${u}" target="_blank" rel="noopener">${l} ↗</a>`).join("")}</div></section>
+  <section class="card" data-sec="issues"><h2>Open issues <span class="pill ${openIssues.length?"p-wait":"p-done"}">${openIssues.length}</span><a class="more" href="index.html#/director/issues" target="_top">Issues log →</a></h2>
+   ${openIssues.length?`<div class="ilist">${openIssues.map(i=>`<div class="iss"><span class="pill ${i.sev==="High"?"p-block":i.sev==="Medium"?"p-wait":""}">${esc(i.sev)}</span><div style="min-width:0"><b>${esc(i.what)}</b>${i.example?' <span class="example">Example</span>':""}<div class="small muted"><span class="mono">${esc(i.id)}</span> · ${esc(i.project)} · ${esc(i.dept)} · ${fmt(i.date)}</div>${i.told&&i.told!=="—"?`<div class="small">${esc(i.told)}</div>`:""}</div><span class="pill p-wait">${esc(i.status)}</span></div>`).join("")}</div>`:'<div class="empty">No open issues.</div>'}</section>
+ </div>
+ <section class="card" data-sec="week" style="margin-top:16px"><h2>This week <span class="muted small" style="font-weight:600;font-family:var(--f-body)">${fmt(ws)} – ${fmt(we)}</span></h2>
+  <div class="wk">
+   <div class="wkn"><span class="n">${doneWeek.length}</span><span class="l">Tasks finished</span></div>
+   <div class="wkn"><span class="n">${decidedWeek.length}</span><span class="l">Decisions made</span></div>
+   <div class="wkn"><span class="n">${issuesWeek.length}</span><span class="l">Issues logged</span></div>
+   <div class="wkn"><span class="n">${lessonsWeek.length}</span><span class="l">Lessons</span></div>
+  </div>
+  <div class="wkcols"><div><div class="k">Coming up before ${fmt(we)}</div>${upcoming.length?upcoming.slice(0,6).map(t=>`<div class="wkitem"><span class="wkdate">${fmt(t.due)}</span><span>${esc(t.name)} <span class="muted small">· ${esc(t.dept)} · ${esc(t.project)}</span></span></div>`).join(""):'<div class="muted small">Nothing else due this week.</div>'}</div>
+   <div><div class="k">Done this week</div>${doneWeek.length?doneWeek.slice(0,6).map(t=>`<div class="wkitem"><span class="wkdate t-good">✓</span><span>${esc(t.name)} <span class="muted small">· ${esc(t.project)}</span></span></div>`).join(""):'<div class="muted small">Nothing finished yet this week.</div>'}${decidedWeek.slice(0,3).map(i=>`<div class="wkitem"><span class="wkdate t-good">★</span><span>${esc(i.what)} <span class="muted small">· ${esc(i.decision)}</span></span></div>`).join("")}</div></div>
+  <div class="flow" aria-label="How a project flows">${["CEO brief","Research","Wireframe","Copy","Design + images","Design approval","Build","QA","Launch approval","CEO publishes"].map(x=>`<span>${x}</span>`).join("<i>→</i>")}</div>
+ </section>`;
  $("#newProj").onclick=openCreate;
+ $$("#main a[href^='#ceo:']").forEach(a=>a.onclick=e=>{e.preventDefault();const sub=a.getAttribute("href").split(":")[1];if(parent!==window)parent.location.hash="#/ceo/"+sub;else location.hash="ceo:"+sub});
  $$("[data-open]").forEach(b=>b.onclick=()=>{S.sel=b.dataset.open;save();if(parent!==window)parent.location.hash="#/director/timeline";else location.hash="director"});
  $$("#decisions [data-dec]").forEach(b=>b.onclick=()=>{const card=b.closest("[data-id]");const d=S.decisions.find(x=>x.id===card.dataset.id);
   if(b.dataset.dec==="note"&&!card.querySelector(".inline-input")){card.insertAdjacentHTML("beforeend",`<div class="inline-input"><input placeholder="Scope or condition, e.g. slide 1 only" aria-label="Note"><button class="btn sm good">Allow</button></div>`);const box=card.querySelector(".inline-input");box.querySelector("button").onclick=()=>decide(d,"Allowed: "+(box.querySelector("input").value||"no note"));box.querySelector("input").focus();return}
@@ -259,9 +382,9 @@ function drawDirector(){
  <section class="card" data-sec="issues" style="margin-top:16px"><h2>Issues log <button class="btn sm" id="addIssue" style="margin-left:auto">+ Log issue</button></h2>${issuesTable(S.issues)}</section>
  <section class="card" data-sec="lessons" style="margin-top:16px"><h2>Lessons log <button class="btn sm" id="addLesson" style="margin-left:auto">+ Add lesson</button></h2>${S.lessons.length?`<div class="tablewrap"><table><thead><tr><th>ID</th><th>Date</th><th>Department</th><th>What happened</th><th>Type</th><th>Change for next time</th></tr></thead><tbody>${S.lessons.map(l=>`<tr><td class="mono">${esc(l.id)}</td><td>${fmt(l.date)}</td><td>${esc(l.dept)}</td><td>${esc(l.what)}${l.example?' <span class="example">Example</span>':""}</td><td>${esc(l.type)}</td><td>${esc(l.change)}</td></tr>`).join("")}</tbody></table></div>`:'<div class="empty">No lessons yet.</div>'}</section>`;
  $("#pd-proj").onchange=e=>{S.sel=e.target.value;save();drawDirector()};
- $$("[data-ti]").forEach(el=>el.onchange=()=>{const t=p.tasks[+el.dataset.ti];t[el.dataset.f]=el.value;if(el.dataset.f==="due"&&t.due<t.start)t.start=t.due;p.due=p.tasks.reduce((m,x)=>x.due>m?x.due:m,p.tasks[0].due);if(p.tasks.every(x=>x.status==="Done"))p.status="Launched";else if(p.status!=="Planning")p.status="Active";save();toast("Timeline updated");drawDirector()});
+ $$("[data-ti]").forEach(el=>el.onchange=()=>{const t=p.tasks[+el.dataset.ti];t[el.dataset.f]=el.value;if(el.dataset.f==="status")t.doneAt=el.value==="Done"?TODAY:undefined;if(el.dataset.f==="due"&&t.due<t.start)t.start=t.due;p.due=p.tasks.reduce((m,x)=>x.due>m?x.due:m,p.tasks[0].due);if(p.tasks.every(x=>x.status==="Done"))p.status="Launched";else if(p.status!=="Planning")p.status="Active";save();toast("Timeline updated");drawDirector()});
  $$("[data-rv]").forEach(b=>b.onclick=()=>{const card=b.closest("[data-tid]"),pr=proj(card.dataset.proj),t=pr.tasks.find(x=>x.id===card.dataset.tid);
-  if(b.dataset.rv==="ok"){t.status="Done";save();toast("Approved");drawDirector()}
+  if(b.dataset.rv==="ok"){t.status="Done";t.doneAt=TODAY;save();toast("Approved");drawDirector()}
   else if(b.dataset.rv==="ceo"){S.decisions.unshift({id:uid(),type:"Escalation",project:pr.code,title:"Review needed: "+t.name,detail:"Sent up by the Project Director from the review queue.",rec:"See the deliverable before deciding."});save();toast("Sent to the CEO");}
   else if(!card.querySelector(".inline-input")){card.insertAdjacentHTML("beforeend",`<div class="inline-input"><input placeholder="What must change, field by field" aria-label="Return comment"><button class="btn sm bad">Return</button></div>`);const box=card.querySelector(".inline-input");box.querySelector("input").focus();box.querySelector("button").onclick=()=>{t.status="In progress";S.issues.unshift({id:"IS-"+String(S.issues.length+1).padStart(3,"0"),date:TODAY,project:pr.code,dept:t.dept,what:"Returned: "+t.name+" — "+(box.querySelector("input").value||"see comments"),type:"Error",sev:"Low",told:"—",decision:"—",status:"Open"});save();toast("Returned and logged");drawDirector()}}});
  $("#addIssue").onclick=()=>quickAdd("issue");$("#addLesson").onclick=()=>quickAdd("lesson");

@@ -27,8 +27,8 @@ On iPhone: open it in Safari → Share → "Add to Home Screen". On Android: Chr
 
 | Page | File | What it does |
 | --- | --- | --- |
-| Home + mega menu | `index.html` | The app shell: menu of every department, a submenu per department, and a home overview |
-| CEO and Project Director | `hq.html` | Decisions waiting, projects, timelines, review queue, issues log, lessons log |
+| App shell + mega menu | `index.html` | The app shell: menu of every department and a submenu per department. Opens on the CEO command center |
+| CEO command center and Project Director | `hq.html` | CEO home page: greeting and status, decisions waiting, project health, work mates, Claude panel, open issues, this week. Project Director: timelines, review queue, issues log, lessons log |
 | UI/UX Designer | `studio.html` | Research, concepts, Code Studio with live Shopify/Liquid preview, library, theme library |
 | Research, Copywriter, Graphic Designer, Shopify Developer | `dept.html?d=…` | Overview with Project Director tasks, plus each department's trackers |
 

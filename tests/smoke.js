@@ -10,7 +10,7 @@ const server = http.createServer((req, res) => {
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end(); }
   res.writeHead(200, { "Content-Type": TYPES[path.extname(f)] || "application/octet-stream" }); fs.createReadStream(f).pipe(res);
 });
-const ROUTES = ["#/home",
+const ROUTES = ["#/home", "#/ceo/home",
   "#/ceo/decisions", "#/ceo/projects", "#/ceo/issues",
   "#/director/timeline", "#/director/review", "#/director/lessons",
   "#/research/overview", "#/research/briefs", "#/research/documents", "#/research/evidence", "#/research/persontasks",

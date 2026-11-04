@@ -67,31 +67,10 @@ a{color:inherit}
 .subbar a.rb{margin-left:auto;font-size:12.5px;font-weight:700;color:var(--accent);text-decoration:none;white-space:nowrap;padding:12px 0 12px 10px}
 .stage{flex:1;min-height:0;position:relative}
 iframe{border:0;width:100%;height:100%;display:block;background:var(--bg)}
-.home{height:100%;overflow:auto}
-.home .in{max-width:1180px;margin:0 auto;padding:28px max(16px,env(safe-area-inset-left,0px)) 48px}
-.eyebrow{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--blush);font-weight:800}
-h1{font-family:var(--f-display);font-weight:800;font-size:clamp(28px,4vw,42px);line-height:1.05;margin:6px 0 8px;letter-spacing:-.02em;text-wrap:balance}
-.lead{color:var(--muted);max-width:62ch;margin:0 0 22px;font-size:15px}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
-.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;text-decoration:none}
-a.kpi:hover{border-color:var(--accent)}
-.kpi .n{font-family:var(--f-display);font-size:30px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
-.kpi .l{font-weight:700;margin-top:6px}.kpi .d{color:var(--muted);font-size:12px}
-.flow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 22px;font-size:12.5px;font-weight:700}
-.flow span{background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:5px 11px}
-.flow i{color:var(--muted);font-style:normal}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;text-decoration:none;display:flex;flex-direction:column;gap:8px}
-a.card:hover{border-color:var(--accent);transform:translateY(-1px)}
-.card .top{display:flex;align-items:center;gap:10px}
-.card b{font-size:15px}.card p{margin:0;color:var(--muted);font-size:13px}
-.card .meta{font-size:12px;font-weight:700;color:var(--accent);margin-top:auto}
-h2{font-family:var(--f-display);font-size:19px;margin:28px 0 12px}
-.note{font-size:12.5px;color:var(--muted);background:var(--sunk);border-radius:10px;padding:10px 12px;margin-top:22px}
 /* mobile */
 .burger{display:none}
 @media (max-width:1100px){.mega .in{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media (max-width:900px){.mega .in{grid-template-columns:repeat(2,minmax(0,1fr))}.kpis{grid-template-columns:repeat(2,1fr)}.quick{display:none}}
+@media (max-width:900px){.mega .in{grid-template-columns:repeat(2,minmax(0,1fr))}.quick{display:none}}
 @media (max-width:560px){.mega .in{grid-template-columns:1fr}.brand b{font-size:15px}.nb{padding:8px}.bar>.in>.seg{display:none}.mtheme{display:flex}}
 @media (max-width:360px){.brand b{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -100,9 +79,9 @@ h2{font-family:var(--f-display);font-size:19px;margin:28px 0 12px}
 <body>
 <header class="bar">
  <div class="in">
-  <a class="brand" href="#/home" aria-label="My AI Work Mates home"><span class="mark" aria-hidden="true">AI</span><b>My AI Work Mates</b></a>
+  <a class="brand" href="#/ceo/home" aria-label="My AI Work Mates home: CEO command center"><span class="mark" aria-hidden="true">AI</span><b>My AI Work Mates</b></a>
   <button class="nb" id="megaBtn" aria-expanded="false" aria-controls="mega">Departments <span class="chev" aria-hidden="true">▾</span></button>
-  <a class="nb quick" data-q="ceo" href="#/ceo/decisions">CEO</a>
+  <a class="nb quick" data-q="ceo" href="#/ceo/home">CEO</a>
   <a class="nb quick" data-q="director" href="#/director/timeline">Project Director</a>
   <span class="sp"></span>
   <div class="seg themeseg" role="group" aria-label="Page background"><button data-t="light">Light</button><button data-t="dark">Dark</button><button data-t="system">Auto</button></div>
@@ -111,7 +90,6 @@ h2{font-family:var(--f-display);font-size:19px;margin:28px 0 12px}
 </header>
 <nav class="subbar" id="subbar" hidden aria-label="Department pages"><div class="in" id="subIn"></div></nav>
 <div class="stage" id="stage">
- <div class="home" id="home"></div>
  <iframe id="frame" title="Department dashboard" hidden></iframe>
 </div>
 <script>
@@ -120,7 +98,7 @@ const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const DOC=id=>"https://claude.ai/artifact/"+id;
 const MENU=[
- {id:"ceo",group:"Leadership",name:"CEO",ico:"★",role:"You decide: approvals, overrides, projects",page:"hq",subs:[["decisions","Decisions waiting"],["projects","Projects"],["departments","Departments"],["issues","Open issues"]],doc:"YTuDLcyoaVpKuywSddfqbo",docName:"Product brief"},
+ {id:"ceo",group:"Leadership",name:"CEO",ico:"★",role:"You decide: approvals, overrides, projects",page:"hq",subs:[["home","Command center"],["decisions","Decisions waiting"],["projects","Projects"],["departments","Departments"],["issues","Open issues"]],doc:"YTuDLcyoaVpKuywSddfqbo",docName:"Product brief"},
  {id:"director",group:"Leadership",name:"Project Director",ico:"◎",role:"Plans, assigns, reviews, reports to CEO",page:"hq",subs:[["timeline","Timeline"],["tasks","Tasks"],["review","Review queue"],["workload","Workload"],["issues","Issues log"],["lessons","Lessons log"]],doc:"YH9YbXXmmt3Ao15JNPgkzq"},
  {id:"research",group:"Departments",name:"Research & Strategist",ico:"⌕",role:"Nine documents and the Marketer's Booklet",page:"dept",subs:[["overview","Overview"],["briefs","Research briefs"],["documents","Nine documents"],["evidence","Evidence ledger"],["persontasks","Person tasks"]],doc:"NqSeg4uwA49BV4JhZd8X8Z"},
  {id:"copy",group:"Departments",name:"Copywriter",ico:"✎",role:"Page copy from the Booklet, claims checked",page:"dept",subs:[["overview","Overview"],["copymaps","Copy maps"],["claims","Claims check"],["swipe","Voice & swipe"]],doc:"V8r1tStkg3uDkpdzcVF489"},
@@ -158,11 +136,11 @@ function parse(){const [,d,s]=(location.hash.match(/^#\/([^/]+)\/?([^/]*)/)||[])
 function src(m,s,withTheme){const t=withTheme?"&theme="+theme:"";if(m.page==="hq")return {base:"hq.html",q:"?embed=1"+t,h:"#"+m.id+":"+s};if(m.page==="studio")return {base:"studio.html",q:"?embed=1"+t,h:"#"+s};return {base:"dept.html",q:"?embed=1&d="+m.id+t,h:"#"+s}}
 function route(){openMega(false);const r=parse();
  $$(".quick").forEach(a=>a.classList.toggle("on",!!r&&a.dataset.q===r.d));
- if(!r){$("#subbar").hidden=true;frame.hidden=true;$("#home").hidden=false;curPage=null;drawHome();document.title="My AI Work Mates";return}
+ if(!r){history.replaceState(null,"","#/ceo/home");return route()}
  const m=byId[r.d],sl=(m.subs.find(x=>x[0]===r.s)||m.subs[0]);
- document.title=m.name+" · "+sl[1]+" · My AI Work Mates";
+ document.title=r.d==="ceo"&&r.s==="home"?"My AI Work Mates":m.name+" · "+sl[1]+" · My AI Work Mates";
  $("#subIn").innerHTML=`<span class="crumb"><span class="dico" aria-hidden="true">${m.ico}</span>${esc(m.name)}</span>${m.subs.map(([s,l])=>`<a class="tab ${s===r.s?"on":""}" href="#/${m.id}/${s}" ${s===r.s?'aria-current="page"':""}>${esc(l)}</a>`).join("")}<a class="rb" href="${DOC(m.doc)}" target="_blank" rel="noopener">${m.docName||"Rulebook"} ↗</a>`;
- $("#subbar").hidden=false;$("#home").hidden=true;frame.hidden=false;
+ $("#subbar").hidden=false;frame.hidden=false;
  const p=src(m,r.s),key=p.base+p.q;
  if(curPage===key){try{if(frame.contentWindow.location.hash!==p.h)frame.contentWindow.location.hash=p.h}catch(e){frame.src=src(m,r.s,true).base+src(m,r.s,true).q+p.h}}
  else{curPage=key;const w=src(m,r.s,true);frame.src=w.base+w.q+p.h}
@@ -173,25 +151,7 @@ window.addEventListener("message",e=>{if(e.origin!==location.origin||!e.data)ret
  if(e.data.flView&&r.d==="uiux"&&e.data.flView!==r.s){history.replaceState(null,"","#/uiux/"+e.data.flView);route()}
  if(e.data.flSub&&e.data.flSub!==r.s){history.replaceState(null,"","#/"+r.d+"/"+e.data.flSub);route()}});
 frame.addEventListener("load",()=>{try{frame.contentWindow.postMessage({flTheme:theme},location.origin)}catch(e){}});
-/* home */
 function readHQ(){try{return JSON.parse(localStorage.getItem("facelove-hq-v1")||"null")}catch(e){return null}}
-function drawHome(){const hq=readHQ();const projects=hq?hq.projects:[],decisions=hq?hq.decisions.length:3,issues=hq?hq.issues.filter(i=>i.status!=="Resolved").length:1;
- const open=projects.filter(p=>p.status!=="Closed").length;const tasks=projects.flatMap(p=>p.tasks||[]);
- const openBy=n=>tasks.filter(t=>t.dept===n&&t.status!=="Done").length;
- $("#home").innerHTML=`<div class="in">
-  <div class="eyebrow">Your AI agency</div><h1>Good to see you, CEO.</h1>
-  <p class="lead">Each department is an AI work mate with its own rulebook and dashboard. The Project Director plans and checks the work; nothing publishes, spends money or reaches a client without your yes.</p>
-  <div class="kpis">
-   <a class="kpi" href="#/ceo/decisions"><div class="n">${decisions}</div><div class="l">Decisions waiting</div><div class="d">Open the CEO dashboard</div></a>
-   <a class="kpi" href="#/ceo/projects"><div class="n">${hq?open:2}</div><div class="l">Open projects</div><div class="d">${hq?"":"Example data until you start"}</div></a>
-   <a class="kpi" href="#/director/review"><div class="n">${tasks.filter(t=>t.status==="Waiting on approval").length}</div><div class="l">Waiting for review</div><div class="d">Project Director queue</div></a>
-   <a class="kpi" href="#/director/issues"><div class="n">${issues}</div><div class="l">Open issues</div><div class="d">Issues log</div></a>
-  </div>
-  <div class="flow" aria-label="How a project flows"><span>CEO brief</span><i>→</i><span>Research</span><i>→</i><span>Wireframe</span><i>→</i><span>Copy</span><i>→</i><span>Design + images</span><i>→</i><span>Design approval</span><i>→</i><span>Build</span><i>→</i><span>QA</span><i>→</i><span>Launch approval</span><i>→</i><span>CEO publishes</span></div>
-  <h2>Your work mates</h2>
-  <div class="cards">${MENU.map(m=>`<a class="card" href="#/${m.id}/${m.subs[0][0]}"><div class="top"><span class="dico" aria-hidden="true">${m.ico}</span><b>${esc(m.name)}</b></div><p>${esc(m.role)}</p><span class="meta">${m.group==="Departments"?openBy(m.name)+" open tasks · ":""}Open dashboard →</span></a>`).join("")}</div>
-  <div class="note">Your work is saved in this browser on this device. Open the same address on another device and it starts fresh there. Rulebooks open in Claude Docs.</div>
- </div>`}
 applyTheme();route();
 if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))navigator.serviceWorker.register("sw.js").catch(()=>{});
 /* New version check: every 3 minutes (and when you come back to the tab) compare the live app files with the ones loaded.
@@ -205,7 +165,7 @@ if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostnam
  check();setInterval(check,3*60*1000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)check()});
 })();
 /* first visit: let Agency HQ create its example data so every dashboard shares it */
-if(!readHQ()){const f=document.createElement("iframe");f.hidden=true;f.src="hq.html?embed=1";f.onload=()=>{if(!parse())drawHome();f.remove()};document.body.appendChild(f)}
+if(!readHQ()){const f=document.createElement("iframe");f.hidden=true;f.src="hq.html?embed=1";f.onload=()=>f.remove();document.body.appendChild(f)}
 })();
 </script>
 </body>
