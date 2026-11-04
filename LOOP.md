@@ -30,6 +30,16 @@ The loop works through this backlog one item per round, top to bottom, and stops
 - [ ] **3a. Export and import** of all data as one file (backup, and a manual way to move data between devices).
 - [ ] **3b. GitHub sync.** Optional: the CEO connects a private data repo with a fine-grained token stored only on that device; the app saves and loads all data there, so laptop, phone and desktop app share projects. Clear status (last synced, conflicts: newest wins, with a warning).
 
+### 3½. Make the work mates work
+Each work mate becomes a real AI agent: Claude, on the CEO's existing subscription (no paid API keys), runs the department's rulebook against the app's shared data in the GitHub data repo from 3b. The app shows what each agent did. Agents never publish, send, spend or contact anyone, and everything goes through the Project Director to the CEO.
+- [ ] **W1. Agent playbooks in the repo.** One instruction file per work mate (`agents/<department>.md`): what it reads from the app data, the rulebook steps it follows, what it writes back (deliverable, task status, issues), and when it must stop and ask. Plus a Project Director playbook that reviews submitted work against the department checklist.
+- [ ] **W2. Research work mate, end to end.** From a CEO brief in the app, it produces real research documents with free sources only, fills the evidence ledger with sources and grades, creates person tasks for anything it can't reach, and submits the Booklet for Project Director review. Proven on one real project.
+- [ ] **W3. Project Director agent.** Reviews submitted deliverables, approves or returns them with comments, logs issues and lessons, and adds anything needing the CEO to the decisions list.
+- [ ] **W4. Copywriter work mate:** a copy map from the approved Booklet, with the claims check.
+- [ ] **W5. Graphic Designer work mate:** a carousel plan and image briefs from the approved copy. Image generation only with free tools; AI product images need CEO approval.
+- [ ] **W6. Shopify Developer work mate:** section code built in the Design Studio format, the QA checklist and a hand-over note. It never touches the live store; the CEO publishes.
+- [ ] **W7. "Run" buttons and schedules.** From each department page the CEO can copy a one-line command to run that work mate now, or set it on a schedule. The app shows each agent's last run, what it produced, and anything waiting on the CEO.
+
 ### 4. Rulebooks inside the app
 - [ ] **4a. Rulebooks and product brief saved in the repo** as Markdown (`rulebooks/`), exported from Claude Docs.
 - [ ] **4b. Rulebook reader** inside the app: each department's "Rulebook" menu item opens it in the app, with a contents list and search.
@@ -40,3 +50,4 @@ The loop works through this backlog one item per round, top to bottom, and stops
 ## Log
 
 - 2026-11-03: Loop set up. App, desktop installers and website live.
+- 2026-11-04: Added section 3½ "Make the work mates work" (CEO approved).
