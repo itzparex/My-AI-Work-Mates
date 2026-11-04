@@ -17,11 +17,10 @@ The loop works through this backlog one item per round, top to bottom, and stops
 
 ### 0. CEO command center (do first: this is the CEO's main page)
 - [x] **C1. CEO page becomes the home page and looks great.** Opening the app lands on the CEO command center (the current home merges into it). Use the frontend-design skill and aim for a polished, premium look in light and dark, on desktop and phone. Top to bottom: a greeting with today's date and one-line status ("3 decisions need you · 1 project at risk"); decisions waiting, with Allow / Disallow / Allow with a note; project health cards (progress, next step, due date, at-risk flag); a work mates strip (each work mate's status, current task, last run, Auto-work state once W1b exists); a "Claude" panel (see C2); open issues; this week's summary.
-- [ ] **C2. Claude panel on the CEO page.** Everything about the CEO's Claude in one place, honestly labeled:
-  - **Plan usage:** the percentage used and reset time from Claude's usage page. Claude doesn't offer apps a usage feed, so either the CEO updates it in one tap, or an optional browser step (when the CEO's computer and Claude desktop app are on) reads the CEO's own usage page and saves the number with the time it was read. Always shows "last updated".
-  - **Agent token use** from every run (feeds into W8).
-  - **Scheduled tasks:** each run records its own result (what ran, when, success or failure, what it produced), so the panel shows the build loop and every work mate's last and next run.
-  - **Quick links:** Claude usage page, scheduled tasks, the rulebooks and the product brief, the GitHub repo and Releases.
+- **C2. Claude panel on the CEO page.** Everything about the CEO's Claude in one place, honestly labeled. Split into:
+  - [x] **C2a. Plan usage and quick links.** The CEO notes the percentage used and reset time from Claude's usage page in one tap (with quick "resets in…" buttons); the panel shows a usage ring, the reset time, "last updated" (flagged when over a day old), a small history of readings, and quick links to the Claude usage page, scheduled tasks, every rulebook and the product brief, the GitHub repo, the build backlog and Releases. "Claude" added to the CEO submenu.
+  - [ ] **C2b. Run records.** Each scheduled run (the build loop now, every work mate later) records its own result in the repo (what ran, when, success or failure, what it produced, token use when known), so the panel shows the build loop's and each work mate's last and next run, and agent token use (feeds into W8).
+  - [ ] **C2c. Optional browser read of plan usage.** When the CEO's computer and Claude desktop app are on, an optional step reads the CEO's own usage page and saves the number with the time it was read (shown as "read automatically" vs "noted by CEO").
 
 ### 0½. Desktop app updates itself
 - [ ] **D1. Automatic updates for the desktop app.** Two layers:
@@ -78,3 +77,4 @@ Each work mate becomes a real AI agent: Claude, on the CEO's existing subscripti
 - 2026-11-04: Open pages now notice new versions (refresh bar, or automatic refresh when idle); 3b also refreshes data automatically.
 - 2026-11-04: Added D1, automatic updates for the desktop app (CEO request).
 - 2026-11-04: C1 done. The app now opens on the CEO command center (greeting and status, decisions, project health with at-risk flags, work mates, Claude panel with quick links, open issues, this week). Next: C2, the full Claude panel.
+- 2026-11-04: C2 split into C2a/C2b/C2c. C2a done: the Claude panel now shows plan usage the CEO notes in one tap (ring, reset time, last updated, history) and quick links to usage, scheduled tasks, all rulebooks, repo, backlog and Releases. Next: C2b, run records.

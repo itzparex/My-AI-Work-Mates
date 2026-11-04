@@ -11,7 +11,7 @@ const server = http.createServer((req, res) => {
   res.writeHead(200, { "Content-Type": TYPES[path.extname(f)] || "application/octet-stream" }); fs.createReadStream(f).pipe(res);
 });
 const ROUTES = ["#/home", "#/ceo/home",
-  "#/ceo/decisions", "#/ceo/projects", "#/ceo/issues",
+  "#/ceo/decisions", "#/ceo/projects", "#/ceo/claude", "#/ceo/issues",
   "#/director/timeline", "#/director/review", "#/director/lessons",
   "#/research/overview", "#/research/briefs", "#/research/documents", "#/research/evidence", "#/research/persontasks",
   "#/copy/overview", "#/copy/copymaps", "#/copy/claims", "#/copy/swipe",

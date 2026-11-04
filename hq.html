@@ -150,6 +150,22 @@ a.stat:hover{border-color:var(--accent)}
 .claude{background:linear-gradient(160deg,var(--accent-soft),var(--surface) 60%)}
 .cmark{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--blush));color:#fff;font-size:14px}
 .cl-row{display:flex;flex-direction:column;gap:2px;padding:9px 0;border-bottom:1px solid var(--line)}
+.usage{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center;padding:4px 0 14px;border-bottom:1px solid var(--line)}
+.ring{--p:0;--c:var(--accent);width:96px;height:96px;border-radius:50%;background:conic-gradient(var(--c) calc(var(--p)*1%),var(--sunk) 0);display:grid;place-items:center;flex:none}
+.ring>div{width:76px;height:76px;border-radius:50%;background:var(--surface);display:grid;place-items:center;text-align:center;line-height:1}
+.ring b{font-family:var(--f-display);font-weight:800;font-size:24px;font-variant-numeric:tabular-nums}.ring b small{font-size:13px;color:var(--muted)}
+.ring span{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+.ring.blank b{color:var(--muted)}
+.ufacts{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ufacts .big{font-weight:800;font-size:15px}
+.stale{color:var(--warn);font-weight:700}
+.uform{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.uform .acts{grid-column:1/-1;justify-content:flex-end}
+.uform .quickp{grid-column:1/-1}
+.spark{display:flex;align-items:flex-end;gap:3px;height:22px;margin-top:2px}.spark i{width:6px;border-radius:2px;background:var(--accent);opacity:.55;min-height:2px}.spark i:last-child{opacity:1}
+a.btn{text-decoration:none;color:inherit}
+@media (max-width:640px){.usage{gap:12px}.ring{width:80px;height:80px}.ring>div{width:62px;height:62px}.ring b{font-size:20px}.uform{grid-template-columns:1fr}}
+.lgroup{margin-top:12px}.lgroup .k{display:block;margin-bottom:6px}.lgroup .links{margin-top:0}
 .links{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
 .links a{font-size:12px;font-weight:700;text-decoration:none;color:var(--accent);background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:5px 10px}
 .links a:hover{border-color:var(--accent)}
@@ -251,6 +267,38 @@ function mateState(n){const ts=S.projects.filter(p=>p.status!=="Closed").flatMap
  const next=ts.filter(t=>t.status==="Not started").sort((a,b)=>a.start<b.start?-1:1)[0];
  return {label:"Idle",cls:"idle",task:null,next}}
 function weekBounds(){const d=D(TODAY),w=(d.getUTCDay()+6)%7;const s=new Date(d);s.setUTCDate(d.getUTCDate()-w);const e=new Date(s);e.setUTCDate(s.getUTCDate()+6);return [iso(s),iso(e)]}
+/* Claude panel: plan usage is noted by the CEO (Claude has no usage feed for apps), always with the time it was noted */
+const DOC=id=>"https://claude.ai/artifact/"+id;
+const LINKS=[["Claude",[["Usage page","https://claude.ai/settings/usage"],["Scheduled tasks","https://claude.ai/code"]]],
+ ["Rulebooks",[["Product brief",DOC("YTuDLcyoaVpKuywSddfqbo")],["Project Director",DOC("YH9YbXXmmt3Ao15JNPgkzq")],["Research & Strategist",DOC("NqSeg4uwA49BV4JhZd8X8Z")],["Copywriter",DOC("V8r1tStkg3uDkpdzcVF489")],["UI/UX Designer",DOC("LrwprikVGXu4yXpEmkh1HF")],["Graphic Designer",DOC("XjeF4sWgPd5rxTz5VD8PvJ")],["Shopify Developer",DOC("DLH5vsgeZ3Wow6nmZiwp28")]]],
+ ["Build",[["GitHub repo","https://github.com/itzparex/My-AI-Work-Mates"],["Build backlog","https://github.com/itzparex/My-AI-Work-Mates/blob/main/LOOP.md"],["Releases","https://github.com/itzparex/My-AI-Work-Mates/releases"]]]];
+const ago=t=>{const m=Math.round((Date.now()-new Date(t))/6e4);if(m<1)return "just now";if(m<60)return m+" min ago";const h=Math.round(m/60);if(h<24)return plural(h,"hour")+" ago";return plural(Math.round(h/24),"day")+" ago"};
+const until=t=>{const m=Math.round((new Date(t)-Date.now())/6e4);if(m<60)return "in "+Math.max(m,0)+" min";const h=Math.round(m/60);if(h<48)return "in "+plural(h,"hour");return "in "+plural(Math.round(h/24),"day")};
+const when=t=>new Date(t).toLocaleString(undefined,{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+const localDT=d=>{const z=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate())+"T"+z(d.getHours())+":"+z(d.getMinutes())};
+function usageHTML(){const C=S.claude||{},u=C.usage,hist=(C.history||[]).slice(-12);
+ if(!u)return `<div class="usage"><div class="ring blank" style="--p:0"><div><b>—</b><span>used</span></div></div><div class="ufacts"><span class="big">Plan usage not noted yet</span><span class="small muted">Claude doesn't share a usage number with apps. Open the usage page, then note the percentage here in one tap.</span><div class="row" style="margin-top:4px"><button class="btn sm primary" id="uEdit">Note usage</button></div></div></div><div id="uForm"></div>`;
+ const pct=Math.max(0,Math.min(100,+u.pct||0)),col=pct>=90?"var(--bad)":pct>=70?"var(--warn)":"var(--accent)";
+ const passed=u.reset&&new Date(u.reset)<Date.now(),stale=Date.now()-new Date(u.at)>24*36e5;
+ return `<div class="usage"><div class="ring" style="--p:${pct};--c:${col}" role="img" aria-label="${pct}% of plan used"><div><div><b>${pct}<small>%</small></b><br><span>used</span></div></div></div>
+  <div class="ufacts"><span class="big">${pct>=90?"Almost at the plan limit":pct>=70?"Getting close to the limit":"Plenty of room left"}</span>
+   <span class="small">${u.reset?(passed?`<span class="stale">Reset time passed (${esc(when(u.reset))}); usage has likely restarted. Note the new number.</span>`:`Resets <b>${esc(when(u.reset))}</b> · ${until(u.reset)}`):'<span class="muted">Reset time not noted</span>'}</span>
+   <span class="small ${stale?"stale":"muted"}">Last updated ${ago(u.at)} · noted by ${esc(u.by||"CEO")}</span>
+   ${hist.length>1?`<div class="spark" title="Last ${hist.length} readings" aria-hidden="true">${hist.map(h=>`<i style="height:${Math.max(2,h.pct)}%"></i>`).join("")}</div>`:""}
+   <div class="row" style="margin-top:2px"><button class="btn sm primary" id="uEdit">Update</button><a class="btn sm" href="https://claude.ai/settings/usage" target="_blank" rel="noopener">Open usage page ↗</a></div></div></div><div id="uForm"></div>`}
+function usageForm(){const box=$("#uForm");if(!box)return;if(box.innerHTML){box.innerHTML="";return}
+ const u=(S.claude||{}).usage||{},def=u.reset&&new Date(u.reset)>Date.now()?localDT(new Date(u.reset)):"";
+ box.innerHTML=`<div class="uform"><div class="field"><label for="u-pct">Percent used</label><input id="u-pct" type="number" min="0" max="100" inputmode="numeric" value="${u.pct??""}" placeholder="e.g. 42"></div>
+  <div class="field"><label for="u-reset">Resets at</label><input id="u-reset" type="datetime-local" value="${def}"></div>
+  <div class="quickp chips" aria-label="Quick reset">${[["in 1 h",1],["in 3 h",3],["in 5 h",5],["in 1 day",24],["in 7 days",168]].map(([l,h])=>`<button type="button" class="chip" data-h="${h}">Resets ${l}</button>`).join("")}</div>
+  <div class="acts"><button class="btn sm" id="u-cancel">Cancel</button><button class="btn sm primary" id="u-save">Save</button></div></div>`;
+ box.querySelectorAll("[data-h]").forEach(b=>b.onclick=()=>{$("#u-reset").value=localDT(new Date(Date.now()+b.dataset.h*36e5))});
+ $("#u-cancel").onclick=()=>box.innerHTML="";
+ const go=()=>{const v=$("#u-pct").value.trim(),pct=Math.round(+v);if(v===""||isNaN(pct)||pct<0||pct>100){toast("Enter a percentage from 0 to 100");$("#u-pct").focus();return}
+  const r=$("#u-reset").value,at=new Date().toISOString();S.claude=S.claude||{};
+  S.claude.usage={pct,reset:r?new Date(r).toISOString():null,at,by:"CEO",source:"manual"};
+  S.claude.history=[...(S.claude.history||[]),{pct,at}].slice(-30);save();toast("Plan usage saved");drawCEO()};
+ $("#u-save").onclick=go;$("#u-pct").onkeydown=e=>{if(e.key==="Enter")go()};$("#u-pct").focus()}
 function drawCEO(){
  const active=S.projects.filter(p=>p.status!=="Closed");
  const waiting=S.decisions.length;
@@ -307,11 +355,11 @@ function drawCEO(){
    <div class="mfoot"><span>Last run: ${r&&r.at?esc(fmt(r.at)):"none yet"}</span><span>Auto-work: ${S.autowork?esc(S.autowork[n]||"On"):"not set up"}</span></div></a>`}).join("")}</div>
   <p class="hint" style="margin:10px 0 0">Work mates become real agents in a later step; their last run and the Auto-work switch fill in then.</p></section>
  <div class="cols cols-b" style="margin-top:16px">
-  <section class="card claude" data-sec="claude"><h2><span class="cmark" aria-hidden="true">✳</span>Claude</h2>
-   <div class="cl-row"><span class="k">Plan usage</span><span class="muted small">Not recorded yet. You'll be able to note it in one tap in the next update.</span></div>
-   <div class="cl-row"><span class="k">Agent tokens</span><span class="muted small">Recorded once work mates run as agents.</span></div>
-   <div class="cl-row"><span class="k">Scheduled tasks</span><span class="muted small">The build loop runs on a schedule; each run's result will show here.</span></div>
-   <div class="links">${[["Claude usage","https://claude.ai/settings/usage"],["Product brief","https://claude.ai/artifact/YTuDLcyoaVpKuywSddfqbo"],["GitHub repo","https://github.com/itzparex/My-AI-Work-Mates"],["Releases","https://github.com/itzparex/My-AI-Work-Mates/releases"]].map(([l,u])=>`<a href="${u}" target="_blank" rel="noopener">${l} ↗</a>`).join("")}</div></section>
+  <section class="card claude" data-sec="claude"><h2><span class="cmark" aria-hidden="true">✳</span>Claude <a class="more" href="https://claude.ai/settings/usage" target="_blank" rel="noopener">Usage page ↗</a></h2>
+   ${usageHTML()}
+   <div class="cl-row"><span class="k">Agent tokens</span><span class="muted small">Each agent run will record its own token use here (next update).</span></div>
+   <div class="cl-row"><span class="k">Scheduled tasks</span><span class="muted small">The build loop runs on a schedule; each run will record what ran, when and the result here (next update).</span></div>
+   ${LINKS.map(([g,ls])=>`<div class="lgroup"><span class="k">${g}</span><div class="links">${ls.map(([l,u])=>`<a href="${u}" target="_blank" rel="noopener">${l} ↗</a>`).join("")}</div></div>`).join("")}</section>
   <section class="card" data-sec="issues"><h2>Open issues <span class="pill ${openIssues.length?"p-wait":"p-done"}">${openIssues.length}</span><a class="more" href="index.html#/director/issues" target="_top">Issues log →</a></h2>
    ${openIssues.length?`<div class="ilist">${openIssues.map(i=>`<div class="iss"><span class="pill ${i.sev==="High"?"p-block":i.sev==="Medium"?"p-wait":""}">${esc(i.sev)}</span><div style="min-width:0"><b>${esc(i.what)}</b>${i.example?' <span class="example">Example</span>':""}<div class="small muted"><span class="mono">${esc(i.id)}</span> · ${esc(i.project)} · ${esc(i.dept)} · ${fmt(i.date)}</div>${i.told&&i.told!=="—"?`<div class="small">${esc(i.told)}</div>`:""}</div><span class="pill p-wait">${esc(i.status)}</span></div>`).join("")}</div>`:'<div class="empty">No open issues.</div>'}</section>
  </div>
@@ -327,6 +375,7 @@ function drawCEO(){
   <div class="flow" aria-label="How a project flows">${["CEO brief","Research","Wireframe","Copy","Design + images","Design approval","Build","QA","Launch approval","CEO publishes"].map(x=>`<span>${x}</span>`).join("<i>→</i>")}</div>
  </section>`;
  $("#newProj").onclick=openCreate;
+ $("#uEdit")&&($("#uEdit").onclick=usageForm);
  $$("#main a[href^='#ceo:']").forEach(a=>a.onclick=e=>{e.preventDefault();const sub=a.getAttribute("href").split(":")[1];if(parent!==window)parent.location.hash="#/ceo/"+sub;else location.hash="ceo:"+sub});
  $$("[data-open]").forEach(b=>b.onclick=()=>{S.sel=b.dataset.open;save();if(parent!==window)parent.location.hash="#/director/timeline";else location.hash="director"});
  $$("#decisions [data-dec]").forEach(b=>b.onclick=()=>{const card=b.closest("[data-id]");const d=S.decisions.find(x=>x.id===card.dataset.id);

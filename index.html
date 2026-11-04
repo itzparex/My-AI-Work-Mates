@@ -98,7 +98,7 @@ const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const DOC=id=>"https://claude.ai/artifact/"+id;
 const MENU=[
- {id:"ceo",group:"Leadership",name:"CEO",ico:"★",role:"You decide: approvals, overrides, projects",page:"hq",subs:[["home","Command center"],["decisions","Decisions waiting"],["projects","Projects"],["departments","Departments"],["issues","Open issues"]],doc:"YTuDLcyoaVpKuywSddfqbo",docName:"Product brief"},
+ {id:"ceo",group:"Leadership",name:"CEO",ico:"★",role:"You decide: approvals, overrides, projects",page:"hq",subs:[["home","Command center"],["decisions","Decisions waiting"],["projects","Projects"],["departments","Departments"],["claude","Claude"],["issues","Open issues"]],doc:"YTuDLcyoaVpKuywSddfqbo",docName:"Product brief"},
  {id:"director",group:"Leadership",name:"Project Director",ico:"◎",role:"Plans, assigns, reviews, reports to CEO",page:"hq",subs:[["timeline","Timeline"],["tasks","Tasks"],["review","Review queue"],["workload","Workload"],["issues","Issues log"],["lessons","Lessons log"]],doc:"YH9YbXXmmt3Ao15JNPgkzq"},
  {id:"research",group:"Departments",name:"Research & Strategist",ico:"⌕",role:"Nine documents and the Marketer's Booklet",page:"dept",subs:[["overview","Overview"],["briefs","Research briefs"],["documents","Nine documents"],["evidence","Evidence ledger"],["persontasks","Person tasks"]],doc:"NqSeg4uwA49BV4JhZd8X8Z"},
  {id:"copy",group:"Departments",name:"Copywriter",ico:"✎",role:"Page copy from the Booklet, claims checked",page:"dept",subs:[["overview","Overview"],["copymaps","Copy maps"],["claims","Claims check"],["swipe","Voice & swipe"]],doc:"V8r1tStkg3uDkpdzcVF489"},
