@@ -18,7 +18,7 @@
     "appId": "com.itzparex.myaiworkmates",
     "productName": "My AI Work Mates",
     "artifactName": "My-AI-Work-Mates-${os}-${arch}.${ext}",
-    "files": ["main.js", "app/**/*"],
+    "files": ["main.js", "serve.js", "app/**/*"],
     "directories": { "buildResources": "build", "output": "dist" },
     "win": { "target": [{ "target": "nsis", "arch": ["x64"] }] },
     "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "shortcutName": "My AI Work Mates" },

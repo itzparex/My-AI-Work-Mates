@@ -13,7 +13,7 @@ GitHub builds new installers automatically every time the code changes.
 - **Mac:** open the `.dmg` and drag the app to Applications. The first time, right-click the app → **Open** → **Open** (it isn't notarized yet).
 - **Linux:** make the `.AppImage` executable and run it.
 
-The desktop app keeps its own data, separate from the website. Live previews and fonts need an internet connection.
+The desktop app opens the live website inside its own window, so every update the build loop pushes shows up in the desktop app straight away (with the same "new version" refresh bar as the website). When the computer is offline it uses the last copy it saved, then the copy built into the app, and shows a small "Offline" label. The desktop app keeps its own data, separate from the website, and that data stays where it was across updates. Live previews and fonts need an internet connection.
 
 ## Install it from the browser (no download)
 

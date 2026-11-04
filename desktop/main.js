@@ -1,8 +1,10 @@
-// Desktop app: opens My AI Work Mates in its own window. Pages are served from the app folder under app://mawm
-// so browser storage works like it does on the website. Outside links open in the normal browser.
+// Desktop app: opens My AI Work Mates in its own window. Pages are served under app://mawm so browser storage works
+// like it does on the website (and saved data stays put). Each page comes from the live website first, so updates
+// appear at once; offline it uses the last saved copy, then the copy built into the app (see serve.js).
+// Outside links open in the normal browser.
 const { app, BrowserWindow, protocol, net, shell } = require("electron");
 const path = require("path");
-const { pathToFileURL } = require("url");
+const { createHandler } = require("./serve");
 
 protocol.registerSchemesAsPrivileged([
   { scheme: "app", privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }
@@ -37,13 +39,11 @@ app.on("second-instance", () => {
 });
 
 app.whenReady().then(() => {
-  protocol.handle("app", (req) => {
-    let p = decodeURIComponent(new URL(req.url).pathname);
-    if (!p || p === "/") p = "/index.html";
-    const file = path.normalize(path.join(ROOT, p));
-    if (!file.startsWith(ROOT)) return new Response("Not found", { status: 404 });
-    return net.fetch(pathToFileURL(file).toString());
-  });
+  protocol.handle("app", createHandler({
+    root: ROOT,
+    cacheDir: path.join(app.getPath("userData"), "live-copy"),
+    fetchLive: (url, opts) => net.fetch(url, opts)
+  }));
   createWindow();
   app.on("activate", () => { if (!BrowserWindow.getAllWindows().length) createWindow(); });
 });
