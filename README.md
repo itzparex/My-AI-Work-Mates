@@ -6,16 +6,23 @@ An AI marketing agency in your browser. Each department is an AI work mate with 
 
 ## Desktop app (Windows, Mac, Linux)
 
-Download the installer from the **Releases** page (right side of the repo page → "My AI Work Mates (desktop)").
-GitHub builds new installers automatically every time the code changes.
+Download the installer from the **Releases** page: https://github.com/itzparex/My-AI-Work-Mates/releases/tag/desktop-latest (or the right side of the repo page → "My AI Work Mates (desktop)").
+GitHub builds new installers for all three systems automatically every time the code changes.
 
-- **Windows:** run the `.exe`. If Windows says "Windows protected your PC", click **More info → Run anyway** (the app isn't code-signed yet).
-- **Mac:** open the `.dmg` and drag the app to Applications. The first time, right-click the app → **Open** → **Open** (it isn't notarized yet).
-- **Linux:** make the `.AppImage` executable and run it.
+| Computer | File | Install |
+| --- | --- | --- |
+| Windows | `My-AI-Work-Mates-win-x64.exe` | Run it. If Windows says "Windows protected your PC", click **More info → Run anyway** (the app isn't code-signed yet). |
+| Mac with Apple chip (M1–M4) | `My-AI-Work-Mates-mac-arm64.dmg` | Open it and drag the app to Applications. The first time, right-click the app → **Open** → **Open** (it isn't notarized yet). |
+| Mac with Intel chip | `My-AI-Work-Mates-mac-x64.dmg` | Same as above. Not sure which chip? Apple menu → About This Mac. |
+| Linux | `My-AI-Work-Mates-linux-x86_64.AppImage` | Make it executable (right-click → Properties → Allow executing, or `chmod +x`) and run it. |
 
-The desktop app opens the live website inside its own window, so every update the build loop pushes shows up in the desktop app straight away (with the same "new version" refresh bar as the website). When the computer is offline it uses the last copy it saved, then the copy built into the app, and shows a small "Offline" label. The desktop app keeps its own data, separate from the website, and that data stays where it was across updates. Live previews and fonts need an internet connection.
+### How updates reach the desktop app
 
-On Windows and Linux (AppImage) the app itself also updates itself: it checks the Releases page when it opens and every 4 hours, downloads a new version in the background, then asks **Restart to update** (it never restarts on its own; choose **Later** and it installs the next time you close the app). Every build gets a higher version number (1.0.<build number>).
+- **Pages update at once, on every computer.** The app opens the live website inside its own window, so every change the build loop pushes shows up straight away (with the same "new version" refresh bar as the website). Offline, it uses the last copy it saved, then the copy built into the app, and shows a small "Offline" label. Live previews and fonts need an internet connection.
+- **Windows and Linux (AppImage): the app updates itself.** It checks the Releases page when it opens and every 4 hours, downloads a new version in the background, then asks **Restart to update**. It never restarts on its own; choose **Later** and it installs the next time you close the app.
+- **Mac: you get a notice.** Without paid Apple code signing a Mac app can't replace itself, so it checks on the same schedule and shows **A new version is available** with a **Download** button that opens the Releases page. Download the `.dmg` for your chip and drag the app to Applications again to replace the old one.
+- Every build gets a higher version number (1.0.<build number>). Installs older than 1.0.18 (Windows, Linux) or 1.0.20 (Mac) don't check for updates, so download the installer once more by hand.
+- Your saved data stays where it is across updates. The desktop app keeps its own data, separate from the website.
 
 ## Install it from the browser (no download)
 

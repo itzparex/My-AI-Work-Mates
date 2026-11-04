@@ -2,7 +2,7 @@
 // asks once per version, and only restarts when the CEO says yes.
 // Run from the repo root: node tests/updater.js   (also run at the end of tests/smoke.js)
 const assert = require("assert"), { EventEmitter } = require("events");
-const { canSelfUpdate, startUpdates } = require("../desktop/updater");
+const { canSelfUpdate, startUpdates, needsUpdateNotice, readVersion, isNewer, startUpdateNotice, RELEASES_PAGE } = require("../desktop/updater");
 
 module.exports = async function run() {
   // Who can update: packaged Windows app and Linux AppImage only.
@@ -41,7 +41,30 @@ module.exports = async function run() {
   const u2 = startUpdates({ updater: f2, ask: async () => true, setTimer: (fn) => (timers.push([fn]), 3), setRepeat: () => 4, clearRepeat: () => {} });
   await timers[timers.length - 1][0](); assert.strictEqual(u2.state.status, "error"); assert.strictEqual(n, 1);
   f2.emit("error", new Error("404")); assert.match(u2.state.error, /404/);
-  return "desktop self-update: check, background download, ask before restart OK";
+
+  // Mac (D1c): no self-update, a notice with a Download button that opens the Releases page.
+  assert.strictEqual(needsUpdateNotice({ platform: "darwin", isPackaged: true }), true);
+  assert.strictEqual(needsUpdateNotice({ platform: "darwin", isPackaged: false }), false);
+  assert.strictEqual(needsUpdateNotice({ platform: "win32", isPackaged: true }), false);
+  assert.strictEqual(readVersion("version: 1.0.19\nfiles:\n  - url: x"), "1.0.19");
+  assert.strictEqual(readVersion("version: '1.0.20'"), "1.0.20");
+  assert.strictEqual(readVersion("<html>Not Found"), null);
+  assert.ok(isNewer("1.0.10", "1.0.9")); assert.ok(!isNewer("1.0.9", "1.0.9")); assert.ok(!isNewer("1.0.8", "1.0.9")); assert.ok(isNewer("1.1", "1.0.99"));
+  let yml = "version: 1.0.19", opened = [], told = [], mt = [], mr = [], replies = [false, true];
+  const m = startUpdateNotice({ current: "1.0.19", fetchText: async () => yml, openPage: (u) => opened.push(u),
+    ask: async (v) => { told.push(v); return replies.shift(); },
+    setTimer: (fn, ms) => (mt.push([fn, ms]), 5), setRepeat: (fn, ms) => (mr.push([fn, ms]), 6), clearRepeat: () => {} });
+  assert.ok(mt[0][1] <= 60000 && mr[0][1] >= 3600000, "checks at startup and every few hours");
+  await mt[0][0](); assert.strictEqual(m.state.status, "up-to-date"); assert.deepStrictEqual(told, []);
+  yml = "version: 1.0.20"; await mr[0][0]();
+  assert.deepStrictEqual(told, ["1.0.20"]); assert.deepStrictEqual(opened, [], "Later opens nothing");
+  await mr[0][0](); assert.deepStrictEqual(told, ["1.0.20"], "told once per version");
+  yml = "version: 1.0.21"; await mr[0][0]();
+  assert.deepStrictEqual(opened, [RELEASES_PAGE], "Download opens the Releases page");
+  const m2 = startUpdateNotice({ current: "1.0.19", fetchText: async () => { throw new Error("offline"); }, openPage: () => opened.push("x"),
+    ask: async () => true, setTimer: (fn) => (mt.push([fn]), 7), setRepeat: () => 8, clearRepeat: () => {} });
+  await mt[mt.length - 1][0](); assert.strictEqual(m2.state.status, "error"); assert.strictEqual(opened.length, 1);
+  return "desktop self-update: check, background download, ask before restart; Mac update notice OK";
 };
 
 if (require.main === module) module.exports().then(m => console.log("OK: " + m), e => { console.error("FAILED\n" + (e.stack || e)); process.exit(1); });
