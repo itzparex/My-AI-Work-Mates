@@ -12,6 +12,7 @@ The loop works through this backlog one item per round, top to bottom, and stops
 6. Commit with a clear message, push to `main`, and confirm the "Build desktop app" run succeeds.
 7. Tick the item, add one line to the log at the bottom, and tell the CEO what changed in two sentences.
 8. If something needs the CEO (a decision, an account, a file), stop and ask instead of guessing.
+9. Record every round, including rounds that stop early, skip or fail, before the last push: `node tools/record-run.js --agent "Build loop" --result success|failure|skipped --started <when the round began, UTC> --summary "<item and what changed>" --produced <item id> --commit <short hash>`. Add `--tokens-in`/`--tokens-out` (or `--tokens`) only when the session reports its token use; never guess. This updates `runs/runs.json`, which the CEO page reads.
 
 ## Backlog
 

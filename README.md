@@ -47,6 +47,10 @@ Paused for now: Video Editor, Email Marketing, Social Media, Media Buyer.
 
 Everything you add is saved in the browser on the device you use (localStorage). Nothing is uploaded. Opening the site on another device starts with fresh data there.
 
+## Run records
+
+Every scheduled run (the build loop now, each work mate later) records itself in `runs/runs.json` with `node tools/record-run.js` (what ran, when, success or failure, what it produced, token use when the session reports it, and the agent's schedule). The Claude panel on the CEO page reads it to show each agent's last run, next run, recent runs and token use. Format and options: see the top of `tools/record-run.js`.
+
 ## Rulebooks
 
 The rulebooks and product brief live in Claude Docs and open from the menu ("Rulebook ↗").

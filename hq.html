@@ -165,6 +165,14 @@ a.stat:hover{border-color:var(--accent)}
 .spark{display:flex;align-items:flex-end;gap:3px;height:22px;margin-top:2px}.spark i{width:6px;border-radius:2px;background:var(--accent);opacity:.55;min-height:2px}.spark i:last-child{opacity:1}
 a.btn{text-decoration:none;color:inherit}
 @media (max-width:640px){.usage{gap:12px}.ring{width:80px;height:80px}.ring>div{width:62px;height:62px}.ring b{font-size:20px}.uform{grid-template-columns:1fr}}
+.runrow{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;padding:8px 0}
+.runrow .ico{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--line);color:var(--accent);font-size:14px}
+.rinfo{display:flex;flex-direction:column;gap:2px;min-width:0}.rinfo .row{gap:6px}
+.rhist{margin-top:6px}.rhist summary{cursor:pointer;font-size:12px;font-weight:800;color:var(--accent)}
+.rh{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--line)}.rh:last-child{border-bottom:0}
+.toks{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0}.tk{font-size:12px;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:4px 10px}.tk b{font-variant-numeric:tabular-nums}
+.cl-row a{color:var(--accent)}
+@media (max-width:640px){.rh{grid-template-columns:auto minmax(0,1fr)}.rh>.mono{grid-column:2}}
 .lgroup{margin-top:12px}.lgroup .k{display:block;margin-bottom:6px}.lgroup .links{margin-top:0}
 .links{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
 .links a{font-size:12px;font-weight:700;text-decoration:none;color:var(--accent);background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:5px 10px}
@@ -299,6 +307,54 @@ function usageForm(){const box=$("#uForm");if(!box)return;if(box.innerHTML){box.
   S.claude.usage={pct,reset:r?new Date(r).toISOString():null,at,by:"CEO",source:"manual"};
   S.claude.history=[...(S.claude.history||[]),{pct,at}].slice(-30);save();toast("Plan usage saved");drawCEO()};
  $("#u-save").onclick=go;$("#u-pct").onkeydown=e=>{if(e.key==="Enter")go()};$("#u-pct").focus()}
+/* Run records: every scheduled run (the build loop now, each work mate later) records itself in runs/runs.json in the repo
+   with tools/record-run.js. The page reads the copy it was served with and the newest copy on GitHub, keeps whichever is newer,
+   and remembers the last good copy for offline use. Next run is worked out from each agent's saved schedule. */
+const RUNS_REMOTE="https://raw.githubusercontent.com/itzparex/My-AI-Work-Mates/main/runs/runs.json";
+const RUNS_PAGE="https://github.com/itzparex/My-AI-Work-Mates/blob/main/runs/runs.json";
+const AGENTS=["Build loop","Project Director",...DEPTS.map(d=>d[0])];
+const RICO={"Build loop":"⚙",...ICO};
+let RUNS=null,runsFrom="";try{RUNS=JSON.parse(localStorage.getItem(KEY+"-runs")||"null");if(RUNS)runsFrom="saved copy"}catch(e){}
+async function loadRuns(){const get=u=>fetch(u,{cache:"no-cache"}).then(r=>r.ok?r.json():null).catch(()=>null);
+ const [a,b]=await Promise.all([get("runs/runs.json"),get(RUNS_REMOTE)]);
+ const ok=[[a,"this copy of the app"],[b,"GitHub"]].filter(x=>x[0]&&Array.isArray(x[0].runs)).sort((x,y)=>(y[0].updated||"")>(x[0].updated||"")?1:-1)[0];
+ if(ok){RUNS=ok[0];runsFrom=ok[1];try{localStorage.setItem(KEY+"-runs",JSON.stringify(RUNS))}catch(e){}}
+ paintRuns()}
+function cronSet(f,min,max){const s=new Set();for(const part of f.split(",")){const [r,stp]=part.split("/");const st=Math.max(1,+stp||1);let a=min,b=max;
+  if(r!=="*"){const [x,y]=r.split("-");a=+x;b=y!==undefined?+y:(stp?max:+x)}if(isNaN(a)||isNaN(b))throw new Error("bad cron");for(let v=a;v<=b;v+=st)s.add(v)}return s}
+function nextRun(sc,from=Date.now()){if(!sc||!sc.cron)return null;try{
+ const [mi,ho,dm,mo,dw]=sc.cron.trim().split(/\s+/),M=cronSet(mi,0,59),H=cronSet(ho,0,23),DM=cronSet(dm,1,31),MO=cronSet(mo,1,12),DW=cronSet(dw,0,7);if(DW.has(7))DW.add(0);
+ const fm=new Intl.DateTimeFormat("en-US",{timeZone:sc.tz||"UTC",hourCycle:"h23",minute:"numeric",hour:"numeric",day:"numeric",month:"numeric",weekday:"short"});
+ const WD={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6},either=dm!=="*"&&dw!=="*";
+ for(let t=Math.floor(from/6e4+1)*6e4,i=0;i<11520;i++,t+=6e4){const p={};for(const x of fm.formatToParts(t))p[x.type]=x.value;
+  if(!M.has(+p.minute)||!H.has(+p.hour%24)||!MO.has(+p.month))continue;
+  const d=DM.has(+p.day),w=DW.has(WD[p.weekday]);if(either?(d||w):(d&&w))return new Date(t)}}catch(e){}return null}
+const lastRunOf=n=>RUNS?RUNS.runs.filter(r=>r.agent===n).slice(-1)[0]:null;
+const RES={success:["✓","Success","p-done"],failure:["✕","Failed","p-block"],skipped:["–","Skipped","p-wait"]};
+const fmtT=t=>new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric"});
+const tok=n=>n==null?null:n>=1e6?(n/1e6).toFixed(n>=1e7?0:1)+"M":n>=1e3?Math.round(n/1e3)+"k":String(n);
+function runsHTML(){
+ if(!RUNS)return `<div class="cl-row"><span class="k">Scheduled runs</span><span class="muted small">Run records couldn't be loaded yet. They load from the repo when you're online.</span></div>`;
+ const sch=RUNS.schedules||{},shown=AGENTS.filter(n=>sch[n]||lastRunOf(n)),idle=AGENTS.filter(n=>!shown.includes(n)&&n!=="Build loop");
+ const wk=Date.now()-7*864e5,recent=RUNS.runs.filter(r=>new Date(r.finished)>wk),withTok=recent.filter(r=>r.tokens&&r.tokens.total!=null);
+ const byAgent=AGENTS.map(n=>[n,withTok.filter(r=>r.agent===n).reduce((s,r)=>s+r.tokens.total,0),recent.filter(r=>r.agent===n).length]).filter(x=>x[2]);
+ const rows=shown.map(n=>{const r=lastRunOf(n),nx=nextRun(sch[n]),res=r&&RES[r.result]||null;
+  const late=r&&sch[n]&&r.result!=="success";
+  return `<div class="runrow"><span class="ico" aria-hidden="true">${RICO[n]||"•"}</span><div class="rinfo"><div class="row"><b>${esc(n)}</b>${res?`<span class="pill ${res[2]}">${res[0]} ${res[1]}</span>`:""}${r&&r.source==="backfilled"?'<span class="example" title="Recorded afterwards from the build history">From history</span>':""}</div>
+   <span class="small">${r?`${esc(r.summary||"Ran")}${r.produced&&r.produced.length?` <span class="muted">· produced ${esc(r.produced.join(", "))}</span>`:""}`:'<span class="muted">No runs recorded yet</span>'}</span>
+   <span class="small muted">${r?`Last <b>${esc(when(r.finished))}</b> · ${ago(r.finished)}${r.started?` · took ${Math.max(1,Math.round((new Date(r.finished)-new Date(r.started))/6e4))} min`:""} · ${r.tokens&&r.tokens.total!=null?tok(r.tokens.total)+" tokens":"tokens not reported"}`:""}</span>
+   <span class="small">${nx?`Next <b>${esc(when(nx))}</b> · ${until(nx)} <span class="muted">· ${esc(sch[n].label||sch[n].cron)}</span>`:'<span class="muted">Not on a schedule</span>'}</span>
+   ${late?`<span class="small stale">Last run ${r.result==="failure"?"failed":"was skipped"}. Check the build log.</span>`:""}</div></div>`}).join("");
+ const hist=RUNS.runs.slice(-8).reverse();
+ return `<div class="cl-row"><span class="k">Scheduled runs</span>${rows||'<span class="muted small">No runs recorded yet.</span>'}
+   ${idle.length?`<span class="small muted" style="margin-top:6px">Not running yet: ${idle.map(esc).join(", ")}. Each starts recording here when it becomes an agent.</span>`:""}
+   ${hist.length?`<details class="rhist"><summary>Recent runs (${RUNS.runs.length} recorded)</summary>${hist.map(r=>{const res=RES[r.result]||["•",r.result,""];return `<div class="rh"><span class="pill ${res[2]}" title="${res[1]}">${res[0]}</span><span class="small"><b>${esc(r.agent)}</b> · ${esc(r.summary||"")}</span><span class="small muted mono">${esc(fmtT(r.finished))} ${new Date(r.finished).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})}</span></div>`}).join("")}</details>`:""}</div>
+  <div class="cl-row"><span class="k">Agent tokens · last 7 days</span>${withTok.length?`<div class="toks">${byAgent.map(([n,t,c])=>`<span class="tk"><b>${tok(t)||"0"}</b> ${esc(n)} <span class="muted">· ${c} run${c===1?"":"s"}</span></span>`).join("")}</div><span class="small muted">${withTok.length} of ${recent.length} runs reported tokens.</span>`:`<span class="muted small">${recent.length?plural(recent.length,"run")+" this week, none reported token use yet. Runs add it when the session shows its usage; nothing is guessed.":"No runs this week."}</span>`}
+   <span class="small muted">Run records from ${esc(runsFrom||"the repo")}${RUNS.updated?" · updated "+ago(RUNS.updated):""} · <a href="${RUNS_PAGE}" target="_blank" rel="noopener">see the file ↗</a></span></div>`}
+function paintRuns(){const box=$("#runsBox");if(box)box.innerHTML=runsHTML();
+ $$("[data-mrun]").forEach(el=>{const r=lastRunOf(el.dataset.mrun),res=r&&RES[r.result];el.innerHTML=r?`Last run: <span class="${r.result==="success"?"t-good":r.result==="failure"?"t-bad":""}">${res[0]}</span> ${esc(fmtT(r.finished))}`:"Last run: none yet"})}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&route()==="ceo")loadRuns()});
+setInterval(()=>{if(!document.hidden&&route()==="ceo")loadRuns()},5*6e4);
 function drawCEO(){
  const active=S.projects.filter(p=>p.status!=="Closed");
  const waiting=S.decisions.length;
@@ -318,7 +374,6 @@ function drawCEO(){
  const upcoming=allTasks.filter(t=>t.status!=="Done"&&t.due>=TODAY&&t.due<=we).sort((a,b)=>a.due<b.due?-1:1);
  const mates=["Project Director",...DEPTS.map(d=>d[0])];
  const mateUrl=n=>n==="Project Director"?"index.html#/director/timeline":(DEPTS.find(d=>d[0]===n)||[])[1];
- const runs=S.runs||{};
  $("#main").innerHTML=`
  <section class="hero">
   <div class="hero-top"><div>
@@ -348,17 +403,16 @@ function drawCEO(){
     ${risk?`<div class="riskline">${esc(risk)}</div>`:""}</button>`}).join("")||'<div class="empty">No projects yet. Create one to get started.</div>'}</div></section>
  </div>
  <section class="card" data-sec="departments" style="margin-top:16px"><h2>Work mates <a class="more" href="index.html#/director/workload" target="_top">Workload →</a></h2>
-  <div class="mates">${mates.map(n=>{const m=mateState(n),r=runs[n];return `<a class="mate" href="${mateUrl(n)}" target="_top">
+  <div class="mates">${mates.map(n=>{const m=mateState(n);return `<a class="mate" href="${mateUrl(n)}" target="_top">
    <div class="row"><span class="ico" aria-hidden="true">${ICO[n]||"•"}</span><b style="flex:1">${esc(n)}</b></div>
    <span class="mstate m-${m.cls}"><i aria-hidden="true"></i>${m.label}</span>
    <div class="small mtask">${m.task?`<span class="mono">${esc(m.task.project)}</span> ${esc(m.task.name)}`:m.next?`Next: ${esc(m.next.name)} · ${fmt(m.next.start)}`:"No open tasks"}</div>
-   <div class="mfoot"><span>Last run: ${r&&r.at?esc(fmt(r.at)):"none yet"}</span><span>Auto-work: ${S.autowork?esc(S.autowork[n]||"On"):"not set up"}</span></div></a>`}).join("")}</div>
-  <p class="hint" style="margin:10px 0 0">Work mates become real agents in a later step; their last run and the Auto-work switch fill in then.</p></section>
+   <div class="mfoot"><span data-mrun="${esc(n)}"></span><span>Auto-work: ${S.autowork?esc(S.autowork[n]||"On"):"not set up"}</span></div></a>`}).join("")}</div>
+  <p class="hint" style="margin:10px 0 0">Last run comes from the run records in the repo; each work mate starts recording when it becomes an agent. The Auto-work switch fills in later.</p></section>
  <div class="cols cols-b" style="margin-top:16px">
   <section class="card claude" data-sec="claude"><h2><span class="cmark" aria-hidden="true">✳</span>Claude <a class="more" href="https://claude.ai/settings/usage" target="_blank" rel="noopener">Usage page ↗</a></h2>
    ${usageHTML()}
-   <div class="cl-row"><span class="k">Agent tokens</span><span class="muted small">Each agent run will record its own token use here (next update).</span></div>
-   <div class="cl-row"><span class="k">Scheduled tasks</span><span class="muted small">The build loop runs on a schedule; each run will record what ran, when and the result here (next update).</span></div>
+   <div id="runsBox">${runsHTML()}</div>
    ${LINKS.map(([g,ls])=>`<div class="lgroup"><span class="k">${g}</span><div class="links">${ls.map(([l,u])=>`<a href="${u}" target="_blank" rel="noopener">${l} ↗</a>`).join("")}</div></div>`).join("")}</section>
   <section class="card" data-sec="issues"><h2>Open issues <span class="pill ${openIssues.length?"p-wait":"p-done"}">${openIssues.length}</span><a class="more" href="index.html#/director/issues" target="_top">Issues log →</a></h2>
    ${openIssues.length?`<div class="ilist">${openIssues.map(i=>`<div class="iss"><span class="pill ${i.sev==="High"?"p-block":i.sev==="Medium"?"p-wait":""}">${esc(i.sev)}</span><div style="min-width:0"><b>${esc(i.what)}</b>${i.example?' <span class="example">Example</span>':""}<div class="small muted"><span class="mono">${esc(i.id)}</span> · ${esc(i.project)} · ${esc(i.dept)} · ${fmt(i.date)}</div>${i.told&&i.told!=="—"?`<div class="small">${esc(i.told)}</div>`:""}</div><span class="pill p-wait">${esc(i.status)}</span></div>`).join("")}</div>`:'<div class="empty">No open issues.</div>'}</section>
@@ -376,6 +430,7 @@ function drawCEO(){
  </section>`;
  $("#newProj").onclick=openCreate;
  $("#uEdit")&&($("#uEdit").onclick=usageForm);
+ paintRuns();
  $$("#main a[href^='#ceo:']").forEach(a=>a.onclick=e=>{e.preventDefault();const sub=a.getAttribute("href").split(":")[1];if(parent!==window)parent.location.hash="#/ceo/"+sub;else location.hash="ceo:"+sub});
  $$("[data-open]").forEach(b=>b.onclick=()=>{S.sel=b.dataset.open;save();if(parent!==window)parent.location.hash="#/director/timeline";else location.hash="director"});
  $$("#decisions [data-dec]").forEach(b=>b.onclick=()=>{const card=b.closest("[data-id]");const d=S.decisions.find(x=>x.id===card.dataset.id);
@@ -458,7 +513,7 @@ function quickAdd(kind){const p=proj(S.sel);const isI=kind==="issue";
   save();$("#modalRoot").innerHTML="";toast("Saved");drawDirector()};
  $("#qa-what").focus()}
 document.addEventListener("keydown",e=>{if(e.key==="Escape")$("#modalRoot").innerHTML=""});
-applyTheme();draw();
+applyTheme();draw();loadRuns();
 })();
 </script>
 <script>
