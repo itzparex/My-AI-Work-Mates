@@ -16,7 +16,7 @@ The loop works through this backlog one item per round, top to bottom, and stops
 ## Backlog
 
 ### 0. CEO command center (do first: this is the CEO's main page)
-- [ ] **C1. CEO page becomes the home page and looks great.** Opening the app lands on the CEO command center (the current home merges into it). Use the frontend-design skill and aim for a polished, premium look in light and dark, on desktop and phone. Top to bottom: a greeting with today's date and one-line status ("3 decisions need you · 1 project at risk"); decisions waiting, with Allow / Disallow / Allow with a note; project health cards (progress, next step, due date, at-risk flag); a work mates strip (each work mate's status, current task, last run, Auto-work state once W1b exists); a "Claude" panel (see C2); open issues; this week's summary.
+- [x] **C1. CEO page becomes the home page and looks great.** Opening the app lands on the CEO command center (the current home merges into it). Use the frontend-design skill and aim for a polished, premium look in light and dark, on desktop and phone. Top to bottom: a greeting with today's date and one-line status ("3 decisions need you · 1 project at risk"); decisions waiting, with Allow / Disallow / Allow with a note; project health cards (progress, next step, due date, at-risk flag); a work mates strip (each work mate's status, current task, last run, Auto-work state once W1b exists); a "Claude" panel (see C2); open issues; this week's summary.
 - [ ] **C2. Claude panel on the CEO page.** Everything about the CEO's Claude in one place, honestly labeled:
   - **Plan usage:** the percentage used and reset time from Claude's usage page. Claude doesn't offer apps a usage feed, so either the CEO updates it in one tap, or an optional browser step (when the CEO's computer and Claude desktop app are on) reads the CEO's own usage page and saves the number with the time it was read. Always shows "last updated".
   - **Agent token use** from every run (feeds into W8).
@@ -77,3 +77,4 @@ Each work mate becomes a real AI agent: Claude, on the CEO's existing subscripti
 - 2026-11-04: Added section 0, the CEO command center as the main page with a Claude panel, to be done first (CEO request).
 - 2026-11-04: Open pages now notice new versions (refresh bar, or automatic refresh when idle); 3b also refreshes data automatically.
 - 2026-11-04: Added D1, automatic updates for the desktop app (CEO request).
+- 2026-11-04: C1 done. The app now opens on the CEO command center (greeting and status, decisions, project health with at-risk flags, work mates, Claude panel with quick links, open issues, this week). Next: C2, the full Claude panel.
