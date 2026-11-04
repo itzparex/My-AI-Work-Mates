@@ -23,6 +23,12 @@ The loop works through this backlog one item per round, top to bottom, and stops
   - **Scheduled tasks:** each run records its own result (what ran, when, success or failure, what it produced), so the panel shows the build loop and every work mate's last and next run.
   - **Quick links:** Claude usage page, scheduled tasks, the rulebooks and the product brief, the GitHub repo and Releases.
 
+### 0½. Desktop app updates itself
+- [ ] **D1. Automatic updates for the desktop app.** Two layers:
+  - **App content:** the desktop app loads the live website (https://itzparex.github.io/My-AI-Work-Mates/), so every change the loop pushes appears in the desktop app at once, with the same refresh bar as the website. If the computer is offline, it falls back to the copy built into the app. Keep the desktop app's saved data working across this change (migrate it, or keep the app:// origin as the offline fallback, and test that nothing is lost).
+  - **The app itself:** on Windows and Linux, use electron-updater against the GitHub Releases files: check at startup and every few hours, download in the background, then show "Restart to update" (never restart without asking). The build sets a rising version number on every build (for example 1.0.<run number>) and publishes the update files (latest.yml and others) with the installers. On Mac, updates can't install automatically without paid code signing, so show "A new version is available" with a Download button that opens the Releases page.
+  - Update the README install section, and confirm the Actions run still builds all three installers.
+
 ### 1. Full department dashboards
 - [ ] **1a. Research & Strategist.** Research brief with the question bank (new product: mine competitors; existing product: use our data). Each of the nine documents opens as a structured editor with its required sections. Evidence ledger IDs can be picked from inside the documents. A Marketer's Booklet builder assembles the Booklet from the documents.
 - [ ] **1b. Copywriter.** Copy map editor: one block per page section (from the wireframe), in page order, with versions. Claims check flags any claim whose ledger entry is "Do not use" or grade C/D. Alt text and image words for the Graphic Designer.
@@ -70,3 +76,4 @@ Each work mate becomes a real AI agent: Claude, on the CEO's existing subscripti
 - 2026-11-04: Added W8, a token usage dashboard with budgets and auto-pause (CEO request).
 - 2026-11-04: Added section 0, the CEO command center as the main page with a Claude panel, to be done first (CEO request).
 - 2026-11-04: Open pages now notice new versions (refresh bar, or automatic refresh when idle); 3b also refreshes data automatically.
+- 2026-11-04: Added D1, automatic updates for the desktop app (CEO request).
