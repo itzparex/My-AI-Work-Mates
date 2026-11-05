@@ -13,7 +13,7 @@ const server = http.createServer((req, res) => {
 const ROUTES = ["#/home", "#/ceo/home",
   "#/ceo/decisions", "#/ceo/projects", "#/ceo/claude", "#/ceo/issues",
   "#/director/timeline", "#/director/review", "#/director/lessons",
-  "#/research/overview", "#/research/briefs", "#/research/questions", "#/research/documents", "#/research/evidence", "#/research/persontasks",
+  "#/research/overview", "#/research/briefs", "#/research/questions", "#/research/documents", "#/research/documents/none", "#/research/evidence", "#/research/persontasks",
   "#/copy/overview", "#/copy/copymaps", "#/copy/claims", "#/copy/swipe",
   "#/uiux/research", "#/uiux/concepts", "#/uiux/studio", "#/uiux/library", "#/uiux/theme",
   "#/graphic/overview", "#/graphic/images", "#/graphic/aiimages", "#/graphic/assets",
