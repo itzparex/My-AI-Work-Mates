@@ -103,7 +103,7 @@ const MENU=[
  {id:"research",group:"Departments",name:"Research & Strategist",ico:"⌕",role:"Nine documents and the Marketer's Booklet",page:"dept",subs:[["overview","Overview"],["briefs","Research briefs"],["questions","Question bank"],["documents","Nine documents"],["booklet","Marketer's Booklet"],["evidence","Evidence ledger"],["persontasks","Person tasks"]],doc:"NqSeg4uwA49BV4JhZd8X8Z"},
  {id:"copy",group:"Departments",name:"Copywriter",ico:"✎",role:"Page copy from the Booklet, claims checked",page:"dept",subs:[["overview","Overview"],["copymaps","Copy maps"],["claims","Claims check"],["images","Image words & alt text"],["swipe","Voice & swipe"]],doc:"V8r1tStkg3uDkpdzcVF489"},
  {id:"uiux",group:"Departments",name:"UI/UX Designer",ico:"◧",role:"Wireframes, designs and live Shopify code",page:"studio",subs:[["research","Research"],["concepts","Concepts"],["studio","Code Studio"],["library","Library"],["theme","Theme library"]],doc:"LrwprikVGXu4yXpEmkh1HF"},
- {id:"graphic",group:"Departments",name:"Graphic Designer",ico:"▣",role:"Carousel and website images",page:"dept",subs:[["overview","Overview"],["images","Image sets"],["aiimages","AI image approvals"],["assets","Brand assets"]],doc:"XjeF4sWgPd5rxTz5VD8PvJ"},
+ {id:"graphic",group:"Departments",name:"Graphic Designer",ico:"▣",role:"Carousel and website images",page:"dept",subs:[["overview","Overview"],["carousel","Carousel planner"],["images","Image sets"],["aiimages","AI image approvals"],["assets","Brand assets"]],doc:"XjeF4sWgPd5rxTz5VD8PvJ"},
  {id:"shopify",group:"Departments",name:"Shopify Developer",ico:"⟨⟩",role:"Builds on a duplicate theme, QA, hand-over",page:"dept",subs:[["overview","Overview"],["builds","Builds"],["qa","QA checklist"],["backups","Theme backups"]],doc:"DLH5vsgeZ3Wow6nmZiwp28"},
 ];
 const PAUSED=[["Video Editor","▶"],["Email Marketing","✉"],["Social Media","♥"],["Media Buyer","$"]];
@@ -142,14 +142,16 @@ function route(){openMega(false);const r=parse();
  $("#subIn").innerHTML=`<span class="crumb"><span class="dico" aria-hidden="true">${m.ico}</span>${esc(m.name)}</span>${m.subs.map(([s,l])=>`<a class="tab ${s===r.s?"on":""}" href="#/${m.id}/${s}" ${s===r.s?'aria-current="page"':""}>${esc(l)}</a>`).join("")}<a class="rb" href="${DOC(m.doc)}" target="_blank" rel="noopener">${m.docName||"Rulebook"} ↗</a>`;
  $("#subbar").hidden=false;frame.hidden=false;
  const p=src(m,r.s),key=p.base+p.q;
- if(curPage===key){try{if(frame.contentWindow.location.hash!==p.h)frame.contentWindow.location.hash=p.h}catch(e){frame.src=src(m,r.s,true).base+src(m,r.s,true).q+p.h}}
+ if(curPage===key){if(syncing)syncing=false;else try{if(frame.contentWindow.location.hash!==p.h)frame.contentWindow.location.hash=p.h}catch(e){frame.src=src(m,r.s,true).base+src(m,r.s,true).q+p.h}}
  else{curPage=key;const w=src(m,r.s,true);frame.src=w.base+w.q+p.h}
  const on=$("#subIn .tab.on");on&&on.scrollIntoView({block:"nearest",inline:"nearest"})}
+/* syncing: the dashboard changed its own page (it may carry an item, e.g. #images/<id>), so only the menu updates and the frame keeps its address */
+let syncing=false;
 window.addEventListener("hashchange",route);
 /* keep the submenu in sync when a dashboard changes its own page */
 window.addEventListener("message",e=>{if(e.origin!==location.origin||!e.data)return;const r=parse();if(!r)return;
  if(e.data.flView&&r.d==="uiux"&&e.data.flView!==r.s){history.replaceState(null,"","#/uiux/"+e.data.flView);route()}
- if(e.data.flSub&&e.data.flSub!==r.s){history.replaceState(null,"","#/"+r.d+"/"+e.data.flSub);route()}});
+ if(e.data.flSub&&e.data.flSub!==r.s){history.replaceState(null,"","#/"+r.d+"/"+e.data.flSub);syncing=true;route();syncing=false}});
 frame.addEventListener("load",()=>{try{frame.contentWindow.postMessage({flTheme:theme},location.origin)}catch(e){}});
 function readHQ(){try{return JSON.parse(localStorage.getItem("facelove-hq-v1")||"null")}catch(e){return null}}
 applyTheme();route();
