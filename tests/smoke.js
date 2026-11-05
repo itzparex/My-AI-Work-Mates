@@ -14,7 +14,7 @@ const ROUTES = ["#/home", "#/ceo/home",
   "#/ceo/decisions", "#/ceo/projects", "#/ceo/claude", "#/ceo/issues",
   "#/director/timeline", "#/director/review", "#/director/lessons",
   "#/research/overview", "#/research/briefs", "#/research/questions", "#/research/documents", "#/research/documents/none", "#/research/booklet", "#/research/evidence", "#/research/persontasks",
-  "#/copy/overview", "#/copy/copymaps", "#/copy/claims", "#/copy/swipe",
+  "#/copy/overview", "#/copy/copymaps", "#/copy/claims", "#/copy/images", "#/copy/swipe",
   "#/uiux/research", "#/uiux/concepts", "#/uiux/studio", "#/uiux/library", "#/uiux/theme",
   "#/graphic/overview", "#/graphic/images", "#/graphic/aiimages", "#/graphic/assets",
   "#/shopify/overview", "#/shopify/builds", "#/shopify/qa", "#/shopify/backups"];
