@@ -30,7 +30,11 @@ The loop works through this backlog one item per round, top to bottom, and stops
   - [x] **D1c. Mac update notice and README.** On Mac (no paid code signing), show "A new version is available" with a Download button that opens the Releases page. Update the README install section, and confirm the Actions run still builds all three installers.
 
 ### 1. Full department dashboards
-- [ ] **1a. Research & Strategist.** Research brief with the question bank (new product: mine competitors; existing product: use our data). Each of the nine documents opens as a structured editor with its required sections. Evidence ledger IDs can be picked from inside the documents. A Marketer's Booklet builder assembles the Booklet from the documents.
+- **1a. Research & Strategist.** Split into:
+  - [ ] **1a-i. Research brief and question bank.** Each brief opens as an editor: header (project, product, path, markets, depth), the client kickoff questionnaire, depth targets, market rules for the chosen markets and an open-questions list. A Question bank page lists every document's questions with where to look for the brief's path (new or existing product); each answer takes ledger IDs or is marked Unknown with what would answer it.
+  - [ ] **1a-ii. Nine documents as structured editors.** Each document opens with the rulebook skeleton: header, summary, question bank answers, its "Must contain" sections, open questions and a confidence rating.
+  - [ ] **1a-iii. Evidence ledger picker.** Ledger entries get the rulebook fields (source type, date found, recheck date, allowed in ads, used in), and ledger IDs can be picked from inside the documents and the question bank.
+  - [ ] **1a-iv. Marketer's Booklet builder.** Assembles the Booklet's nine parts from the documents, with the ready-for-handoff checklist.
 - [ ] **1b. Copywriter.** Copy map editor: one block per page section (from the wireframe), in page order, with versions. Claims check flags any claim whose ledger entry is "Do not use" or grade C/D. Alt text and image words for the Graphic Designer.
 - [ ] **1c. Graphic Designer.** Carousel planner with the nine standard slides (job, words from the copy map, proof IDs, alt text, auto file name). Image size and format guide. AI image approvals create a CEO decision and record the outcome.
 - [ ] **1d. Shopify Developer.** Build tracker with preview links and theme copy names, the QA checklist per project, backup log, and a hand-over note generator for the CEO.
