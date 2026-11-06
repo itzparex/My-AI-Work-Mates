@@ -37,7 +37,7 @@ On iPhone: open it in Safari → Share → "Add to Home Screen". On Android: Chr
 | Page | File | What it does |
 | --- | --- | --- |
 | App shell + mega menu | `index.html` | The app shell: menu of every department and a submenu per department. Opens on the CEO command center |
-| CEO command center and Project Director | `hq.html` | CEO home page: greeting and status, decisions waiting, project health, work mates, Claude panel, open issues, this week. Project Director: timelines, review queue, issues log, lessons log |
+| CEO command center and Project Director | `hq.html` | CEO home page: greeting and status, decisions waiting, project health, work mates, Claude panel, open issues, this week. Data page for the shared model. Project Director: timelines, review queue, issues log, lessons log |
 | UI/UX Designer | `studio.html` | Research, concepts, Code Studio with live Shopify/Liquid preview, library, theme library |
 | Research, Copywriter, Graphic Designer, Shopify Developer | `dept.html?d=…` | Overview with Project Director tasks, plus each department's trackers |
 
@@ -55,6 +55,8 @@ Paused for now: Video Editor, Email Marketing, Social Media, Media Buyer.
 ## Your data
 
 Everything you add is saved in the browser on the device you use (localStorage). Nothing is uploaded. Opening the site on another device starts with fresh data there.
+
+All pages share one data model (`data.js`, saved as `mawm-data-v1`): projects, tasks, deliverables, decisions, issues and lessons, linked by the project code. It is built from what each page saved and kept current whenever a page saves; the older saved data is never changed, and a one-time backup copy is kept as `mawm-data-backup-v0`. CEO → **Data** shows what's in the model, the migration and its checks.
 
 ## Run records
 

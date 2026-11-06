@@ -50,7 +50,11 @@ The loop works through this backlog one item per round, top to bottom, and stops
   - [x] **1d-iv. Hand-over note for the CEO.** Publish plan, rollback plan and post-publish checks assembled into one note the CEO can copy; the CEO publishes.
 
 ### 2. Hand-offs between departments
-- [ ] **2a. One shared project data model** used by every page (projects, tasks, deliverables, decisions, issues, lessons), with a safe migration of existing saved data.
+- **2a. One shared project data model** used by every page (projects, tasks, deliverables, decisions, issues, lessons), with a safe migration of existing saved data. Split into:
+  - [x] **2a-i. The model, migration and checks.** `data.js` defines the six collections and builds them from each page's saved data (old data never changed, a one-time backup kept), keeps the model current whenever a page saves, and checks it (unique IDs, project links); a CEO "Data" page shows what's in it, the migration and the checks.
+  - [ ] **2a-ii. CEO and Project Director read and write the model.** hq.html uses the model's projects, tasks, decisions (with decided history), issues and lessons as its source, still writing the old key so the other pages keep working.
+  - [ ] **2a-iii. Department pages use the model.** dept.html reads projects, tasks and decisions from the model and writes its issues, decisions and deliverables through it (one helper instead of the direct writes to the CEO's saved data).
+  - [ ] **2a-iv. Design Studio uses the model, old keys retired.** studio.html links concepts and Code Studio items to projects through the model; once every page reads the model, the old keys become read-only backups.
 - [ ] **2b. Deliverables flow.** A department submits a deliverable → its task becomes "Waiting on approval" in the Project Director's review queue → approve moves the next task to "In progress" and shows the deliverable as an input on the next department's Overview; return sends it back with comments and logs an issue.
 - [ ] **2c. Gates.** Design approval and Launch approval show everything that's being approved in one view; anything needing a guardrail override becomes a CEO decision.
 

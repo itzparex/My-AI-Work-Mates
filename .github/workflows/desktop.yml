@@ -22,7 +22,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p desktop/app
-          cp index.html hq.html studio.html dept.html manifest.webmanifest sw.js desktop/app/
+          cp index.html hq.html studio.html dept.html data.js manifest.webmanifest sw.js desktop/app/
           cp -r icons desktop/app/
       - name: Install and build
         working-directory: desktop

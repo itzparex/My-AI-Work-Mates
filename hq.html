@@ -194,6 +194,14 @@ a.btn{text-decoration:none;color:inherit}
 @media (max-width:1180px){.mates{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:980px){.cols-b{grid-template-columns:1fr}}
 @media (max-width:640px){.hero{padding:18px 16px 14px;border-radius:16px}.hero-top .btn{width:100%;justify-content:center}.stats,.wk{grid-template-columns:repeat(2,1fr)}.mates{grid-template-columns:repeat(2,minmax(0,1fr))}.wkcols{grid-template-columns:1fr}.pfacts{grid-template-columns:1fr 1fr}.iss{grid-template-columns:auto minmax(0,1fr)}.iss>.pill:last-child{grid-column:2;justify-self:start}}
+.dm{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:4px 0 6px}
+.dmc{background:var(--sunk);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.dmc .n{font-family:var(--f-display);font-weight:800;font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums}.dmc .l{font-size:12px;font-weight:700;color:var(--muted)}
+.dchk{display:flex;gap:10px;align-items:flex-start;padding:7px 0;font-size:13px;font-weight:600;border-top:1px solid var(--line)}.dchk:first-child{border-top:0}.dchk .ic{flex:none;width:20px;text-align:center;font-weight:800}
+.dsrc td,.dsrc th{font-size:12.5px}.dlog{font-size:12.5px}.dlog div{display:flex;gap:10px;padding:4px 0}.dlog .mono{flex:none;color:var(--muted)}
+.dschema{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.dschema details{background:var(--sunk);border-radius:12px;padding:10px 14px}.dschema summary{cursor:pointer;font-weight:800}.dschema p{margin:6px 0;font-size:12.5px;color:var(--muted)}.dschema ul{margin:0;padding-left:16px;font-size:12.5px}.dschema li{margin:2px 0}
+@media (max-width:980px){.dm{grid-template-columns:repeat(3,minmax(0,1fr))}.dschema{grid-template-columns:1fr}}
+@media (max-width:640px){.dm{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (prefers-reduced-motion:reduce){.m-prog i{animation:none}}
 @media (max-width:980px){.cols{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:560px){.form{grid-template-columns:1fr}.field.wide{grid-column:auto}}
@@ -209,6 +217,7 @@ a.btn{text-decoration:none;color:inherit}
 <div id="modalRoot"></div>
 <div class="toast" id="toast" hidden></div>
 
+<script src="data.js"></script>
 <script>
 (function(){
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
@@ -257,7 +266,7 @@ const proj=c=>S.projects.find(p=>p.code===c);
 const prog=p=>{const n=p.tasks.length,d=p.tasks.filter(t=>t.status==="Done").length;return {n,d,pct:n?Math.round(d/n*100):0}};
 const nextTask=p=>p.tasks.find(t=>t.status!=="Done");
 function route(){const h=location.hash.slice(1).split(":")[0];return h==="director"?"director":"ceo"}
-function draw(){const r=route();$$("#roles button").forEach(b=>b.classList.toggle("on",b.dataset.r===r));r==="ceo"?drawCEO():drawDirector();const sub=location.hash.split(":")[1];const el=sub&&document.querySelector(`[data-sec="${sub}"]`);el?el.scrollIntoView({block:"start"}):window.scrollTo({top:0})}
+function draw(){const r=route();$$("#roles button").forEach(b=>b.classList.toggle("on",b.dataset.r===r));const sub=location.hash.split(":")[1];if(r==="ceo"&&sub==="data"){drawData();window.scrollTo({top:0});return}r==="ceo"?drawCEO():drawDirector();const el=sub&&document.querySelector(`[data-sec="${sub}"]`);el?el.scrollIntoView({block:"start"}):window.scrollTo({top:0})}
 $("#roles").onclick=e=>{const b=e.target.closest("button");if(!b)return;location.hash=b.dataset.r};
 window.addEventListener("hashchange",draw);
 
@@ -458,6 +467,43 @@ function drawCEO(){
  $$("#decisions [data-dec]").forEach(b=>b.onclick=()=>{const card=b.closest("[data-id]");const d=S.decisions.find(x=>x.id===card.dataset.id);
   if(b.dataset.dec==="note"&&!card.querySelector(".inline-input")){card.insertAdjacentHTML("beforeend",`<div class="inline-input"><input placeholder="Scope or condition, e.g. slide 1 only" aria-label="Note"><button class="btn sm good">Allow</button></div>`);const box=card.querySelector(".inline-input");box.querySelector("button").onclick=()=>decide(d,"Allowed: "+(box.querySelector("input").value||"no note"));box.querySelector("input").focus();return}
   if(b.dataset.dec!=="note")decide(d,b.dataset.dec==="allow"?"Allowed":"Disallowed")});
+}
+/* Shared data model (2a-i): what's in it, where it came from, and checks */
+function drawData(){const DM=window.MAWM_DATA;
+ if(!DM){$("#main").innerHTML='<section class="card"><h2>Data model</h2><div class="empty">The shared data model couldn\'t load on this device. Your saved data is untouched.</div></section>';return}
+ const m=DM.migrate("view")||DM.load(),bk=DM.backupInfo(),chk=DM.check(m),err=DM.error();
+ const ago=iso=>{if(!iso)return"never";const d=new Date(iso);return d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" "+d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})};
+ const kb=n=>n>=1024?(n/1024).toFixed(n>=10240?0:1)+" KB":n+" B";
+ const cols=Object.keys(DM.SCHEMA);
+ const byKind=m?Object.entries(m.deliverables.reduce((o,d)=>(o[d.kind]=(o[d.kind]||0)+1,o),{})).sort((a,b)=>b[1]-a[1]):[];
+ const bad=chk.filter(c=>c[0]==="bad").length,warn=chk.filter(c=>c[0]==="warn").length;
+ $("#main").innerHTML=`
+ <section class="hero">
+  <div class="hero-top"><div>
+   <div class="eyebrow">CEO · Data</div>
+   <h1 class="hello" style="font-size:clamp(26px,4vw,36px)">One shared data model</h1>
+   <p class="status">${bad?`<span class="st st-bad">${plural(bad,"problem")} found</span>`:warn?`<span class="st st-warn">${plural(warn,"thing")} to look at</span>`:`<span class="st st-good">Model checks pass</span>`}<span class="dot" aria-hidden="true">·</span><span class="st">Updated ${esc(ago(m&&m.meta.built))}</span></p></div>
+   <button class="btn" id="dmRebuild">Rebuild now</button></div>
+  <p class="small muted" style="margin:10px 0 0;max-width:760px">Every page's projects, tasks, deliverables, decisions, issues and lessons now sit in one model on this device, built from what each page saved before. Your old saved data is never changed: a backup copy was kept before the first build. Pages start reading this model directly in the next steps.</p>
+  ${err?`<p class="small t-bad" style="margin:8px 0 0">${esc(err)}</p>`:""}
+ </section>
+ <section class="card" style="margin-top:16px"><h2>What's in it</h2>
+  <div class="dm">${cols.map(c=>`<div class="dmc"><span class="n">${m?m[c].length:0}</span><span class="l">${esc(DM.SCHEMA[c].label)}</span></div>`).join("")}</div>
+  ${byKind.length?`<div class="row small" style="flex-wrap:wrap;gap:6px;margin-top:8px"><span class="k" style="margin-right:4px">Deliverables</span>${byKind.map(([k,n])=>`<span class="pill">${n} ${esc(k)}</span>`).join("")}</div>`:""}
+ </section>
+ <div class="cols cols-b" style="margin-top:16px">
+  <section class="card"><h2>Checks <span class="pill ${bad?"p-block":warn?"p-wait":"p-done"}">${bad?bad+" problem"+(bad>1?"s":""):warn?warn+" to look at":"All clear"}</span></h2>
+   <div>${chk.map(([l,t])=>`<div class="dchk"><span class="ic ${l==="bad"?"t-bad":l==="ok"?"t-good":""}" style="${l==="warn"?"color:var(--warn)":""}" aria-label="${l==="bad"?"Problem":l==="warn"?"Look at":"Fine"}">${l==="bad"?"✕":l==="warn"?"!":"✓"}</span><span>${esc(t)}</span></div>`).join("")}</div>
+   <p class="hint" style="margin:10px 0 0">Problems here never change your data. The Project Director logs anything that needs fixing in the issues log.</p></section>
+  <section class="card"><h2>Migration</h2>
+   <div class="tablewrap"><table class="dsrc"><thead><tr><th>Saved by</th><th>Holds</th><th>Size</th></tr></thead><tbody>${DM.SOURCES.map(([k,who,what])=>{const s=m&&m.meta.sources[k]||{};return `<tr><td><b>${esc(who)}</b><div class="mono small muted">${esc(k)}</div></td><td>${esc(what)}</td><td>${s.unreadable?'<span class="pill p-block">Unreadable</span>':s.found?kb(s.bytes):'<span class="muted">Nothing saved yet</span>'}</td></tr>`}).join("")}</tbody></table></div>
+   <div class="lgroup"><span class="k">Backup of the old data</span><div class="small">${bk?`Kept ${esc(ago(bk.at))} · ${bk.keys.length} part${bk.keys.length===1?"":"s"} · ${kb(bk.bytes)} · <span class="mono">${esc(DM.BACKUP)}</span>`:'<span class="t-bad">No backup yet</span> (nothing saved, or not enough storage)'}</div></div>
+   <div class="lgroup"><span class="k">Log</span><div class="dlog">${(m&&m.meta.log||[]).slice(0,8).map(([at,t])=>`<div><span class="mono">${esc(ago(at))}</span><span>${esc(t)}</span></div>`).join("")||'<div class="muted">Nothing yet.</div>'}</div></div></section>
+ </div>
+ <section class="card" style="margin-top:16px"><h2>The model</h2><p class="hint">The six collections every page shares. The project code links them all.</p>
+  <div class="dschema">${cols.map(c=>{const d=DM.SCHEMA[c];return `<details><summary>${esc(d.label)}</summary><p>${esc(d.what)}</p><ul>${d.fields.map(([f,w])=>`<li><span class="mono">${esc(f)}</span> · ${esc(w)}</li>`).join("")}</ul></details>`}).join("")}</div>
+ </section>`;
+ $("#dmRebuild").onclick=()=>{DM.migrate("manual");toast("Shared model rebuilt");drawData()};
 }
 function decide(d,result){S.decisions=S.decisions.filter(x=>x!==d);
  const open=d.issue?S.issues.find(i=>i.id===d.issue):S.issues.find(i=>i.project===d.project&&i.status==="Waiting on CEO");
