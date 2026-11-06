@@ -7,6 +7,8 @@
    Step 2a-iii: the department pages (dept.html) read projects, tasks, their decisions and issues from the model (deptView),
    log issues and CEO decisions through one helper (report) instead of writing the CEO's saved data themselves, and save
    their own records (the deliverables) through saveDept, which keeps the model's deliverables current.
+   Step 2a-iv (first part): the Design Studio (studio.html) links concepts and Code Studio items to projects through the model
+   (projects, studio, saveStudio, studioFor); dept.html reads the Design Studio's work for a project the same way.
    The old saved data is never changed or deleted by the migration: a one-time backup copy is kept under "mawm-data-backup-v0",
    and the model is rebuilt from the saved data whenever a page saves.
    Used by hq.html, dept.html and studio.html as window.MAWM_DATA. No network, no accounts: everything stays on this device. */
@@ -85,7 +87,7 @@
     });
     const st = src["facelove-studio-v2"] || {};
     arr(st.concepts).filter(c => c && c.stage !== "Ideas").forEach(c => m.deliverables.push({ id: "uiux:concepts:" + c.id, project: c.project || "", dept: "UI/UX Designer", kind: "Design concept", title: c.name || "Concept", status: c.stage || "", version: "", updated: c.updated || "", source: { key: "facelove-studio-v2", path: "concepts", row: c.id }, example: !!c.example }));
-    arr(st.items).forEach(c => c && m.deliverables.push({ id: "uiux:items:" + c.id, project: c.project || "", dept: "UI/UX Designer", kind: "Code Studio item", title: c.name || "Item", status: c.status || "", version: c.version != null ? String(c.version) : "", updated: c.updated || "", source: { key: "facelove-studio-v2", path: "items", row: c.id }, example: !!c.example }));
+    arr(st.items).forEach(c => c && m.deliverables.push(Object.assign({ id: "uiux:items:" + c.id, project: c.project || "", dept: "UI/UX Designer", kind: "Code Studio item", title: c.name || "Item", status: c.status || "", version: c.version != null ? String(c.version) : "", updated: c.updated || "", source: { key: "facelove-studio-v2", path: "items", row: c.id }, example: !!c.example }, c.concept ? { from: "uiux:concepts:" + c.concept } : {})));
     meta.counts = Object.fromEntries(Object.keys(m).map(k => [k, m[k].length]));
     /* page settings that travel with the CEO's data (selected project, plan usage notes, Auto-work later) */
     const settings = { hq: pick(hq, HQ_SETTINGS) };
@@ -209,6 +211,31 @@
   }
   /* every decision the CEO made, newest first (decided history plus older ones read from the issues log) */
   const decided = m => arr((m || load() || {}).decisions).filter(d => d.status === "Decided").sort((a, b) => (b.date || "") < (a.date || "") ? -1 : (b.date || "") > (a.date || "") ? 1 : 0);
+  /* 2a-iv: the Design Studio links its work to projects through the model.
+     projects(): every project as { code, name, status }, from the model (or the CEO's saved data before the model exists). */
+  function projects() {
+    const m = load(); let list = m && hasHq(m) ? m.projects.map(p => ({ code: p.code || p.id, name: p.name || "", status: p.status || "" })) : null;
+    if (!list) { const v = parse(raw(HQ)); list = arr(v && v.projects).filter(p => p && p.code).map(p => ({ code: p.code, name: p.name || "", status: p.status || "" })) }
+    return list;
+  }
+  const STUDIO = "facelove-studio-v2";
+  /* the Design Studio's full saved work (concepts, Code Studio items, references, kit), or null */
+  const studio = () => { const v = parse(raw(STUDIO)); return v && typeof v === "object" ? v : null };
+  /* the Design Studio saves through the model: its key is written and the model's deliverables rebuilt shortly after */
+  function saveStudio(data) {
+    if (!ls) return "This device doesn't allow saving.";
+    try { ls.setItem(STUDIO, JSON.stringify(data)) } catch (e) { return "Not enough storage on this device to save." }
+    touch(); return "";
+  }
+  /* the concepts (past Ideas) or Code Studio items a department can use for a project: that project's first, then the shared
+     ones (no project); work linked to another project is left out unless keep(item) says it is already in use */
+  function studioFor(kind, project, keep) {
+    const st = studio() || {}; let list = arr(kind === "concepts" ? st.concepts : st.items).filter(Boolean);
+    if (kind === "concepts") list = list.filter(c => c.stage !== "Ideas");
+    if (!project) return list;
+    const mine = list.filter(x => x.project === project), shared = list.filter(x => !x.project), other = list.filter(x => x.project && x.project !== project && keep && keep(x));
+    return mine.concat(shared, other);
+  }
   let t = null;
   const touch = () => { clearTimeout(t); t = setTimeout(() => { t = null; migrate("save") }, 400) };
   const flush = () => { if (t) { clearTimeout(t); t = null; migrate("save") } };
@@ -218,6 +245,6 @@
     if (!set.__mawm) { const w = function (k, v) { set.call(this, k, v); if (this === ls && SRC_KEYS.has(k)) touch() }; w.__mawm = true; Storage.prototype.setItem = w }
   } catch (e) { }
   g.addEventListener && g.addEventListener("pagehide", flush);
-  g.MAWM_DATA = { KEY, BACKUP, VERSION, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, HQ, error: () => lastError, today };
+  g.MAWM_DATA = { KEY, BACKUP, VERSION, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, projects, studio, saveStudio, studioFor, STUDIO, HQ, error: () => lastError, today };
   migrate("load");
 })(typeof window !== "undefined" ? window : globalThis);

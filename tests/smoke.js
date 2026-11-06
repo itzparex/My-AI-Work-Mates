@@ -82,7 +82,26 @@ const ROUTES = ["#/home", "#/ceo/home",
       const got = D2.load().deliverables.some(x => x.id === "shopify:builds:smoke2"); if (before == null) W.localStorage.removeItem(k); else W.localStorage.setItem(k, before);
       return e ? "saveDept: " + e : got ? "ok" : "a saved build didn't reach the model"; });
     if (dp !== "ok") errors.push("data model: department page: " + dp);
-    console.log("OK: data model " + JSON.stringify(r.counts) + ", CEO page reads it back (" + rt.projects + " projects, " + rt.tasks + " tasks), decision recorded, department logs and saves through it");
+    // 2a-iv: the Design Studio links concepts and Code Studio items to projects through the model
+    await page.goto(base + "index.html#/uiux/concepts"); await page.waitForTimeout(1800);
+    const ds = await page.evaluate(async () => { const W = document.getElementById("frame").contentWindow, d = W.document, D = W.MAWM_DATA, k = D.STUDIO, before = W.localStorage.getItem(k), wait = ms => new Promise(r => setTimeout(r, ms));
+      try {
+        if (![...d.querySelectorAll("#bproj option")].some(o => o.value === "FL-PDP")) return "project filter has no FL-PDP";
+        d.getElementById("addCon").click(); const sel = d.getElementById("cf-project"); if (![...sel.options].some(o => o.value === "FL-PDP")) return "concept form has no project list";
+        sel.value = "FL-PDP"; d.getElementById("cf-name").value = "Smoke concept"; d.getElementById("cfSave").click(); await wait(100);
+        const c = D.studio().concepts.find(x => x.name === "Smoke concept"); if (!c || c.project !== "FL-PDP") return "concept not linked to the project";
+        d.querySelector(`[data-mv="${c.id}"][data-d="1"]`).click(); D.flush(); await wait(50);
+        const dl = D.load().deliverables.find(x => x.id === "uiux:concepts:" + c.id); if (!dl || dl.project !== "FL-PDP") return "linked concept not in the model with its project";
+        if (!D.studioFor("concepts", "FL-PDP").some(x => x.id === c.id) || D.studioFor("concepts", "FL-OTHER").some(x => x.id === c.id)) return "studioFor doesn't keep the concept to its project";
+        d.querySelector(`[data-build="${c.id}"]`).click(); await wait(300); if (d.getElementById("s-project").value !== "FL-PDP") return "Code Studio didn't carry the concept's project";
+        d.getElementById("save").click(); await wait(100); D.flush(); const it = D.studio().items.find(x => x.name === "Smoke concept");
+        if (!it || it.project !== "FL-PDP" || it.concept !== c.id) return "Code Studio item not linked to the project and concept";
+        const di = D.load().deliverables.find(x => x.id === "uiux:items:" + it.id); if (!di || di.project !== "FL-PDP" || di.from !== "uiux:concepts:" + c.id) return "Code Studio item not in the model with its project";
+        return "ok";
+      } finally { if (before == null) W.localStorage.removeItem(k); else W.localStorage.setItem(k, before); D.flush() } });
+    if (ds !== "ok") errors.push("data model: Design Studio: " + ds);
+    if (/localStorage\.setItem\(\s*["']facelove-studio/.test(fs.readFileSync(path.join(ROOT, "dept.html"), "utf8") + fs.readFileSync(path.join(ROOT, "studio.html"), "utf8"))) errors.push("data model: a page still writes the Design Studio's saved data directly");
+    console.log("OK: data model " + JSON.stringify(r.counts) + ", CEO page reads it back (" + rt.projects + " projects, " + rt.tasks + " tasks), decision recorded, department logs and saves through it, Design Studio links work to projects");
     await page.close();
   }
   await browser.close(); server.close();

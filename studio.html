@@ -107,6 +107,8 @@ select,.field input,.field textarea,.field select{background:var(--surface);bord
 .ticket .hyp{font-size:12px;color:var(--muted);border-left:2px solid var(--blush);padding-left:8px}
 .ticket .refs{font-size:12px;color:var(--muted)}
 .ticket .acts{display:flex;gap:6px;flex-wrap:wrap}
+.ticket .tproj{font-size:12px;padding:5px 8px;border-radius:8px;max-width:100%}
+.projnote{font-size:12.5px;color:var(--muted);margin:-6px 0 12px}
 /* studio */
 .studio{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:14px;min-height:560px}
 .pane{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;min-width:0;overflow:hidden}
@@ -158,6 +160,7 @@ select,.field input,.field textarea,.field select{background:var(--surface);bord
 .kv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .kv div{background:var(--sunk);border-radius:10px;padding:10px 12px}
 .kv span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.kv select{width:100%;min-width:0;margin-top:4px;font-size:13px;padding:6px 8px}
 pre.code{background:var(--code-bg);color:var(--code-ink);font-family:var(--f-mono);font-size:12px;border-radius:10px;padding:14px;overflow:auto;max-height:260px;margin:0}
 .confirm{background:var(--blush-soft);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:60;box-shadow:var(--shadow)}
@@ -247,7 +250,7 @@ pre.code{background:var(--code-bg);color:var(--code-ink);font-family:var(--f-mon
   main{padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
   .pipeline{grid-template-columns:repeat(2,1fr)}
   .form{grid-template-columns:1fr}.field.wide{grid-column:auto}
-  .kv{grid-template-columns:1fr 1fr}
+  .kv{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -268,7 +271,7 @@ pre.code{background:var(--code-bg);color:var(--code-ink);font-family:var(--f-mon
       </nav>
     </div>
     <div><div class="navlabel">Appearance</div><div class="themesw" id="themesw" role="group" aria-label="Page background"><button data-t="light">Light</button><button data-t="dark">Dark</button><button data-t="system">Auto</button></div></div>
-    <div class="foot"><span class="dot"></span>Saved in this browser<br>Hand-off: Project Director approves</div>
+    <div class="foot"><span class="dot"></span>Saved in this browser · linked to projects<br>Hand-off: Project Director approves</div>
   </aside>
 
   <main>
@@ -309,11 +312,13 @@ pre.code{background:var(--code-bg);color:var(--code-ink);font-family:var(--f-mon
         <div class="form">
           <div class="field wide"><label for="cf-name">Concept name</label><input id="cf-name" placeholder="e.g. Sticky bundle bar on mobile"></div>
           <div class="field"><label for="cf-page">Page</label><select id="cf-page"><option>Product page</option><option>Homepage</option><option>Landing page</option><option>Collection page</option></select></div>
+          <div class="field"><label for="cf-project">Project</label><select id="cf-project"></select></div>
           <div class="field"><label for="cf-metric">Metric to move</label><select id="cf-metric"><option>Conversion rate</option><option>Add-to-cart rate</option><option>AOV</option><option>Scroll depth</option></select></div>
           <div class="field full"><label for="cf-hyp">Hypothesis</label><input id="cf-hyp" placeholder="If we… then… because…"></div>
         </div>
         <div class="sheetfoot"><span></span><div style="display:flex;gap:8px"><button class="btn ghost" id="cfCancel">Cancel</button><button class="btn primary" id="cfSave">Add to Ideas</button></div></div>
       </div>
+      <div class="toolbar"><select id="bproj" aria-label="Filter by project"></select><span class="example" id="bprojNote"></span></div>
       <div class="board" id="board"></div>
     </section>
 
@@ -353,6 +358,7 @@ pre.code{background:var(--code-bg);color:var(--code-ink);font-family:var(--f-mon
           <div class="field"><label for="s-type">Type</label><select id="s-type"><option>Component</option><option>Section</option><option>Page</option><option>Pop-up</option></select></div>
           <div class="field"><label for="s-cat">Category</label><select id="s-cat"></select></div>
           <div class="field wide"><span class="lbl">Suitable page types</span><div class="chips" id="s-pages"></div></div>
+          <div class="field"><label for="s-project">Project</label><select id="s-project"></select></div>
           <div class="field"><label for="s-status">Status</label><select id="s-status"><option>Draft</option><option>Design review</option><option>In build</option><option>QA</option><option>Launch review</option><option>Approved</option></select></div>
           <div class="field"><label for="s-file">File name</label><input id="s-file" placeholder="fl-product-faq.liquid"></div>
           <div class="field wide"><label for="s-tags">Tags</label><input id="s-tags" placeholder="accordion, mobile-first"></div>
@@ -393,6 +399,7 @@ pre.code{background:var(--code-bg);color:var(--code-ink);font-family:var(--f-mon
       </div>
       <div class="toolbar">
         <div class="search"><span aria-hidden="true">⌕</span><input id="lq" placeholder="Search names, files, tags"></div>
+        <select id="lproj" aria-label="Project"></select>
         <select id="ltype" aria-label="Type"><option value="">Every type</option><option>Component</option><option>Section</option><option>Page</option><option>Pop-up</option></select>
         <select id="lcat" aria-label="Category"><option value="">Every category</option></select>
         <select id="lstatus" aria-label="Status"><option value="">Every status</option><option>Draft</option><option>Design review</option><option>In build</option><option>QA</option><option>Launch review</option><option>Approved</option></select>
@@ -526,7 +533,19 @@ if(!S.kit)S.kit={status:"new",step:0,brandConfirmed:false,brand:{name:"Facelove"
 if(!S.ui)S.ui={theme:"system",markers:true};
 let TH;try{TH=JSON.parse(localStorage.getItem(KEY+"-theme")||"null")}catch(e){TH=null}
 if(!TH||!TH.meta){TH={files:{},meta:{},sel:null,importedAt:null,name:"",needsSeed:true}}
-const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+/* 2a-iv: saved through the shared model (data.js), which links concepts and Code Studio items to projects */
+const persist=()=>{let err="";try{err=window.MAWM_DATA?MAWM_DATA.saveStudio(S):(localStorage.setItem(KEY,JSON.stringify(S)),"")}catch(e){err="Couldn't save on this device."}if(err)setTimeout(()=>toast(err),0)};
+/* projects come from the shared model; a concept or item with no project is shared across projects */
+const projList=()=>{try{return window.MAWM_DATA?MAWM_DATA.projects():[]}catch(e){return []}};
+const projName=c=>{const p=projList().find(x=>x.code===c);return p?(p.name?c+" · "+p.name:c):c};
+const projKnown=c=>!c||projList().some(x=>x.code===c);
+function projOpts(sel,first){const l=projList();let h=`<option value="">${first||"Shared (no project)"}</option>`+l.map(p=>`<option value="${esc(p.code)}" ${p.code===sel?"selected":""}>${esc(p.code+(p.name?" · "+p.name:""))}${p.status==="Closed"?" (closed)":""}</option>`).join("");
+ if(sel&&!l.some(p=>p.code===sel))h+=`<option value="${esc(sel)}" selected>${esc(sel)} (not found)</option>`;return h}
+const projPill=c=>c?`<span class="pill ${projKnown(c)?"approved":"draft"}" title="${projKnown(c)?"Project":"This project code isn't in the Project Director's projects"}">${esc(projKnown(c)?projName(c):c+" · not found")}</span>`:'<span class="pill">Shared</span>';
+let buildConcept=null,boardProj="*",libProj="*";
+/* a project filter: All projects, Shared (no project), then each project (and any linked code that isn't found) */
+function filterOpts(v,list){const l=projList(),extra=[...new Set(list.map(x=>x.project).filter(c=>c&&!l.some(p=>p.code===c)))];
+ return `<option value="*" ${v==="*"?"selected":""}>All projects</option><option value="" ${v===""?"selected":""}>Shared (no project)</option>`+l.map(p=>`<option value="${esc(p.code)}" ${p.code===v?"selected":""}>${esc(p.code+(p.name?" · "+p.name:""))}</option>`).join("")+extra.map(c=>`<option value="${esc(c)}" ${c===v?"selected":""}>${esc(c)} (not found)</option>`).join("")}
 
 let view="research", editingId=null, pagesSel=new Set(["Product page"]);
 const STAGES=["Ideas","Wireframe","In design","Review","Approved"];
@@ -657,22 +676,28 @@ $("#rfSave").onclick=()=>{const n=$("#rf-name").value.trim();if(!n){toast("Add a
  S.refs.unshift({id:uid(),name:n,url:$("#rf-url").value.trim(),kind:$("#rf-kind").value,page:$("#rf-page").value,score:Math.min(5,Math.max(1,+$("#rf-score").value||3)),tags:$("#rf-tags").value.split(",").map(s=>s.trim()).filter(Boolean),note:$("#rf-note").value.trim()});
  persist();$("#refForm").hidden=true;["#rf-name","#rf-url","#rf-tags","#rf-note"].forEach(s=>$(s).value="");renderRefs();renderPipeline();toast("Reference saved")};
 $("#refGrid").addEventListener("click",e=>{const b=e.target.closest("[data-toconcept]");if(!b)return;const r=S.refs.find(x=>x.id===b.dataset.toconcept);
- S.concepts.unshift({id:uid(),name:"Idea from "+r.name,page:r.page,metric:"Conversion rate",hyp:"If we adapt "+(r.tags[0]||"this pattern")+" from "+r.name+", then…",stage:"Ideas",refs:r.name});persist();renderBoard();renderPipeline();toast("Added to Ideas");go("concepts")});
+ S.concepts.unshift({id:uid(),name:"Idea from "+r.name,page:r.page,metric:"Conversion rate",hyp:"If we adapt "+(r.tags[0]||"this pattern")+" from "+r.name+", then…",stage:"Ideas",refs:r.name,project:boardProj!=="*"?boardProj:"",updated:today()});persist();renderBoard();renderPipeline();toast("Added to Ideas");go("concepts")});
 
 /* ---------- concepts ---------- */
 function renderBoard(){
- $("#board").innerHTML=STAGES.map((st,si)=>{const cs=S.concepts.filter(c=>c.stage===st);
+ $("#bproj").innerHTML=filterOpts(boardProj,S.concepts);$("#bproj").value=boardProj;
+ const fv=boardProj,np=projList().length;$("#bprojNote").textContent=np?"":"No projects yet: add one on the Project Director page to link concepts to it.";
+ $("#board").innerHTML=STAGES.map((st,si)=>{const cs=S.concepts.filter(c=>c.stage===st&&(fv==="*"||(c.project||"")===fv));
   return `<div class="col"><h3>${st}<span class="pill">${cs.length}</span></h3>${cs.map(c=>`<div class="ticket">
-   <b>${esc(c.name)}</b><div class="meta" style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill">${esc(c.page)}</span><span class="pill reuse">${esc(c.metric)}</span></div>
+   <b>${esc(c.name)}</b><div class="meta" style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill">${esc(c.page)}</span><span class="pill reuse">${esc(c.metric)}</span>${projPill(c.project)}</div>
    <div class="hyp">${esc(c.hyp)}</div>${c.refs?`<div class="refs">Refs: ${esc(c.refs)}</div>`:""}
-   <div class="acts">${si>0?`<button class="btn sm" data-mv="${c.id}" data-d="-1">←</button>`:""}${si<STAGES.length-1?`<button class="btn sm" data-mv="${c.id}" data-d="1">Move →</button>`:""}<button class="btn sm" data-build="${c.id}">${st==="Ideas"?"Start wireframe":st==="Wireframe"?"Open wireframe":"Build"}</button></div></div>`).join("")||'<div class="example" style="padding:8px">Nothing here yet</div>'}</div>`}).join("");
+   <div class="acts">${si>0?`<button class="btn sm" data-mv="${c.id}" data-d="-1">←</button>`:""}${si<STAGES.length-1?`<button class="btn sm" data-mv="${c.id}" data-d="1">Move →</button>`:""}<button class="btn sm" data-build="${c.id}">${st==="Ideas"?"Start wireframe":st==="Wireframe"?"Open wireframe":"Build"}</button></div>
+   <select class="tproj" data-cproj="${c.id}" aria-label="Project for ${esc(c.name)}">${projOpts(c.project)}</select></div>`).join("")||'<div class="example" style="padding:8px">Nothing here yet</div>'}</div>`}).join("");
 }
+$("#bproj").onchange=e=>{boardProj=e.target.value;renderBoard()};
+$("#board").addEventListener("change",e=>{const s=e.target.closest("[data-cproj]");if(!s)return;const c=S.concepts.find(x=>x.id===s.dataset.cproj);if(!c)return;c.project=s.value;c.updated=today();
+ S.items.filter(i=>i.concept===c.id&&!i.project).forEach(i=>{i.project=c.project});persist();renderBoard();toast(c.project?"Linked to "+c.project:"Shared across projects")});
 $("#board").addEventListener("click",e=>{const m=e.target.closest("[data-mv]");if(m){const c=S.concepts.find(x=>x.id===m.dataset.mv);c.stage=STAGES[Math.max(0,Math.min(STAGES.length-1,STAGES.indexOf(c.stage)+(+m.dataset.d)))];persist();renderBoard();renderPipeline();return}
- const b=e.target.closest("[data-build]");if(b){const c=S.concepts.find(x=>x.id===b.dataset.build);blank();$("#s-name").value=c.name;$("#s-notes").value="Concept: "+c.hyp;if(c.stage==="Ideas"){c.stage="Wireframe";persist();toast("Moved to Wireframe: agree sections and text room with the Copywriter")}go("studio")}});
-$("#addCon").onclick=()=>{$("#conForm").hidden=false;$("#cf-name").focus()};
+ const b=e.target.closest("[data-build]");if(b){const c=S.concepts.find(x=>x.id===b.dataset.build);blank();$("#s-name").value=c.name;$("#s-notes").value="Concept: "+c.hyp;buildConcept=c.id;$("#s-project").innerHTML=projOpts(c.project||"");$("#editing").textContent="New design from concept “"+c.name+"”";if(c.stage==="Ideas"){c.stage="Wireframe";persist();toast("Moved to Wireframe: agree sections and text room with the Copywriter")}go("studio")}});
+$("#addCon").onclick=()=>{$("#cf-project").innerHTML=projOpts(boardProj!=="*"?boardProj:"");$("#conForm").hidden=false;$("#cf-name").focus()};
 $("#cfCancel").onclick=()=>$("#conForm").hidden=true;
 $("#cfSave").onclick=()=>{const n=$("#cf-name").value.trim();if(!n){toast("Name the concept first");return}
- S.concepts.unshift({id:uid(),name:n,page:$("#cf-page").value,metric:$("#cf-metric").value,hyp:$("#cf-hyp").value.trim()||"Add a hypothesis",stage:"Ideas",refs:""});persist();$("#conForm").hidden=true;$("#cf-name").value="";$("#cf-hyp").value="";renderBoard();renderPipeline();toast("Concept added")};
+ S.concepts.unshift({id:uid(),name:n,page:$("#cf-page").value,metric:$("#cf-metric").value,hyp:$("#cf-hyp").value.trim()||"Add a hypothesis",stage:"Ideas",refs:"",project:$("#cf-project").value,updated:today()});persist();$("#conForm").hidden=true;$("#cf-name").value="";$("#cf-hyp").value="";renderBoard();renderPipeline();toast("Concept added")};
 
 /* ---------- studio ---------- */
 $("#s-cat").innerHTML=CATS.map(c=>`<option>${c}</option>`).join("");
@@ -829,16 +854,16 @@ $("#starter").onchange=e=>{const k=e.target.value;if(!k)return;$("#code").value=
 $("#fmt").onclick=()=>{$("#code").value=$("#code").value.replace(/[ \t]+$/gm,"").replace(/\n{3,}/g,"\n\n").trim()+"\n";refresh()};
 $("#copyCode").onclick=e=>copy($("#code").value);
 function blank(){editingId=null;secKey=null;pendingState=null;$("#ctype").value="auto";$("#code").value="<section class=\"hero\">\n  <h1>{{ product.title }}</h1>\n  <p>Now {{ product.price | money }}</p>\n</section>\n<style>\n.hero{font-family:system-ui;padding:40px 20px;text-align:center;background:#f5f0ff;color:#2a1530}\n</style>\n";
- ["#s-name","#s-file","#s-tags","#s-notes"].forEach(s=>$(s).value="");$("#s-type").value="Component";$("#s-status").value="Draft";$("#s-date").value=today();$("#s-reuse").checked=true;pagesSel=new Set(["Product page"]);drawPages();
+ ["#s-name","#s-file","#s-tags","#s-notes"].forEach(s=>$(s).value="");buildConcept=null;$("#s-project").innerHTML=projOpts("");$("#s-type").value="Component";$("#s-status").value="Draft";$("#s-date").value=today();$("#s-reuse").checked=true;pagesSel=new Set(["Product page"]);drawPages();
  $("#editing").textContent="New design";$("#studioTitle").textContent="Build and preview"}
 $("#newCode").onclick=()=>{blank();refresh()};
-function openInStudio(it){editingId=it.id;$("#code").value=it.code;$("#ctype").value=it.ctype||"auto";secKey=null;pendingState=it.state?JSON.parse(JSON.stringify(it.state)):null;$("#s-name").value=it.name;$("#s-type").value=it.type;$("#s-cat").value=it.cat;$("#s-status").value=it.status;$("#s-file").value=it.file||"";$("#s-tags").value=(it.tags||[]).join(", ");$("#s-notes").value=it.notes||"";$("#s-date").value=it.date;$("#s-reuse").checked=!!it.reusable;pagesSel=new Set(it.pages||[]);drawPages();
+function openInStudio(it){editingId=it.id;buildConcept=it.concept||null;$("#s-project").innerHTML=projOpts(it.project||"");$("#code").value=it.code;$("#ctype").value=it.ctype||"auto";secKey=null;pendingState=it.state?JSON.parse(JSON.stringify(it.state)):null;$("#s-name").value=it.name;$("#s-type").value=it.type;$("#s-cat").value=it.cat;$("#s-status").value=it.status;$("#s-file").value=it.file||"";$("#s-tags").value=(it.tags||[]).join(", ");$("#s-notes").value=it.notes||"";$("#s-date").value=it.date;$("#s-reuse").checked=!!it.reusable;pagesSel=new Set(it.pages||[]);drawPages();
  $("#editing").textContent="Editing v"+it.version+" · last saved "+fmtDate(it.updated);$("#studioTitle").textContent=it.name;go("studio")}
-function collect(){return {name:$("#s-name").value.trim(),type:$("#s-type").value,cat:$("#s-cat").value,status:$("#s-status").value,file:$("#s-file").value.trim(),tags:$("#s-tags").value.split(",").map(s=>s.trim()).filter(Boolean),notes:$("#s-notes").value.trim(),date:$("#s-date").value||today(),reusable:$("#s-reuse").checked,pages:[...pagesSel],code:$("#code").value,ctype:$("#ctype").value,state:secState?JSON.parse(JSON.stringify(secState)):null}}
+function collect(){return {name:$("#s-name").value.trim(),type:$("#s-type").value,cat:$("#s-cat").value,status:$("#s-status").value,file:$("#s-file").value.trim(),tags:$("#s-tags").value.split(",").map(s=>s.trim()).filter(Boolean),notes:$("#s-notes").value.trim(),date:$("#s-date").value||today(),reusable:$("#s-reuse").checked,pages:[...pagesSel],code:$("#code").value,ctype:$("#ctype").value,state:secState?JSON.parse(JSON.stringify(secState)):null,project:$("#s-project").value,concept:buildConcept||""}}
 function save(asNew){const d=collect();if(!d.name){toast("Give the design a name first");$("#s-name").focus();return}
  const ex=!asNew&&editingId&&S.items.find(i=>i.id===editingId);
- if(ex){Object.assign(ex,d,{updated:today(),version:ex.version+1,example:false});toast("Saved · v"+ex.version)}
- else{const it=Object.assign({id:uid(),version:1,updated:today()},d);S.items.unshift(it);editingId=it.id;toast("Saved to library")}
+ if(ex){Object.assign(ex,d,{updated:today(),version:ex.version+1,example:false});toast("Saved · v"+ex.version+(d.project?" · "+d.project:""))}
+ else{const it=Object.assign({id:uid(),version:1,updated:today()},d);S.items.unshift(it);editingId=it.id;toast("Saved to library"+(d.project?" · linked to "+d.project:""))}
  persist();const cur=S.items.find(i=>i.id===editingId);$("#editing").textContent="Editing v"+cur.version+" · last saved "+fmtDate(cur.updated);$("#studioTitle").textContent=cur.name;renderPipeline()}
 $("#save").onclick=()=>save(false);$("#saveCopy").onclick=()=>save(true);
 
@@ -846,16 +871,17 @@ $("#save").onclick=()=>save(false);$("#saveCopy").onclick=()=>save(true);
 const pillFor=s=>s==="Approved"?"approved":s==="Draft"?"draft":(s==="Design review"||s==="Launch review")?"review":"reuse";
 async function thumb(frame,it){const r=await render(it.code,MOCK,it.state,it.ctype);frame.srcdoc=doc(r.html)}
 function renderLib(){
+ $("#lproj").innerHTML=filterOpts(libProj,S.items);$("#lproj").value=libProj;const pf=libProj;
  const q=$("#lq").value.toLowerCase(),ty=$("#ltype").value,ca=$("#lcat").value,st=$("#lstatus").value,ru=$("#lreuse").checked;
- const list=S.items.filter(i=>(!ty||i.type===ty)&&(!ca||i.cat===ca)&&(!st||i.status===st)&&(!ru||i.reusable)&&(!q||(i.name+" "+i.file+" "+(i.tags||[]).join(" ")).toLowerCase().includes(q)));
+ const list=S.items.filter(i=>(pf==="*"||(i.project||"")===pf)&&(!ty||i.type===ty)&&(!ca||i.cat===ca)&&(!st||i.status===st)&&(!ru||i.reusable)&&(!q||(i.name+" "+i.file+" "+(i.tags||[]).join(" ")).toLowerCase().includes(q)));
  $("#libGrid").innerHTML=list.length?list.map(i=>`<button class="card libcard" data-open="${i.id}">
   <div class="thumb"><span class="pill reuse type">${esc(i.type)}</span><iframe sandbox="allow-scripts" tabindex="-1" aria-hidden="true" data-th="${i.id}"></iframe></div>
   <div class="body"><span class="name">${esc(i.name)}</span><span class="mono">${esc(i.file||"no file name")}</span>
-  <div class="meta"><span class="pill ${pillFor(i.status)}">${esc(i.status)}</span><span class="pill">${esc(i.cat)}</span>${i.ctype&&i.ctype!=="auto"?`<span class="pill">${esc(CTYPES[i.ctype])}</span>`:""}${i.reusable?'<span class="pill reuse">Reusable</span>':""}</div>
+  <div class="meta"><span class="pill ${pillFor(i.status)}">${esc(i.status)}</span><span class="pill">${esc(i.cat)}</span>${projPill(i.project)}${i.ctype&&i.ctype!=="auto"?`<span class="pill">${esc(CTYPES[i.ctype])}</span>`:""}${i.reusable?'<span class="pill reuse">Reusable</span>':""}</div>
   <div class="row"><span class="example">v${i.version} · ${fmtDate(i.updated)}${i.example?" · Example":""}</span></div></div></button>`).join(""):'<div class="empty">No designs match these filters.</div>';
  list.forEach(i=>{const f=document.querySelector(`[data-th="${i.id}"]`);if(f)thumb(f,i)});
 }
-["#lq","#ltype","#lcat","#lstatus","#lreuse"].forEach(s=>$(s).addEventListener(s==="#lq"?"input":"change",renderLib));
+$("#lproj").addEventListener("change",e=>{libProj=e.target.value});["#lq","#lproj","#ltype","#lcat","#lstatus","#lreuse"].forEach(s=>$(s).addEventListener(s==="#lq"?"input":"change",renderLib));
 $("#libGrid").addEventListener("click",e=>{const b=e.target.closest("[data-open]");if(b)drawer(b.dataset.open)});
 
 function drawer(id){const i=S.items.find(x=>x.id===id);if(!i)return;
@@ -868,7 +894,8 @@ function drawer(id){const i=S.items.find(x=>x.id===id);if(!i)return;
   <div id="dConfirm"></div>
   <iframe sandbox="allow-scripts" title="Preview" id="dFrame"></iframe>
   <div class="kv"><div><span>Status</span><span class="pill ${pillFor(i.status)}">${esc(i.status)}</span></div><div><span>Reusable</span>${i.reusable?"Yes":"No"}</div><div><span>Code type</span>${esc(CTYPES[i.ctype||"auto"])}</div><div><span>Version</span>v${i.version}</div>
-   <div><span>Created</span>${fmtDate(i.date)}</div><div><span>Updated</span>${fmtDate(i.updated)}</div><div><span>Pages</span>${esc((i.pages||[]).join(", ")||"Any")}</div></div>
+   <div><span>Created</span>${fmtDate(i.date)}</div><div><span>Updated</span>${fmtDate(i.updated)}</div><div><span>Pages</span>${esc((i.pages||[]).join(", ")||"Any")}</div>
+   <div><span>Project</span><select id="dProj" aria-label="Project">${projOpts(i.project)}</select></div>${i.concept?`<div><span>From concept</span>${esc((S.concepts.find(c=>c.id===i.concept)||{}).name||"(deleted)")}</div>`:""}</div>
   ${i.tags&&i.tags.length?`<div class="meta" style="display:flex;gap:6px;flex-wrap:wrap">${i.tags.map(t=>`<span class="pill">#${esc(t)}</span>`).join("")}</div>`:""}
   ${i.notes?`<div><div class="navlabel" style="padding:0">Setup notes</div><p style="margin:4px 0 0">${esc(i.notes)}</p></div>`:""}
   <div><div class="navlabel" style="padding:0">Code</div><pre class="code">${esc(i.code)}</pre></div>
@@ -877,6 +904,7 @@ function drawer(id){const i=S.items.find(x=>x.id===id);if(!i)return;
  $$("#drawerRoot [data-close]").forEach(b=>b.onclick=closeDrawer);
  $("#dEdit").onclick=()=>{closeDrawer();openInStudio(i)};
  $("#dCopy").onclick=()=>copy(i.code);
+ $("#dProj").onchange=e=>{i.project=e.target.value;i.updated=today();persist();renderLib();toast(i.project?"Linked to "+i.project:"Shared across projects")};
  $("#dStatus").onchange=e=>{i.status=e.target.value;i.updated=today();persist();renderLib();renderPipeline();toast("Marked "+i.status)};
  $("#dDel").onclick=()=>{$("#dConfirm").innerHTML=`<div class="confirm">Delete “${esc(i.name)}” from the library? This can't be undone.<span style="flex:1"></span><button class="btn sm" id="dNo">Keep it</button><button class="btn sm primary" id="dYes">Delete</button></div>`;
   $("#dNo").onclick=()=>$("#dConfirm").innerHTML="";$("#dYes").onclick=()=>{S.items=S.items.filter(x=>x.id!==i.id);persist();closeDrawer();renderLib();renderPipeline();toast("Deleted")}};
@@ -967,6 +995,8 @@ blank();$("#code").value=STARTERS["Facelove guarantee (Shopify section)"];$("#ct
 renderRefs();renderBoard();drawMatch();$("#c-theme").textContent=thItems().length;
 const VIEWS=["research","concepts","studio","library","theme"];const startView=()=>{const h=location.hash.slice(1);return VIEWS.includes(h)?h:"studio"};
 go(startView());window.addEventListener("hashchange",()=>go(startView()));
+/* when the Project Director adds or renames a project in another tab, refresh the project lists */
+window.addEventListener("storage",e=>{if(window.MAWM_DATA&&e.key===MAWM_DATA.KEY){if(view==="concepts")renderBoard();if(view==="library")renderLib()}});
 })();
 </script>
 <script>

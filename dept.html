@@ -511,7 +511,8 @@ function imgCard(m,locked,pc){const f=imgFlags(m),wl=Math.max(0,...(m.words||"")
 function imgText(r,list){return `# Image words and alt text · ${r.page||"Page"} v${r.version||"1"} · ${pname(r[P])} · ${today()}\nFor the Graphic Designer. Image words go on the image word for word; alt text goes in the image's alt field.\n\n`+(list||cmImgList(r)).map(({b,i,m,j})=>`## ${i+1}. ${b.sec} · image ${j+1}: ${(m.what||"").trim()||"(not described)"}\nImage words: ${(m.words||"").trim()||"none"}\nAlt text: ${m.deco?'decorative (alt="")':(m.alt||"").trim()||"(missing)"}${m.ev?`\nLedger IDs: ${m.ev}`:""}${imgOk(m)?"":`\nOpen: ${imgFlags(m).map(x=>x[1]).join("; ")}`}`).join("\n\n")}
 /* the Research & Strategist's saved work (Booklet, documents, ledger) and the Design Studio's concepts, read-only */
 const rsDoc=(c,d)=>(((RSD.rows||{}).documents)||[]).find(r=>r[P]===c&&r.doc===NINE[d]);
-const studioConcepts=()=>{try{return ((JSON.parse(localStorage.getItem("facelove-studio-v2")||"null")||{}).concepts||[]).filter(c=>c.stage!=="Ideas")}catch(e){return []}};
+/* 2a-iv: the Design Studio's work for a project comes through the shared model: that project's first, then shared ones */
+const studioConcepts=(proj,keep)=>{try{return MAWM_DATA.studioFor("concepts",proj,keep)}catch(e){return []}};
 function cmOutline(c){const t=((((rsDoc(c,6)||{}).mc||{})["Product page outline"])||{}).t||"";
  const l=t.split(/\n|,|;|→|->|>|→|\d+\.\s/).map(x=>x.replace(/^[\s\-–•*()]+|[\s.)]+$/g,"")).filter(x=>x.length>1&&x.length<=40).slice(0,14);
  return l.length>=3?{from:"Conversion Strategy · Product page outline",l}:{from:"the standard section jobs in the rulebook",l:CM_DEF}}
@@ -521,7 +522,7 @@ function copyEditor(id){const rows=S.rows.copymaps||(S.rows.copymaps=[]),r=rows.
  if(!r){$("#main").innerHTML=`<div class="head"><div><div class="eyebrow">${esc(C.name)} · Copy map</div><h1>Copy map not found</h1><p class="sub">It may have been deleted on this device.</p></div><a class="btn" href="#copymaps">← All copy maps</a></div>`;return}
  r.blocks=r.blocks||[];r.hist=r.hist||[];if(!r.version)r.version="1";if(!r.date)r.date=today();if(!r.status)r.status="Not started";
  let viewing=null;
- const render=()=>{const locked=r.status==="Done",bk=rsDoc(r[P],8),cons=studioConcepts(),ids=ledgerIds(),out=cmOutline(r[P]);
+ const render=()=>{const locked=r.status==="Done",bk=rsDoc(r[P],8),cons=studioConcepts(r[P],c=>c.name===r.wire),ids=ledgerIds(),out=cmOutline(r[P]);
   const tasks=(projects.find(p=>p.code===r[P])||{}).tasks||[],myTasks=tasks.filter(t=>t.dept===C.hq);
   const over=r.blocks.flatMap((b,i)=>cmOver(b).map(l=>`${i+1}. ${b.sec}: ${l}`)),cited=cmIds(r),miss=cited.filter(x=>!ids.has(x)),flagged=cited.map(evById).filter(e=>e&&(e.use==="Do not use"||/^[CD]/.test(e.grade||""))).map(e=>e.id);
   const written=r.blocks.filter(cmWritten).length,hdOk=["task","page","platform","market","segment","angle","bkv"].every(k=>(r[k]||"").trim());
@@ -545,7 +546,7 @@ function copyEditor(id){const rows=S.rows.copymaps||(S.rows.copymaps=[]),r=rows.
      <div class="field"><label for="cm-date">Date</label><input id="cm-date" type="date" data-h="date" value="${esc(r.date)}" ${locked?"disabled":""}></div>
      <div class="field"><label for="cm-version">Version</label><input id="cm-version" data-h="version" value="${esc(r.version)}" disabled title="Changes with Start version"></div>
      <div class="field"><label for="cm-changes">What changed in this version</label>${inp("changes",r.hist.length?"e.g. New hook after review":"First version")}</div>
-     <div class="field full"><label for="cm-wire">Agreed wireframe (Design Studio concept)</label><select id="cm-wire" data-h="wire" ${locked?"disabled":""}><option value="">—</option>${cons.map(c=>`<option ${c.name===r.wire?"selected":""}>${esc(c.name)}</option>`).join("")}${r.wire&&!cons.some(c=>c.name===r.wire)?`<option selected>${esc(r.wire)}</option>`:""}</select>
+     <div class="field full"><label for="cm-wire">Agreed wireframe (Design Studio concept)</label><select id="cm-wire" data-h="wire" ${locked?"disabled":""}><option value="">—</option>${cons.map(c=>`<option value="${esc(c.name)}" ${c.name===r.wire?"selected":""}>${esc(c.name)}${c.project?"":" (shared)"}</option>`).join("")}${r.wire&&!cons.some(c=>c.name===r.wire)?`<option selected>${esc(r.wire)}</option>`:""}</select>
       <label class="unk" style="margin-top:4px"><input type="checkbox" data-x="wireOk" ${r.wireOk?"checked":""} ${locked?"disabled":""}> Sections, fields and limits agreed with the UI/UX Designer</label>${cons.length?"":`<span class="sub" style="font-size:12.5px">No wireframes in the Design Studio yet: <a href="index.html#/uiux/concepts" target="_top">start one in Concepts</a>.</span>`}</div></div></div>
    <div class="card" style="margin-top:14px"><h2>Summary</h2><div class="form plain"><div class="field full"><label for="cm-message">Main message, in one sentence</label>${inp("message","The one idea the page is built around")}</div><div class="field"><label for="cm-metric">Metric it targets</label>${inp("metric","e.g. Add-to-cart rate")}</div></div></div>
    <div class="row" style="margin:20px 0 4px"><h2 style="margin:0">Sections in page order <span class="pill ${r.blocks.length&&written===r.blocks.length?"g":"w"}">${written} of ${r.blocks.length} written</span></h2></div>
@@ -873,7 +874,7 @@ const SB_STOP=[["The design needs an app, script, font or checkout change",1],["
 const SB_OK=["In build","QA","Launch review","Approved"];
 const sbName=r=>`${r[P]||"PROJECT"} build ${r.date||today()}`;
 const sbStepsDone=r=>SB_STEPS.filter((_,i)=>((r.steps||{})[i]||{}).done).length;
-const studioItems=()=>{try{return ((JSON.parse(localStorage.getItem("facelove-studio-v2")||"null")||{}).items||[])}catch(e){return []}};
+const studioItems=(proj,keep)=>{try{return MAWM_DATA.studioFor("items",proj,keep)}catch(e){return []}};
 const sbLib=r=>{const ids=r.lib||[];return studioItems().filter(i=>ids.includes(i.id))};
 const sbBackups=r=>(S.rows.backups||[]).filter(b=>r[P]&&b[P]===r[P]);
 /* theme backups (1d-iii): each backup is linked to the build it protects (b.build), names the rollback theme and stays saved until the project closes */
@@ -1058,7 +1059,7 @@ function buildEditor(id){const rows=S.rows.builds||(S.rows.builds=[]),r=rows.fin
  if(!r){$("#main").innerHTML=`<div class="head"><div><div class="eyebrow">${esc(C.name)} · Build</div><h1>Build not found</h1><p class="sub">It may have been deleted on this device.</p></div><a class="btn" href="#builds">← All builds</a></div>`;return}
  r.inputs=r.inputs||{};r.steps=r.steps||{};r.changes=r.changes||[];r.lib=r.lib||[];if(!r.date)r.date=today();if(!r.status)r.status="Not started";
  let err="",stepErr=null,hoErr="";
- const render=()=>{const lib=sbLib(r),items=studioItems(),flags=sbFlags(r),done=sbStepsDone(r),myTasks=((projects.find(p=>p.code===r[P])||{}).tasks||[]).filter(t=>t.dept===C.hq),bks=sbBackups(r);
+ const render=()=>{const lib=sbLib(r),items=studioItems(r[P],i=>(r.lib||[]).includes(i.id)),flags=sbFlags(r),done=sbStepsDone(r),myTasks=((projects.find(p=>p.code===r[P])||{}).tasks||[]).filter(t=>t.dept===C.hq),bks=sbBackups(r);
   const appr=lib.length&&lib.every(i=>SB_OK.includes(i.status));if(appr)r.inputs[0]=true;
   const iDone=SB_IN.filter((_,i)=>r.inputs[i]).length,bad=flags.filter(x=>x[0]==="b").length;
   const q=sbQ(r),sp=sbSpeed(r),tc=sbTc(r);if(sp.rec!==!!(q.tests[6]||{}).done){q.tests[6]=sp.rec?{done:true,date:today()}:{};save()}
@@ -1078,7 +1079,7 @@ function buildEditor(id){const rows=S.rows.builds||(S.rows.builds=[]),r=rows.fin
      <div class="field full"><label for="sb-preview">Preview link of the duplicate theme</label>${inp("preview","https://your-store.myshopify.com/?preview_theme_id=…",'type="url"')}</div></div>
     <p class="sub" style="font-size:12.5px;margin-top:8px">Theme copies are named <span class="mono">[project code] build [date]</span>, e.g. <span class="mono">${esc(sbName(r))}</span>. The preview link goes to QA (the UI/UX Designer) through the Project Director.</p></div>
    <div class="card" style="margin-top:14px"><h2>What's being built</h2><p class="sub" style="font-size:12.5px;margin:-4px 0 8px">The approved items from the Code Studio library. Only items past design review can be built.</p>
-    ${items.length?items.map(i=>{const on=r.lib.includes(i.id),ok=SB_OK.includes(i.status);return `<label class="check"><input type="checkbox" data-lib="${esc(i.id)}" ${on?"checked":""}><span style="text-decoration:none;color:var(--ink);flex:1"><b>${esc(i.name)}</b> <span class="pill ${ok?"g":"w"}">${esc(i.status||"Draft")}</span><br><span class="mono">${esc(i.file||"no file name")} · v${esc(i.version||1)} · ${esc(i.type||"")}</span></span></label>`}).join(""):`<p class="sub">The Code Studio library is empty on this device. <a href="index.html#/uiux/library" target="_top">Open the library ↗</a></p>`}
+    ${items.length?items.map(i=>{const on=r.lib.includes(i.id),ok=SB_OK.includes(i.status);return `<label class="check"><input type="checkbox" data-lib="${esc(i.id)}" ${on?"checked":""}><span style="text-decoration:none;color:var(--ink);flex:1"><b>${esc(i.name)}</b> <span class="pill ${ok?"g":"w"}">${esc(i.status||"Draft")}</span>${i.project?(i.project===r[P]?"":` <span class="pill w">Linked to ${esc(i.project)}</span>`):` <span class="pill">Shared</span>`}<br><span class="mono">${esc(i.file||"no file name")} · v${esc(i.version||1)} · ${esc(i.type||"")}</span></span></label>`}).join(""):`<p class="sub">The Code Studio library is empty on this device. <a href="index.html#/uiux/library" target="_top">Open the library ↗</a></p>`}
     ${lib.length?`<div class="toolbar" style="margin:10px 0 0"><button class="btn sm" id="sbLibAdd">Add their files to the change list</button></div>`:""}</div>
    <div class="card" style="margin-top:14px"><h2>Inputs the brief must point to <span class="pill ${iDone===SB_IN.length?"g":"w"}">${iDone} of ${SB_IN.length}</span></h2><p class="sub" style="font-size:12.5px;margin:-4px 0 6px">If the design approval is missing or an input is incomplete, the brief goes back to the Project Director (use Stop and ask). Never build an unapproved design.</p>
     ${SB_IN.map((x,i)=>{const auto=i===0&&appr,ok=!!r.inputs[i];return `<label class="check ${ok?"done":""}" style="${auto?"cursor:default":""}"><input type="checkbox" ${auto?"disabled":`data-in="${i}"`} ${ok?"checked":""}><span style="text-decoration:none;color:var(--ink)">${esc(x)}${i===0?`<br><span class="mono" style="text-decoration:none;color:${ok?"var(--good)":"var(--warn)"}">${auto?"Checked by the app · every picked Code Studio item is past design review":lib.length?"A picked Code Studio item is still in design review":"Pick the Code Studio items above, or tick once the Project Director records the approval"}</span>`:""}</span></label>`}).join("")}</div>
