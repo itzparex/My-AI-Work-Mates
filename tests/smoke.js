@@ -17,7 +17,7 @@ const ROUTES = ["#/home", "#/ceo/home",
   "#/copy/overview", "#/copy/copymaps", "#/copy/claims", "#/copy/images", "#/copy/swipe",
   "#/uiux/research", "#/uiux/concepts", "#/uiux/studio", "#/uiux/library", "#/uiux/theme",
   "#/graphic/overview", "#/graphic/carousel", "#/graphic/images", "#/graphic/aiimages", "#/graphic/assets",
-  "#/shopify/overview", "#/shopify/builds", "#/shopify/builds/none", "#/shopify/qa", "#/shopify/backups"];
+  "#/shopify/overview", "#/shopify/builds", "#/shopify/builds/none", "#/shopify/qa", "#/shopify/backups", "#/shopify/handover"];
 (async () => {
   await new Promise(r => server.listen(0, r)); const base = "http://localhost:" + server.address().port + "/";
   const browser = await chromium.launch(); const errors = [];
