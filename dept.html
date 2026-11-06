@@ -176,17 +176,28 @@ const CFG={
 const C=CFG[D]||CFG.research;document.title=C.name+" · My AI Work Mates";
 const KEY="mawm-dept-"+D;
 let S;try{S=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){S=null}if(!S)S={rows:{},checks:{}};S.qa=S.qa||{};
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+/* 2a-iii: the department's records (its deliverables) are saved through the shared model (data.js) */
+const DM=window.MAWM_DATA||null;let saveErr="";
+const save=()=>{if(DM){const e=DM.saveDept(KEY,S);saveErr=e;return}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 /* other departments read the Research & Strategist's ledger and Booklet (read-only) */
 let RSD={rows:{}};const loadRS=()=>{if(D==="research"){RSD=S;return}try{RSD=JSON.parse(localStorage.getItem("mawm-dept-research")||"null")||{rows:{}}}catch(e){RSD={rows:{}}}};loadRS();
-const hq=(()=>{try{return JSON.parse(localStorage.getItem("facelove-hq-v1")||"null")}catch(e){return null}})();
-const projects=hq?hq.projects:[];
+/* projects, tasks and this department's decisions and issues come from the shared model (CEO and Project Director data);
+   without the model (it failed to load) the page falls back to reading the CEO's saved data as before */
+let DV=null,projects=[];
+const loadDV=()=>{DV=null;if(DM)try{DV=DM.deptView(C.hq)}catch(e){DV=null}
+ if(DV){projects=DV.projects;return}let H=null;try{H=JSON.parse(localStorage.getItem("facelove-hq-v1")||"null")}catch(e){}projects=H&&Array.isArray(H.projects)?H.projects:[]};loadDV();
+/* the one helper for logging with the Project Director (issues log, plus a CEO decision when a guardrail is involved) */
+const pdLog=o=>DM?DM.report(Object.assign({dept:C.hq},o)):{error:"The shared data couldn't load on this device, so nothing was logged."};
+const pdIssue=id=>DM?DM.issue(id):null;
+const pdReady=()=>!!(DM&&DM.hqReady());
 const pname=c=>{const p=projects.find(x=>x.code===c);return p?p.code+" · "+p.name:c||"—"};
 const pill=v=>{const m={"Done":"g","Clear":"g","Approved":"g","Pass":"g","In progress":"a","Waiting on approval":"w","Waiting on CEO":"w","Reword":"w","To do":"w","Blocked":"b","Do not use":"b","Rejected":"b","Yes, with wording":"g","No":"b","Needs compliance review":"w"};return `<span class="pill ${m[v]||""}">${esc(v)}</span>`};
 function route(){const [b,...a]=location.hash.slice(1).split("/");return {v:b==="overview"||C.secs[b]?b:"overview",a:a.length?decodeURIComponent(a.join("/")):""}}
 function view(){return route().v}
-function draw(){loadRS();const {v,a}=route();try{if(parent!==window)parent.postMessage({flSub:v},location.origin)}catch(e){}const s=C.secs[v];v==="overview"?overview():s.open&&a?s.open(a):s.custom?s.custom(v,a):s.checklist?checklist(v):tracker(v);window.scrollTo({top:0})}
+function draw(){loadRS();loadDV();const {v,a}=route();try{if(parent!==window)parent.postMessage({flSub:v},location.origin)}catch(e){}const s=C.secs[v];v==="overview"?overview():s.open&&a?s.open(a):s.custom?s.custom(v,a):s.checklist?checklist(v):tracker(v);window.scrollTo({top:0})}
 addEventListener("hashchange",draw);
+/* when the CEO or Project Director changes tasks or decides (another tab), the model changes: refresh the overview */
+addEventListener("storage",e=>{if(!DM||e.key!==DM.KEY)return;loadDV();const a=document.activeElement;if(view()==="overview"&&!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))overview()});
 addEventListener("storage",e=>{if(e.key!==KEY||!e.newValue)return;try{S=JSON.parse(e.newValue);S.rows=S.rows||{};S.checks=S.checks||{};S.qa=S.qa||{}}catch(_){return}const a=document.activeElement;if(!a||!/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))draw()});
 function overview(){const tasks=projects.flatMap(p=>(p.tasks||[]).filter(t=>t.dept===C.hq).map(t=>({...t,project:p.code})));
  $("#main").innerHTML=`<div class="head"><div><div class="eyebrow">${esc(C.name)} · Overview</div><h1>${esc(C.name)}</h1><p class="sub">${esc(C.role)}</p></div></div>
@@ -194,7 +205,18 @@ function overview(){const tasks=projects.flatMap(p=>(p.tasks||[]).filter(t=>t.de
  <div class="cols"><div class="card"><h2>Needs before starting</h2><ul>${C.inputs.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div><div class="card"><h2>Hands off</h2><ul>${C.outputs.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div><div class="card"><h2>Never</h2><ul>${C.never.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div></div>
  <h2 id="tasks" style="margin-top:18px">Tasks from the Project Director</h2>
  <div class="tablewrap">${tasks.length?`<table><thead><tr><th>Task</th><th>Project</th><th>Start</th><th>Due</th><th>Status</th></tr></thead><tbody>${tasks.map(t=>`<tr><td><span class="mono">${esc(t.id)}</span><br><b>${esc(t.name)}</b></td><td>${esc(pname(t.project))}</td><td>${esc(t.start)}</td><td>${esc(t.due)}</td><td>${pill(t.status)}</td></tr>`).join("")}</tbody></table>`:`<div class="empty">No tasks yet. Projects created on the CEO dashboard assign tasks here automatically.</div>`}</div>
- <p class="note">Task dates and status are changed by the Project Director on their timeline. The full rules are in this department's rulebook (link in the menu above).</p>`}
+ ${pdCard()}
+ <p class="note">Task dates and status are changed by the Project Director on their timeline. Issues and CEO decisions are logged through the shared data, so the Project Director and the CEO see them at once. The full rules are in this department's rulebook (link in the menu above).${saveErr?` <b style="color:var(--bad)">${esc(saveErr)}</b>`:""}</p>`}
+/* 2a-iii: this department's decisions with the CEO (waiting and decided) and its issues, read from the shared model */
+function pdCard(){if(!DV)return `<h2 style="margin-top:18px">With the Project Director and the CEO</h2><div class="tablewrap"><div class="empty">${DM?"Open the CEO page once on this device, so the Project Director's log exists.":"The shared data couldn't load on this device."}</div></div>`;
+ const open=DV.issues.filter(i=>i.status!=="Resolved"),res=r=>/^Disallow/.test(r||"")?"b":/^Allow/.test(r||"")?"g":"",
+  dRow=(d,dec)=>`<div class="check" style="cursor:default;display:block;padding:9px 0"><div class="row"><span><span class="pill ${d.type==="Override"?"p":d.type==="Escalation"?"b":"w"}">${esc(d.type||"Decision")}</span> <b>${esc(d.title)}</b></span>${dec?`<span class="pill ${res(d.result)}">${esc(d.result||"Decided")}</span>`:pill("Waiting on CEO")}</div><div class="mono" style="margin-top:3px">${esc(pname(d.project))}${d.issue?" · "+esc(d.issue):""}${dec&&d.date?" · decided "+esc(d.date):d.asked?" · asked "+esc(d.asked):""}</div></div>`;
+ return `<h2 style="margin-top:18px">With the Project Director and the CEO</h2>
+ <div class="cols" id="pdcard">
+  <div class="card"><div class="row"><h2 style="margin:0">Waiting on the CEO</h2><span class="pill ${DV.waiting.length?"w":""}">${DV.waiting.length}</span></div>${DV.waiting.length?DV.waiting.slice(0,6).map(d=>dRow(d,false)).join(""):'<p class="sub" style="margin-top:8px">Nothing from this department is waiting on the CEO.</p>'}</div>
+  <div class="card"><div class="row"><h2 style="margin:0">Decided</h2><span class="pill">${DV.decided.length}</span></div>${DV.decided.length?DV.decided.slice(0,6).map(d=>dRow(d,true)).join(""):'<p class="sub" style="margin-top:8px">No CEO decisions for this department yet.</p>'}</div>
+  <div class="card"><div class="row"><h2 style="margin:0">Issues logged</h2><span class="pill ${open.length?"w":""}">${open.length} open</span></div>${DV.issues.length?DV.issues.slice(0,6).map(i=>`<div class="check" style="cursor:default;display:block;padding:9px 0"><div class="row"><span class="mono">${esc(i.id)} · ${esc(i.date)}</span>${pill(i.status==="Resolved"?"Done":i.status)}</div><div style="margin-top:3px">${esc(i.what)}</div></div>`).join(""):'<p class="sub" style="margin-top:8px">No issues logged by this department.</p>'}</div>
+ </div>`}
 function tracker(k){const s=C.secs[k],rows=S.rows[k]||(S.rows[k]=[]);let edit=null,fq="",fp="",ff="";
  const ex=s.extras||(s.extra?[s.extra]:[]);
  const render=()=>{const flt=s.filters&&s.filters.find(x=>x[0]===ff);const list=rows.filter(r=>(!fp||r[P]===fp)&&(!flt||flt[1](r))&&(!fq||JSON.stringify(r).toLowerCase().includes(fq.toLowerCase())));
@@ -602,14 +624,11 @@ function ccCollect(c,mid){const m={},add=(id,where)=>{(m[id]=m[id]||{id,where:[]
  if(!mid)(S.rows.claims||[]).filter(r=>r[P]===c).forEach(r=>evList(r.ledger).forEach(id=>add(id,`Other claims · "${String(r.claim||"").slice(0,50)}"`)));
  return Object.values(m).sort((a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true}))}
 /* logs a flagged claim in the Project Director's issues log (the CEO dashboard's saved data); never contacts anyone */
-function ccReport(c,id,what){let H;try{H=JSON.parse(localStorage.getItem("facelove-hq-v1")||"null")}catch(e){H=null}if(!H||!Array.isArray(H.issues))return null;
- const n=H.issues.reduce((mx,i)=>Math.max(mx,parseInt(String(i.id||"").replace(/^\D+/,""),10)||0),0)+1,iid="IS-"+String(n).padStart(3,"0");
- H.issues.unshift({id:iid,date:today(),project:c||"—",dept:"Copywriter",what,type:"Rule hit",sev:"Medium",told:"Copywriter stopped using the claim until the Project Director decides; only the CEO can override",decision:"—",status:"Open"});
- try{localStorage.setItem("facelove-hq-v1",JSON.stringify(H))}catch(e){return null}return iid}
+function ccReport(c,id,what){const r=pdLog({project:c,issue:{what,type:"Rule hit",sev:"Medium",told:"Copywriter stopped using the claim until the Project Director decides; only the CEO can override",decision:"—",status:"Open"}});return r.error?null:r.id}
 function claimsCheck(k,arg){if(arg==="other")return tracker(k);S.cc=S.cc||{};let pc=arg||(projects[0]?projects[0].code:""),mid="",fv="";
  const render=()=>{const maps=(S.rows.copymaps||[]).filter(r=>r[P]===pc),list=ccCollect(pc,mid),cc=S.cc[pc]||{};
   const rows=list.map(x=>{const e=evById(x.id),st=cc[x.id]||{},f=ccFlags(e,st);return {...x,e,st,f,v:ccVerdict(f)}}),cnt=v=>rows.filter(r=>r.v===v).length,shown=rows.filter(r=>!fv||r.v===fv);
-  const hqOk=(()=>{try{const H=JSON.parse(localStorage.getItem("facelove-hq-v1")||"null");return !!(H&&Array.isArray(H.issues))}catch(e){return false}})();
+  const hqOk=pdReady();
   const others=(S.rows.claims||[]).filter(r=>r[P]===pc).length;
   $("#main").innerHTML=`<div class="head"><div><div class="eyebrow">${esc(C.name)}</div><h1>Claims check</h1><p class="sub">Every ledger ID cited in this project's copy, with its claim, grade and verdict from the Research & Strategist's ledger. Only Clear or Reword claims are used, Reword with the exact safe wording.</p></div>
    <div class="toolbar" style="margin:0;align-items:flex-end"><div class="field" style="min-width:200px"><label for="pc">Project</label><select id="pc">${projects.map(p=>`<option value="${esc(p.code)}" ${p.code===pc?"selected":""}>${esc(p.code)} · ${esc(p.name)}</option>`).join("")||'<option value="">No projects yet</option>'}</select></div>
@@ -716,13 +735,11 @@ function aiState(s){if(!s.aiimg)return null;const q=aiReq(s);
  if(q.decision==="Rejected")return ["b","CEO disallowed this AI product image"+(q.date?" ("+q.date+")":"")+": use a real photo or drop it","no"];
  return ["b","AI product image waiting on the CEO","wait"]}
 /* logs the request with the Project Director and adds it to the CEO's decisions; returns "" or why it couldn't */
-function aiAsk(o){let H;try{H=JSON.parse(localStorage.getItem("facelove-hq-v1")||"null")}catch(e){H=null}
- if(!H||!Array.isArray(H.issues)||!Array.isArray(H.decisions))return "Open the CEO page once on this device first, so the Project Director's log exists.";
- const n=H.issues.reduce((mx,i)=>Math.max(mx,parseInt(String(i.id||"").replace(/^\D+/,""),10)||0),0)+1,iid="IS-"+String(n).padStart(3,"0"),did=Math.random().toString(36).slice(2,9);
- H.issues.unshift({id:iid,date:today(),project:o[P]||"—",dept:"Graphic Designer",what:"AI product image needs CEO approval: "+o.image,type:"Override request",sev:"Medium",told:"Sent to the CEO with the product spec it was checked against; the image stays blocked until the CEO decides",decision:"Waiting on CEO",status:"Waiting on CEO"});
- H.decisions.unshift({id:did,type:"Override",project:o[P]||"—",title:"AI product image: "+o.image,detail:`${o.shows?o.shows.replace(/\.$/,"")+". ":""}${o.why?"Why AI: "+o.why.replace(/\.$/,"")+". ":""}Checked against the product spec: ${o.spec}.`,rec:"Allow only if it matches the spec. Approval covers this image only; a changed or new AI product image needs its own approval.",ai:{dept:"graphic",row:o._id},issue:iid});
- try{localStorage.setItem("facelove-hq-v1",JSON.stringify(H))}catch(e){return "Couldn't save to the Project Director's log on this device."}
- Object.assign(o,{issue:iid,dec:did,decision:"Waiting on CEO",asked:today(),date:"",note:""});
+function aiAsk(o){const r=pdLog({project:o[P],
+  issue:{what:"AI product image needs CEO approval: "+o.image,type:"Override request",sev:"Medium",told:"Sent to the CEO with the product spec it was checked against; the image stays blocked until the CEO decides",decision:"Waiting on CEO",status:"Waiting on CEO"},
+  decision:{type:"Override",title:"AI product image: "+o.image,detail:`${o.shows?o.shows.replace(/\.$/,"")+". ":""}${o.why?"Why AI: "+o.why.replace(/\.$/,"")+". ":""}Checked against the product spec: ${o.spec}.`,rec:"Allow only if it matches the spec. Approval covers this image only; a changed or new AI product image needs its own approval.",ai:{dept:"graphic",row:o._id}}});
+ if(r.error)return r.error;
+ Object.assign(o,{issue:r.id,dec:r.decision,decision:"Waiting on CEO",asked:today(),date:"",note:""});
  const rows=aiRows();if(!rows.includes(o))rows.unshift(o);save();return ""}
 function setEditor(id){const rows=S.rows.images||(S.rows.images=[]),r=rows.find(x=>x._id===id);
  if(!r){$("#main").innerHTML=`<div class="head"><div><div class="eyebrow">${esc(C.name)} · Image set</div><h1>Image set not found</h1><p class="sub">It may have been deleted on this device.</p></div><a class="btn" href="#carousel">← Carousel planner</a></div>`;return}
@@ -911,15 +928,12 @@ function sbFlags(r){const f=[],th=(r.theme||"").trim(),pv=(r.preview||"").trim()
  return f}
 function sbText(r){const lib=sbLib(r),ch=r.changes||[];return [`BUILD NOTES · ${pname(r[P])}`,`Duplicate theme: ${r.theme||"—"}`,`Preview: ${r.preview||"—"}`,`Live theme: ${r.live||"—"} · Task: ${r.task||"—"} · Date: ${r.date||"—"} · Status: ${r.status||"—"}`,`Backup: ${(b=>b?`${b.file||"no file name"} · ${b.date||"no date"} · ${b.where||"where not noted"} · from ${b.theme||"—"}`:"none linked")(sbBk(r))}`,`Rollback theme: ${(sbBk(r)||{}).rollback||"—"}`,`Code Studio items: ${lib.length?lib.map(i=>`${i.name} (${i.file||"no file"}, v${i.version||1}, ${i.status})`).join("; "):"—"}`,"",`INPUTS (${SB_IN.filter((_,i)=>(r.inputs||{})[i]).length} of ${SB_IN.length})`,...SB_IN.map((x,i)=>`[${(r.inputs||{})[i]?"x":" "}] ${x}`),"",`SAFE BUILD STEPS (${sbStepsDone(r)} of ${SB_STEPS.length})`,...SB_STEPS.map((s,i)=>{const st=(r.steps||{})[i]||{};return `[${st.done?"x":" "}] ${i+1}. ${s[0]}${st.date?" · "+st.date:""}${(st.note||"").trim()?" · "+st.note.trim():""}`}),"",`CHANGE LIST (${ch.length})`,...(ch.length?ch.map((c,i)=>`${i+1}. ${c.kind}: ${c.what||"—"}${(c.note||"").trim()?" · "+c.note.trim():""}`):["—"]),"","WARNINGS",...(sbFlags(r).map(x=>"- "+x[1]).concat(sbFlags(r).length?[]:["None"])),...((r.notes||"").trim()?["","NOTES",r.notes.trim()]:[])].join("\n")+sbQaText(r)+"\n\n"+hoText(r)}
 /* logs a stop-and-ask with the Project Director; anything that needs a guardrail lifted also goes to the CEO's decisions */
-function sbAsk(r,reason,detail,ceo){let H;try{H=JSON.parse(localStorage.getItem("facelove-hq-v1")||"null")}catch(e){H=null}
- if(!H||!Array.isArray(H.issues)||!Array.isArray(H.decisions))return "Open the CEO page once on this device first, so the Project Director's log exists.";
- const n=H.issues.reduce((mx,i)=>Math.max(mx,parseInt(String(i.id||"").replace(/^\D+/,""),10)||0),0)+1,iid="IS-"+String(n).padStart(3,"0");
- const what=`Build ${r.theme||sbName(r)}: ${reason}${detail?" — "+detail:""}`;
- H.issues.unshift({id:iid,date:today(),project:r[P]||"—",dept:"Shopify Developer",what,type:ceo?"Override request":"Rule hit",sev:"Medium",told:ceo?"Shopify Developer stopped; sent to the CEO, who is the only one who can lift the guardrail":"Shopify Developer stopped and waits for the Project Director",decision:ceo?"Waiting on CEO":"—",status:ceo?"Waiting on CEO":"Open"});
- if(ceo)H.decisions.unshift({id:Math.random().toString(36).slice(2,9),type:"Override",project:r[P]||"—",title:"Build needs a guardrail lifted: "+reason,detail:`${detail?detail.replace(/\.$/,"")+". ":""}Duplicate theme: ${r.theme||sbName(r)}. Nothing has been installed on the live store.`,rec:"Allow only if it's free and doesn't touch checkout, payments or customer data. Approval covers this build only.",build:{dept:"shopify",row:r._id},issue:iid});
- try{localStorage.setItem("facelove-hq-v1",JSON.stringify(H))}catch(e){return "Couldn't save to the Project Director's log on this device."}
- (r.asks=r.asks||[]).unshift({issue:iid,date:today(),reason,detail,ceo:!!ceo});save();return ""}
-function sbIssue(id){try{return ((JSON.parse(localStorage.getItem("facelove-hq-v1")||"null")||{}).issues||[]).find(i=>i.id===id)}catch(e){return null}}
+function sbAsk(r,reason,detail,ceo){const what=`Build ${r.theme||sbName(r)}: ${reason}${detail?" — "+detail:""}`;
+ const res=pdLog({project:r[P],issue:{what,type:ceo?"Override request":"Rule hit",sev:"Medium",told:ceo?"Shopify Developer stopped; sent to the CEO, who is the only one who can lift the guardrail":"Shopify Developer stopped and waits for the Project Director",decision:ceo?"Waiting on CEO":"—",status:ceo?"Waiting on CEO":"Open"},
+  decision:ceo?{type:"Override",title:"Build needs a guardrail lifted: "+reason,detail:`${detail?detail.replace(/\.$/,"")+". ":""}Duplicate theme: ${r.theme||sbName(r)}. Nothing has been installed on the live store.`,rec:"Allow only if it's free and doesn't touch checkout, payments or customer data. Approval covers this build only.",build:{dept:"shopify",row:r._id}}:null});
+ if(res.error)return res.error;
+ (r.asks=r.asks||[]).unshift({issue:res.id,date:today(),reason,detail,ceo:!!ceo});save();return ""}
+function sbIssue(id){return pdIssue(id)}
 /* per-build QA (1d-ii): the rulebook's testing before QA, code and performance standards, theme check and speed results, and the build handoff checklist */
 const SB_TEST=["Preview opens with no errors; the browser console shows no new errors","Matches the approved Code Studio design at mobile, tablet and desktop","Every link and button goes to the right place; nothing shows \"Link not set\"","Add to cart, variant picker, quantity and checkout start work as before","Apps on the page still work (reviews, bundles, upsells)","Theme editor: settings and blocks behave as described in the schema","Speed compared with the live page, both numbers recorded","Other pages that use the same template or snippets still look right","Tested in at least Chrome and Safari, on one iPhone and one Android size"];
 const SB_STD=[["Code",["fl- prefix on section and block names, classes and CSS variables; no collisions with the theme or apps","No hard-coded links, prices, product names or text that should be a setting","JavaScript runs only on pages that use the section and never blocks the page from loading","No new third-party scripts, fonts or apps without CEO approval"]],["Performance",["Images go through Shopify's image filters with responsive widths, lazy-loaded below the first screen","No layout jumps when images or fonts load"]],["Compatibility",["Works with the store's existing apps on the page (reviews, bundles, upsells, subscriptions)","Works in the theme editor: every setting does what it says; blocks can be added, moved and removed","Works in every market and language the store uses (if Markets or translations are set up)"]]];
@@ -989,13 +1003,10 @@ function hoText(r){const h=hoQ(r),p=hoParts(r),how=hoHow(r),bk=sbBk(r),hd=sbHand
   "",`POST-PUBLISH CHECKS (within the first hour, by the Shopify Developer, reported to the Project Director)`,`Published by the CEO: ${h.pubAt?h.pubAt.replace("T"," "):"not yet"}`,...HO_POST.map((x,i)=>{const c=h.post[i]||{};return `[${c.done?"x":" "}] ${x}${c.done&&c.at?" · "+c.at.replace("T"," "):""}${late.includes(i)?" (after the first hour)":""}`}),...((h.report||"").trim()?["Result: "+h.report.trim()]:[]),
   ...(p.pub.concat(p.rb).some(x=>!x[0])?["","STILL MISSING",...p.pub.concat(p.rb).filter(x=>!x[0]).map(x=>`- ${x[1]}: ${x[2]}`)]:[])].join("\n")}
 /* a failed post-publish check: logged with the Project Director, and the rollback question goes to the CEO (only the CEO switches themes) */
-function hoReport(r,what){let H;try{H=JSON.parse(localStorage.getItem("facelove-hq-v1")||"null")}catch(e){H=null}
- if(!H||!Array.isArray(H.issues)||!Array.isArray(H.decisions))return "Open the CEO page once on this device first, so the Project Director's log exists.";
- const n=H.issues.reduce((mx,i)=>Math.max(mx,parseInt(String(i.id||"").replace(/^\D+/,""),10)||0),0)+1,iid="IS-"+String(n).padStart(3,"0");
- H.issues.unshift({id:iid,date:today(),project:r[P]||"—",dept:"Shopify Developer",what:`After publishing ${hoTarget(r)||r.theme||sbName(r)}: ${what}`,type:"Escalation",sev:"High",told:"Shopify Developer reported it; the CEO decides whether to roll back",decision:"Waiting on CEO",status:"Waiting on CEO"});
- H.decisions.unshift({id:Math.random().toString(36).slice(2,9),type:"Escalation",project:r[P]||"—",title:`Roll back ${hoTarget(r)||r.theme||sbName(r)}?`,detail:`A post-publish check failed: ${what}. Rollback: ${hoHow(r).rb}.`,rec:"Allow means roll back now (you switch the theme; it takes one step). Disallow keeps it live while the Shopify Developer fixes it on a new duplicate.",issue:iid});
- try{localStorage.setItem("facelove-hq-v1",JSON.stringify(H))}catch(e){return "Couldn't save to the Project Director's log on this device."}
- (r.asks=r.asks||[]).unshift({issue:iid,date:today(),reason:"Post-publish check failed",detail:what,ceo:true});save();return ""}
+function hoReport(r,what){const res=pdLog({project:r[P],issue:{what:`After publishing ${hoTarget(r)||r.theme||sbName(r)}: ${what}`,type:"Escalation",sev:"High",told:"Shopify Developer reported it; the CEO decides whether to roll back",decision:"Waiting on CEO",status:"Waiting on CEO"},
+  decision:{type:"Escalation",title:`Roll back ${hoTarget(r)||r.theme||sbName(r)}?`,detail:`A post-publish check failed: ${what}. Rollback: ${hoHow(r).rb}.`,rec:"Allow means roll back now (you switch the theme; it takes one step). Disallow keeps it live while the Shopify Developer fixes it on a new duplicate."}});
+ if(res.error)return res.error;
+ (r.asks=r.asks||[]).unshift({issue:res.id,date:today(),reason:"Post-publish check failed",detail:what,ceo:true});save();return ""}
 /* the hand-over card inside a build */
 function hoCard(r,hoErr){const h=hoQ(r),p=hoParts(r),how=hoHow(r),ready=hoReady(r),late=hoLate(r),pd=hoPostDone(r),bad=x=>`<span class="pill ${x[0]?"g":"w"}">${x[0]?"✓":"To do"}</span>`,
   sel=(k,opts,lab)=>`<div class="field"><label for="ho-${k}">${lab}</label><select id="ho-${k}" data-ho="${k}">${opts.map(o=>Array.isArray(o)?`<option value="${o[0]}" ${o[0]===h[k]?"selected":""}>${esc(o[1])}</option>`:`<option ${o===h[k]?"selected":""}>${esc(o)}</option>`).join("")}</select></div>`,

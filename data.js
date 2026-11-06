@@ -4,6 +4,9 @@
    Step 2a-ii: the CEO and Project Director page (hq.html) reads its projects, tasks, decisions (waiting and decided),
    issues and lessons from the model (readHq) and saves through it (writeHq), which also keeps the old key current so
    pages that don't read the model yet keep working. Decided decisions are kept as their own history.
+   Step 2a-iii: the department pages (dept.html) read projects, tasks, their decisions and issues from the model (deptView),
+   log issues and CEO decisions through one helper (report) instead of writing the CEO's saved data themselves, and save
+   their own records (the deliverables) through saveDept, which keeps the model's deliverables current.
    The old saved data is never changed or deleted by the migration: a one-time backup copy is kept under "mawm-data-backup-v0",
    and the model is rebuilt from the saved data whenever a page saves.
    Used by hq.html, dept.html and studio.html as window.MAWM_DATA. No network, no accounts: everything stays on this device. */
@@ -134,11 +137,13 @@
     return m;
   }
   /* 2a-ii: the CEO and Project Director page reads its data from the model ... */
+  /* projects with their timeline tasks, in the shape the pages used before */
+  const projectsOf = m => m.projects.map(p => Object.assign(omit(p, ["id"]), { code: p.code || p.id, tasks: m.tasks.filter(t => t.project === p.id && t.kind !== "person").map(t => Object.assign(omit(t, ["project", "kind"]), { gate: t.kind === "gate" })) }));
+  const hasHq = m => !!(m && m.meta.sources && m.meta.sources[HQ] && m.meta.sources[HQ].found);
   function readHq() {
-    const m = load(); if (!m || !m.meta.sources || !m.meta.sources[HQ] || !m.meta.sources[HQ].found) return null;
-    const projects = m.projects.map(p => Object.assign(omit(p, ["id"]), { code: p.code || p.id, tasks: m.tasks.filter(t => t.project === p.id && t.kind !== "person").map(t => Object.assign(omit(t, ["project", "kind"]), { gate: t.kind === "gate" })) }));
+    const m = load(); if (!hasHq(m)) return null;
     const S = Object.assign({}, (m.settings && m.settings.hq) || {}, {
-      projects,
+      projects: projectsOf(m),
       decisions: m.decisions.filter(d => d.status !== "Decided").map(d => omit(d, ["status"])),
       decided: m.decisions.filter(d => d.status === "Decided" && d.from !== "issues").map(d => omit(d, ["status"])),
       issues: m.issues.map(i => Object.assign({}, i)), lessons: m.lessons.map(l => Object.assign({}, l))
@@ -153,6 +158,55 @@
     clearTimeout(t); t = null; migrate("save");
     return lastError;
   }
+  /* 2a-iii: what a department page reads from the model: projects and their tasks, plus the decisions and issues that
+     came from this department (waiting and decided), newest first. Returns null until the CEO page has saved once. */
+  const DEPT_OF = { graphic: "Graphic Designer", shopify: "Shopify Developer", copy: "Copywriter", research: "Research & Strategist" };
+  function deptOf(d, m) {
+    if (d.dept) return d.dept;
+    const k = (d.ai && (d.ai.dept || "graphic")) || (d.build && (d.build.dept || "shopify")); if (k) return DEPT_OF[k] || k;
+    const i = d.issue && arr(m && m.issues).find(x => x.id === d.issue); return i ? i.dept : "";
+  }
+  const byDate = (a, b) => (b.date || b.asked || "") < (a.date || a.asked || "") ? -1 : (b.date || b.asked || "") > (a.date || a.asked || "") ? 1 : 0;
+  function deptView(dept) {
+    const m = load(); if (!hasHq(m)) return null;
+    const own = m.decisions.filter(d => d.from !== "issues" && deptOf(d, m) === dept).map(d => Object.assign({ dept }, d));
+    return {
+      projects: projectsOf(m),
+      waiting: own.filter(d => d.status !== "Decided"),
+      decided: own.filter(d => d.status === "Decided").sort(byDate),
+      issues: m.issues.filter(i => i.dept === dept).map(i => Object.assign({}, i)),
+      built: m.meta.built
+    };
+  }
+  /* the one way a department logs with the Project Director: an issue in the issues log and, when a guardrail or the CEO is
+     involved, a CEO decision linked to it. Saved through the model (writeHq). Never contacts anyone.
+     o = { dept, project, issue: {what, type, sev, told, decision, status}, decision: {type, title, detail, rec, ...} }
+     Returns { id, decision } or { error }. */
+  function report(o) {
+    if (!ls) return { error: "This device doesn't allow saving." };
+    flush();
+    let S = readHq(); if (!S) { const v = parse(raw(HQ)); S = v && Array.isArray(v.issues) ? v : null }
+    if (!S || !Array.isArray(S.issues)) return { error: "Open the CEO page once on this device first, so the Project Director's log exists." };
+    S.decisions = arr(S.decisions);
+    const n = S.issues.reduce((mx, i) => Math.max(mx, parseInt(String(i.id || "").replace(/^\D+/, ""), 10) || 0), 0) + 1, id = "IS-" + String(n).padStart(3, "0");
+    const project = o.project || "—";
+    S.issues.unshift(Object.assign({ id, date: today(), project, dept: o.dept || "—", what: "", type: "Rule hit", sev: "Medium", told: "—", decision: "—", status: "Open" }, o.issue || {}));
+    let did = "";
+    if (o.decision) { did = Math.random().toString(36).slice(2, 9); S.decisions.unshift(Object.assign({ id: did, project, dept: o.dept || "", issue: id, asked: today() }, o.decision)) }
+    const err = writeHq(S);
+    return err ? { error: "Couldn't save to the Project Director's log on this device. " + err } : { id, decision: did };
+  }
+  /* an issue in the Project Director's log, read from the model */
+  const issue = id => { const m = load(); return m && arr(m.issues).find(i => i.id === id) || null };
+  const hqReady = () => !!readHq() || (() => { const v = parse(raw(HQ)); return !!(v && Array.isArray(v.issues)) })();
+  /* a department saves its own records (its deliverables) through the model: the department's key is written and the
+     model's deliverables are rebuilt shortly after (at once when the page closes). Returns "" or an error message. */
+  function saveDept(key, data) {
+    if (!ls) return "This device doesn't allow saving.";
+    if (!/^mawm-dept-/.test(key)) return "Not a department's saved data.";
+    try { ls.setItem(key, JSON.stringify(data)) } catch (e) { return "Not enough storage on this device to save." }
+    touch(); return "";
+  }
   /* every decision the CEO made, newest first (decided history plus older ones read from the issues log) */
   const decided = m => arr((m || load() || {}).decisions).filter(d => d.status === "Decided").sort((a, b) => (b.date || "") < (a.date || "") ? -1 : (b.date || "") > (a.date || "") ? 1 : 0);
   let t = null;
@@ -164,6 +218,6 @@
     if (!set.__mawm) { const w = function (k, v) { set.call(this, k, v); if (this === ls && SRC_KEYS.has(k)) touch() }; w.__mawm = true; Storage.prototype.setItem = w }
   } catch (e) { }
   g.addEventListener && g.addEventListener("pagehide", flush);
-  g.MAWM_DATA = { KEY, BACKUP, VERSION, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, HQ, error: () => lastError, today };
+  g.MAWM_DATA = { KEY, BACKUP, VERSION, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, HQ, error: () => lastError, today };
   migrate("load");
 })(typeof window !== "undefined" ? window : globalThis);

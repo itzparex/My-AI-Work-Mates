@@ -65,7 +65,24 @@ const ROUTES = ["#/home", "#/ceo/home",
       if (!old.decided.some(x => x.title === title) || old.decisions.some(x => x.title === title)) return "old key not kept current"; if (!m.issues.some(i => i.id === got.issue)) return "decision not linked to the issues log";
       if (m.decisions.filter(x => x.issue === got.issue).length !== 1) return "decision counted twice"; if (!d.querySelector(".dhist")) return "decided history not shown"; return "ok"; });
     if (dec !== "ok") errors.push("data model: CEO decision: " + dec);
-    console.log("OK: data model " + JSON.stringify(r.counts) + ", CEO page reads it back (" + rt.projects + " projects, " + rt.tasks + " tasks), decision recorded");
+    // 2a-iii: department pages log through the model (one helper), read their decisions from it, and save their deliverables through it
+    if (/setItem\(\s*["']facelove-hq-v1/.test(fs.readFileSync(path.join(ROOT, "dept.html"), "utf8"))) errors.push("data model: dept.html still writes the CEO's saved data directly");
+    await page.goto(base + "index.html#/shopify/overview"); await page.waitForTimeout(1200);
+    const dp = await page.evaluate(async () => { const W = document.getElementById("frame").contentWindow, D = W.MAWM_DATA, d = W.document;
+      const n0 = D.load().issues.length, r = D.report({ dept: "Shopify Developer", project: "FL-PDP", issue: { what: "Smoke: stop and ask", type: "Override request", status: "Waiting on CEO", decision: "Waiting on CEO" }, decision: { type: "Override", title: "Smoke: guardrail question", detail: "Test", rec: "Test", build: { dept: "shopify", row: "x" } } });
+      if (r.error) return "report failed: " + r.error; const m = D.load(), old = JSON.parse(W.localStorage.getItem("facelove-hq-v1"));
+      if (m.issues.length !== n0 + 1 || !m.issues.some(i => i.id === r.id && i.dept === "Shopify Developer")) return "issue not in the model";
+      if (!old.issues.some(i => i.id === r.id) || !old.decisions.some(x => x.id === r.decision && x.issue === r.id)) return "old key not kept current";
+      if (!m.decisions.some(x => x.id === r.decision && x.status === "Waiting on CEO" && x.dept === "Shopify Developer")) return "decision not waiting in the model";
+      const v = D.deptView("Shopify Developer"); if (!v.waiting.some(x => x.id === r.decision)) return "department view misses its decision"; if (D.deptView("Copywriter").waiting.some(x => x.id === r.decision)) return "decision shown to the wrong department";
+      W.location.reload(); await new Promise(res => setTimeout(res, 900)); const d2 = document.getElementById("frame").contentWindow.document;
+      if (!d2.querySelector("#pdcard") || !d2.querySelector("#pdcard").textContent.includes("Smoke: guardrail question")) return "overview doesn't show the decision";
+      const D2 = document.getElementById("frame").contentWindow.MAWM_DATA, k = "mawm-dept-shopify", before = W.localStorage.getItem(k), o = JSON.parse(before || "null") || { rows: {}, checks: {} };
+      o.rows.builds = (o.rows.builds || []).concat([{ _id: "smoke2", project: "FL-PDP", theme: "FL-PDP build smoke", status: "In progress" }]); const e = D2.saveDept(k, o); D2.flush();
+      const got = D2.load().deliverables.some(x => x.id === "shopify:builds:smoke2"); if (before == null) W.localStorage.removeItem(k); else W.localStorage.setItem(k, before);
+      return e ? "saveDept: " + e : got ? "ok" : "a saved build didn't reach the model"; });
+    if (dp !== "ok") errors.push("data model: department page: " + dp);
+    console.log("OK: data model " + JSON.stringify(r.counts) + ", CEO page reads it back (" + rt.projects + " projects, " + rt.tasks + " tasks), decision recorded, department logs and saves through it");
     await page.close();
   }
   await browser.close(); server.close();
