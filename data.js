@@ -1,8 +1,11 @@
 /* My AI Work Mates: the shared project data model (backlog 2a).
    One model for every page: projects, tasks, deliverables, decisions, issues and lessons, saved under "mawm-data-v1".
-   Step 2a-i (this file): the model, a safe migration that builds it from the data each page saved before, and checks.
-   The old saved data is never changed or deleted: a one-time backup copy is kept under "mawm-data-backup-v0", and until
-   each page reads the model directly (2a-ii to 2a-iv) the model is rebuilt from the old data whenever a page saves.
+   Step 2a-i: the model, a safe migration that builds it from the data each page saved before, and checks.
+   Step 2a-ii: the CEO and Project Director page (hq.html) reads its projects, tasks, decisions (waiting and decided),
+   issues and lessons from the model (readHq) and saves through it (writeHq), which also keeps the old key current so
+   pages that don't read the model yet keep working. Decided decisions are kept as their own history.
+   The old saved data is never changed or deleted by the migration: a one-time backup copy is kept under "mawm-data-backup-v0",
+   and the model is rebuilt from the saved data whenever a page saves.
    Used by hq.html, dept.html and studio.html as window.MAWM_DATA. No network, no accounts: everything stays on this device. */
 (function (g) {
   "use strict";
@@ -43,6 +46,8 @@
   const parse = s => { try { return s ? JSON.parse(s) : null } catch (e) { return undefined } };
   const arr = x => Array.isArray(x) ? x : [];
   const pick = (o, keys) => { const r = {}; keys.forEach(k => { if (o[k] !== undefined) r[k] = o[k] }); return r };
+  const omit = (o, keys) => { const r = Object.assign({}, o); keys.forEach(k => delete r[k]); return r };
+  const HQ = "facelove-hq-v1", HQ_SETTINGS = ["sel", "reviews", "claude", "autowork"];
 
   /* Build the model from the data the pages saved before. Pure: reads only, never writes. */
   function build() {
@@ -53,12 +58,16 @@
     const hq = src["facelove-hq-v1"] || {};
     arr(hq.projects).forEach(p => {
       if (!p || !p.code) return;
-      m.projects.push(Object.assign({ id: p.code }, pick(p, ["code", "name", "client", "product", "goal", "markets", "depth", "start", "due", "priority", "status", "example"])));
-      arr(p.tasks).forEach(t => m.tasks.push(Object.assign({ id: t.id, project: p.code, kind: t.gate ? "gate" : "step" }, pick(t, ["name", "dept", "start", "due", "status", "doneAt"]))));
+      /* every field is kept (lossless), so the CEO page can read the model back exactly as it saved it */
+      m.projects.push(Object.assign({ id: p.code }, omit(p, ["tasks"])));
+      arr(p.tasks).forEach(t => t && m.tasks.push(Object.assign({ id: t.id, project: p.code, kind: t.gate ? "gate" : "step" }, omit(t, ["id", "gate"]))));
     });
-    arr(hq.decisions).forEach(d => m.decisions.push(Object.assign({ status: "Waiting on CEO" }, pick(d, ["id", "project", "type", "title", "detail", "rec", "issue", "ai", "example"]))));
-    /* decisions the CEO already made live on in the issues log (dept "CEO decision") */
-    arr(hq.issues).filter(i => i && i.dept === "CEO decision").forEach(i => m.decisions.push({ id: "DEC-" + i.id, project: i.project, type: /override/i.test(i.type || "") ? "Override" : (i.type || "Decision"), title: i.what, rec: i.told, status: "Decided", result: i.decision, date: i.date, issue: i.id }));
+    arr(hq.decisions).forEach(d => d && m.decisions.push(Object.assign({}, d, { status: "Waiting on CEO" })));
+    /* decided history (2a-ii): each decision the CEO made, with the answer, date and the issue it was recorded in */
+    const decidedIssues = new Set();
+    arr(hq.decided).forEach(d => { if (!d) return; m.decisions.push(Object.assign({}, d, { status: "Decided" })); if (d.issue) decidedIssues.add(d.issue) });
+    /* older decisions only live on in the issues log (dept "CEO decision"): shown as decided, marked as read from the log */
+    arr(hq.issues).filter(i => i && i.dept === "CEO decision" && !decidedIssues.has(i.id)).forEach(i => m.decisions.push({ id: "DEC-" + i.id, project: i.project, type: /override/i.test(i.type || "") ? "Override" : (i.type || "Decision"), title: i.what, rec: i.told, status: "Decided", result: i.decision, date: i.date, issue: i.id, from: "issues" }));
     arr(hq.issues).forEach(i => i && m.issues.push(Object.assign({}, i)));
     arr(hq.lessons).forEach(l => l && m.lessons.push(Object.assign({}, l)));
     /* person tasks from the Research & Strategist */
@@ -75,7 +84,9 @@
     arr(st.concepts).filter(c => c && c.stage !== "Ideas").forEach(c => m.deliverables.push({ id: "uiux:concepts:" + c.id, project: c.project || "", dept: "UI/UX Designer", kind: "Design concept", title: c.name || "Concept", status: c.stage || "", version: "", updated: c.updated || "", source: { key: "facelove-studio-v2", path: "concepts", row: c.id }, example: !!c.example }));
     arr(st.items).forEach(c => c && m.deliverables.push({ id: "uiux:items:" + c.id, project: c.project || "", dept: "UI/UX Designer", kind: "Code Studio item", title: c.name || "Item", status: c.status || "", version: c.version != null ? String(c.version) : "", updated: c.updated || "", source: { key: "facelove-studio-v2", path: "items", row: c.id }, example: !!c.example }));
     meta.counts = Object.fromEntries(Object.keys(m).map(k => [k, m[k].length]));
-    return Object.assign({ meta }, m);
+    /* page settings that travel with the CEO's data (selected project, plan usage notes, Auto-work later) */
+    const settings = { hq: pick(hq, HQ_SETTINGS) };
+    return Object.assign({ meta }, m, { settings });
   }
 
   /* Checks on the model: [level ("bad" | "warn" | "ok"), text] */
@@ -122,6 +133,28 @@
     try { ls.setItem(KEY, JSON.stringify(m)); lastError = "" } catch (e) { lastError = "Not enough storage on this device to save the shared model." }
     return m;
   }
+  /* 2a-ii: the CEO and Project Director page reads its data from the model ... */
+  function readHq() {
+    const m = load(); if (!m || !m.meta.sources || !m.meta.sources[HQ] || !m.meta.sources[HQ].found) return null;
+    const projects = m.projects.map(p => Object.assign(omit(p, ["id"]), { code: p.code || p.id, tasks: m.tasks.filter(t => t.project === p.id && t.kind !== "person").map(t => Object.assign(omit(t, ["project", "kind"]), { gate: t.kind === "gate" })) }));
+    const S = Object.assign({}, (m.settings && m.settings.hq) || {}, {
+      projects,
+      decisions: m.decisions.filter(d => d.status !== "Decided").map(d => omit(d, ["status"])),
+      decided: m.decisions.filter(d => d.status === "Decided" && d.from !== "issues").map(d => omit(d, ["status"])),
+      issues: m.issues.map(i => Object.assign({}, i)), lessons: m.lessons.map(l => Object.assign({}, l))
+    });
+    return S;
+  }
+  /* ... and saves through it: the old key is written in the same step (other pages still read it until 2a-iii/2a-iv),
+     then the model is rebuilt at once so it is current before the page reads it again. Returns "" or an error message. */
+  function writeHq(S) {
+    if (!ls) return "This device doesn't allow saving.";
+    try { ls.setItem(HQ, JSON.stringify(S)) } catch (e) { return "Not enough storage on this device to save." }
+    clearTimeout(t); t = null; migrate("save");
+    return lastError;
+  }
+  /* every decision the CEO made, newest first (decided history plus older ones read from the issues log) */
+  const decided = m => arr((m || load() || {}).decisions).filter(d => d.status === "Decided").sort((a, b) => (b.date || "") < (a.date || "") ? -1 : (b.date || "") > (a.date || "") ? 1 : 0);
   let t = null;
   const touch = () => { clearTimeout(t); t = setTimeout(() => { t = null; migrate("save") }, 400) };
   const flush = () => { if (t) { clearTimeout(t); t = null; migrate("save") } };
@@ -131,6 +164,6 @@
     if (!set.__mawm) { const w = function (k, v) { set.call(this, k, v); if (this === ls && SRC_KEYS.has(k)) touch() }; w.__mawm = true; Storage.prototype.setItem = w }
   } catch (e) { }
   g.addEventListener && g.addEventListener("pagehide", flush);
-  g.MAWM_DATA = { KEY, BACKUP, VERSION, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, error: () => lastError, today };
+  g.MAWM_DATA = { KEY, BACKUP, VERSION, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, HQ, error: () => lastError, today };
   migrate("load");
 })(typeof window !== "undefined" ? window : globalThis);

@@ -56,7 +56,7 @@ Paused for now: Video Editor, Email Marketing, Social Media, Media Buyer.
 
 Everything you add is saved in the browser on the device you use (localStorage). Nothing is uploaded. Opening the site on another device starts with fresh data there.
 
-All pages share one data model (`data.js`, saved as `mawm-data-v1`): projects, tasks, deliverables, decisions, issues and lessons, linked by the project code. It is built from what each page saved and kept current whenever a page saves; the older saved data is never changed, and a one-time backup copy is kept as `mawm-data-backup-v0`. CEO → **Data** shows what's in the model, the migration and its checks.
+All pages share one data model (`data.js`, saved as `mawm-data-v1`): projects, tasks, deliverables, decisions, issues and lessons, linked by the project code. It is built from what each page saved and kept current whenever a page saves; the older saved data is never changed, and a one-time backup copy is kept as `mawm-data-backup-v0`. CEO → **Data** shows what's in the model, the migration and its checks. The CEO and Project Director pages read and save the model directly (and keep the older key current for pages that haven't switched yet); every decision the CEO makes is kept as decided history with its answer, date and issues-log entry.
 
 ## Run records
 

@@ -198,6 +198,7 @@ a.btn{text-decoration:none;color:inherit}
 .dmc{background:var(--sunk);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
 .dmc .n{font-family:var(--f-display);font-weight:800;font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums}.dmc .l{font-size:12px;font-weight:700;color:var(--muted)}
 .dchk{display:flex;gap:10px;align-items:flex-start;padding:7px 0;font-size:13px;font-weight:600;border-top:1px solid var(--line)}.dchk:first-child{border-top:0}.dchk .ic{flex:none;width:20px;text-align:center;font-weight:800}
+.dhist{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}.dhist .mono{white-space:nowrap}
 .dsrc td,.dsrc th{font-size:12.5px}.dlog{font-size:12.5px}.dlog div{display:flex;gap:10px;padding:4px 0}.dlog .mono{flex:none;color:var(--muted)}
 .dschema{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.dschema details{background:var(--sunk);border-radius:12px;padding:10px 14px}.dschema summary{cursor:pointer;font-weight:800}.dschema p{margin:6px 0;font-size:12.5px;color:var(--muted)}.dschema ul{margin:0;padding-left:16px;font-size:12.5px}.dschema li{margin:2px 0}
 @media (max-width:980px){.dm{grid-template-columns:repeat(3,minmax(0,1fr))}.dschema{grid-template-columns:1fr}}
@@ -254,10 +255,22 @@ function seed(){
   reviews:{}};
 }
 const KEY="facelove-hq-v1";
-let S;try{S=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){S=null}
-if(!S||!S.projects){S=seed();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+/* 2a-ii: this page reads its projects, tasks, decisions (waiting and decided), issues and lessons from the shared model
+   (data.js) and saves through it; the model also keeps the old key current for pages that don't read the model yet.
+   Without the model (it failed to load), the page falls back to the old key as before. */
+const DM=window.MAWM_DATA||null;let fromModel=false;
+const readS=()=>{let x=null;if(DM){try{x=DM.readHq()}catch(e){x=null}if(x){fromModel=true;return x}}fromModel=false;try{x=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){x=null}return x};
+let S=readS();
+if(!S||!S.projects){S=seed();if(DM)DM.writeHq(S);else try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(DM)S=readS()||S}
+if(!Array.isArray(S.decided))S.decided=[];
 let UI;try{UI=JSON.parse(localStorage.getItem(KEY+"-ui")||"null")}catch(e){UI=null}if(!UI)UI={theme:"system"};
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const save=()=>{if(DM){const err=DM.writeHq(S);if(err)toast(err);return}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+/* every decision the CEO made, newest first: from the model's decided history (plus older ones read from the issues log) */
+const decidedAll=()=>DM&&DM.load()?DM.decided():(S.decided||[]).slice().sort((a,b)=>(b.date||"")<(a.date||"")?-1:1);
+/* new work from another page (a department logging an issue or asking for a decision) reaches the model; show it here
+   without a reload, unless the CEO is in the middle of typing or has a form open */
+addEventListener("storage",e=>{if(!DM||e.key!==DM.KEY)return;const x=readS();if(!x||!x.projects)return;S=x;if(!Array.isArray(S.decided))S.decided=[];
+ const busy=$("#modalRoot").innerHTML||document.querySelector(".inline-input")||($("#uForm")&&$("#uForm").innerHTML)||(document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName));if(!busy)draw()});
 const saveUI=()=>{try{localStorage.setItem(KEY+"-ui",JSON.stringify(UI))}catch(e){}};
 let tt;const toast=m=>{const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2200)};
 function applyTheme(){if(UI.theme==="system")document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme",UI.theme);$$("#themesw button").forEach(b=>b.classList.toggle("on",b.dataset.t===UI.theme))}
@@ -399,7 +412,7 @@ function drawCEO(){
  const [ws,we]=weekBounds(),inWeek=d=>d&&d>=ws&&d<=we;
  const allTasks=S.projects.flatMap(p=>p.tasks.map(t=>({...t,project:p.code})));
  const doneWeek=allTasks.filter(t=>t.status==="Done"&&inWeek(t.doneAt||t.due));
- const decidedWeek=S.issues.filter(i=>i.dept==="CEO decision"&&inWeek(i.date));
+ const decidedList=decidedAll(),decidedWeek=decidedList.filter(d=>inWeek(d.date));
  const issuesWeek=S.issues.filter(i=>i.dept!=="CEO decision"&&inWeek(i.date));
  const lessonsWeek=S.lessons.filter(l=>inWeek(l.date));
  const upcoming=allTasks.filter(t=>t.status!=="Done"&&t.due>=TODAY&&t.due<=we).sort((a,b)=>a.due<b.due?-1:1);
@@ -425,7 +438,7 @@ function drawCEO(){
     <div class="meta"><span class="pill ${d.type==="Approval"?"p-wait":d.type==="Override"?"p-person":"p-block"}">${esc(d.type)}</span><span class="mono">${esc(d.project)}</span>${d.example?'<span class="example">Example</span>':""}</div>
     <b>${esc(d.title)}</b><p class="small">${esc(d.detail)}</p><div class="rec"><b>Project Director recommends:</b> ${esc(d.rec)}</div>
     <div class="acts"><button class="btn sm good" data-dec="allow">Allow</button><button class="btn sm bad" data-dec="disallow">Disallow</button><button class="btn sm" data-dec="note">Allow with a note</button></div>
-   </article>`).join("")||'<div class="empty">You\'re all caught up. New decisions from the Project Director will appear here.</div>'}</div></section>
+   </article>`).join("")||'<div class="empty">You\'re all caught up. New decisions from the Project Director will appear here.</div>'}</div>${decidedHTML(decidedList)}</section>
   <section class="card" data-sec="projects"><h2>Project health <span class="pill">${active.length} open</span></h2><div class="grid">${S.projects.map(p=>{const g=prog(p),n=nextTask(p),risk=riskOf(p),left=days(TODAY,p.due);return `<button class="proj ${risk?"risk":""}" data-open="${p.code}">
     <div class="row"><b style="flex:1;font-size:15px">${esc(p.name)}</b>${risk?'<span class="pill p-block">⚠ At risk</span>':`<span class="pill ${p.status==="Active"?"p-prog":p.status==="Closed"||p.status==="Launched"?"p-done":"p-wait"}">${esc(p.status)}</span>`}</div>
     <div class="row small muted"><span class="mono">${esc(p.code)}</span><span>${esc(p.client)}</span><span>·</span><span>${esc(p.markets.join(", "))}</span><span>·</span><span>${esc(p.priority)} priority</span>${p.example?'<span class="example">Example</span>':""}</div>
@@ -456,7 +469,7 @@ function drawCEO(){
    <div class="wkn"><span class="n">${lessonsWeek.length}</span><span class="l">Lessons</span></div>
   </div>
   <div class="wkcols"><div><div class="k">Coming up before ${fmt(we)}</div>${upcoming.length?upcoming.slice(0,6).map(t=>`<div class="wkitem"><span class="wkdate">${fmt(t.due)}</span><span>${esc(t.name)} <span class="muted small">· ${esc(t.dept)} · ${esc(t.project)}</span></span></div>`).join(""):'<div class="muted small">Nothing else due this week.</div>'}</div>
-   <div><div class="k">Done this week</div>${doneWeek.length?doneWeek.slice(0,6).map(t=>`<div class="wkitem"><span class="wkdate t-good">✓</span><span>${esc(t.name)} <span class="muted small">· ${esc(t.project)}</span></span></div>`).join(""):'<div class="muted small">Nothing finished yet this week.</div>'}${decidedWeek.slice(0,3).map(i=>`<div class="wkitem"><span class="wkdate t-good">★</span><span>${esc(i.what)} <span class="muted small">· ${esc(i.decision)}</span></span></div>`).join("")}</div></div>
+   <div><div class="k">Done this week</div>${doneWeek.length?doneWeek.slice(0,6).map(t=>`<div class="wkitem"><span class="wkdate t-good">✓</span><span>${esc(t.name)} <span class="muted small">· ${esc(t.project)}</span></span></div>`).join(""):'<div class="muted small">Nothing finished yet this week.</div>'}${decidedWeek.slice(0,3).map(d=>`<div class="wkitem"><span class="wkdate t-good">★</span><span>${esc(d.title)} <span class="muted small">· ${esc(d.result)}</span></span></div>`).join("")}</div></div>
   <div class="flow" aria-label="How a project flows">${["CEO brief","Research","Wireframe","Copy","Design + images","Design approval","Build","QA","Launch approval","CEO publishes"].map(x=>`<span>${x}</span>`).join("<i>→</i>")}</div>
  </section>`;
  $("#newProj").onclick=openCreate;
@@ -468,6 +481,9 @@ function drawCEO(){
   if(b.dataset.dec==="note"&&!card.querySelector(".inline-input")){card.insertAdjacentHTML("beforeend",`<div class="inline-input"><input placeholder="Scope or condition, e.g. slide 1 only" aria-label="Note"><button class="btn sm good">Allow</button></div>`);const box=card.querySelector(".inline-input");box.querySelector("button").onclick=()=>decide(d,"Allowed: "+(box.querySelector("input").value||"no note"));box.querySelector("input").focus();return}
   if(b.dataset.dec!=="note")decide(d,b.dataset.dec==="allow"?"Allowed":"Disallowed")});
 }
+/* Decided history (2a-ii): what the CEO decided, when, and where it was recorded */
+function decidedHTML(list){if(!list.length)return "";const res=r=>/^Disallow/.test(r||"")?"p-block":/^Allow/.test(r||"")?"p-done":"";
+ return `<details class="rhist dhist"><summary>Decided (${list.length})</summary>${list.slice(0,12).map(d=>`<div class="rh"><span class="pill ${res(d.result)}">${/^Disallow/.test(d.result||"")?"✕":/^Allow/.test(d.result||"")?"✓":"•"}</span><span class="small"><b>${esc(d.title)}</b>${d.example?' <span class="example">Example</span>':""}<br><span class="muted">${esc(d.type||"Decision")} · <span class="mono">${esc(d.project||"")}</span>${d.result?" · "+esc(d.result):""}${d.issue?` · logged as <span class="mono">${esc(d.issue)}</span>`:""}</span></span><span class="small muted mono">${esc(fmt(d.date))}</span></div>`).join("")}${list.length>12?`<p class="small muted" style="margin:6px 0 0">Showing the 12 newest. Every decision stays in the shared data and the issues log.</p>`:""}</details>`}
 /* Shared data model (2a-i): what's in it, where it came from, and checks */
 function drawData(){const DM=window.MAWM_DATA;
  if(!DM){$("#main").innerHTML='<section class="card"><h2>Data model</h2><div class="empty">The shared data model couldn\'t load on this device. Your saved data is untouched.</div></section>';return}
@@ -484,7 +500,7 @@ function drawData(){const DM=window.MAWM_DATA;
    <h1 class="hello" style="font-size:clamp(26px,4vw,36px)">One shared data model</h1>
    <p class="status">${bad?`<span class="st st-bad">${plural(bad,"problem")} found</span>`:warn?`<span class="st st-warn">${plural(warn,"thing")} to look at</span>`:`<span class="st st-good">Model checks pass</span>`}<span class="dot" aria-hidden="true">·</span><span class="st">Updated ${esc(ago(m&&m.meta.built))}</span></p></div>
    <button class="btn" id="dmRebuild">Rebuild now</button></div>
-  <p class="small muted" style="margin:10px 0 0;max-width:760px">Every page's projects, tasks, deliverables, decisions, issues and lessons now sit in one model on this device, built from what each page saved before. Your old saved data is never changed: a backup copy was kept before the first build. Pages start reading this model directly in the next steps.</p>
+  <p class="small muted" style="margin:10px 0 0;max-width:760px">Every page's projects, tasks, deliverables, decisions, issues and lessons now sit in one model on this device, built from what each page saved before. Your old saved data is never changed: a backup copy was kept before the first build. The CEO and Project Director pages read and save this model directly${fromModel?"":" (this time they fell back to the old saved data)"}; the department pages and the Design Studio follow next.</p>
   ${err?`<p class="small t-bad" style="margin:8px 0 0">${esc(err)}</p>`:""}
  </section>
  <section class="card" style="margin-top:16px"><h2>What's in it</h2>
@@ -508,12 +524,16 @@ function drawData(){const DM=window.MAWM_DATA;
 function decide(d,result){S.decisions=S.decisions.filter(x=>x!==d);
  const open=d.issue?S.issues.find(i=>i.id===d.issue):S.issues.find(i=>i.project===d.project&&i.status==="Waiting on CEO");
  if(d.ai)aiAnswer(d,result);
- if(open&&d.type!=="Approval"){open.decision=result+" ("+fmt(TODAY)+")";open.status="Resolved"}
- else S.issues.unshift({id:"IS-"+String(S.issues.length+1).padStart(3,"0"),date:TODAY,project:d.project,dept:"CEO decision",what:d.title,type:d.type==="Override"?"Override request":d.type,sev:"Medium",told:d.rec,decision:result,status:"Resolved"});
+ let logged;
+ if(open&&d.type!=="Approval"){open.decision=result+" ("+fmt(TODAY)+")";open.status="Resolved";logged=open.id}
+ else{logged=nextIssueId();S.issues.unshift({id:logged,date:TODAY,project:d.project,dept:"CEO decision",what:d.title,type:d.type==="Override"?"Override request":d.type,sev:"Medium",told:d.rec,decision:result,status:"Resolved"})}
+ /* decided history in the shared model: the decision as it was put to the CEO, with the answer and date */
+ S.decided=[Object.assign({},d,{result,date:TODAY,by:"CEO",issue:logged}),...(S.decided||[])];
  save();toast(result.split(":")[0]+" · recorded in the issues log");drawCEO()}
 /* AI product image approvals (1c-iii): the CEO's answer is written back on the department's request with the date */
 function aiAnswer(d,result){const k="mawm-dept-"+(d.ai.dept||"graphic");try{const G=JSON.parse(localStorage.getItem(k)||"null"),row=G&&G.rows&&(G.rows.aiimages||[]).find(x=>x._id===d.ai.row);if(!row)return;
  const note=result.includes(": ")?result.split(": ").slice(1).join(": "):"";row.decision=/^Allowed/.test(result)?"Approved":"Rejected";row.date=TODAY;row.note=note==="no note"?"":note;row.by="CEO";localStorage.setItem(k,JSON.stringify(G))}catch(e){}}
+const nextIssueId=()=>{const n=S.issues.reduce((m,i)=>{const k=+String(i.id||"").replace(/^IS-/,"");return isNaN(k)?m:Math.max(m,k)},0);return "IS-"+String(n+1).padStart(3,"0")};
 function issuesTable(list){return list.length?`<div class="tablewrap"><table><thead><tr><th>ID</th><th>Date</th><th>Project</th><th>Department</th><th>What happened</th><th>Severity</th><th>CEO decision</th><th>Status</th></tr></thead><tbody>${list.map(i=>`<tr><td class="mono">${esc(i.id)}</td><td>${fmt(i.date)}</td><td class="mono">${esc(i.project)}</td><td>${esc(i.dept)}</td><td>${esc(i.what)}${i.example?' <span class="example">Example</span>':""}</td><td><span class="pill ${i.sev==="High"?"p-block":i.sev==="Medium"?"p-wait":""}">${esc(i.sev)}</span></td><td>${esc(i.decision)}</td><td><span class="pill ${i.status==="Resolved"?"p-done":"p-wait"}">${esc(i.status)}</span></td></tr>`).join("")}</tbody></table></div>`:'<div class="empty">No open issues.</div>'}
 function openCreate(){let mk=new Set(["US"]);
  $("#modalRoot").innerHTML=`<div class="modalwrap"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="cpT"><div><div class="eyebrow">New project</div><h2 id="cpT" style="font-size:22px">Create a project</h2><p class="sub small">The Project Director builds the nine-step timeline from these answers using the standard task times. You can adjust dates afterwards.</p></div>
@@ -562,7 +582,7 @@ function drawDirector(){
  $$("[data-rv]").forEach(b=>b.onclick=()=>{const card=b.closest("[data-tid]"),pr=proj(card.dataset.proj),t=pr.tasks.find(x=>x.id===card.dataset.tid);
   if(b.dataset.rv==="ok"){t.status="Done";t.doneAt=TODAY;save();toast("Approved");drawDirector()}
   else if(b.dataset.rv==="ceo"){S.decisions.unshift({id:uid(),type:"Escalation",project:pr.code,title:"Review needed: "+t.name,detail:"Sent up by the Project Director from the review queue.",rec:"See the deliverable before deciding."});save();toast("Sent to the CEO");}
-  else if(!card.querySelector(".inline-input")){card.insertAdjacentHTML("beforeend",`<div class="inline-input"><input placeholder="What must change, field by field" aria-label="Return comment"><button class="btn sm bad">Return</button></div>`);const box=card.querySelector(".inline-input");box.querySelector("input").focus();box.querySelector("button").onclick=()=>{t.status="In progress";S.issues.unshift({id:"IS-"+String(S.issues.length+1).padStart(3,"0"),date:TODAY,project:pr.code,dept:t.dept,what:"Returned: "+t.name+" — "+(box.querySelector("input").value||"see comments"),type:"Error",sev:"Low",told:"—",decision:"—",status:"Open"});save();toast("Returned and logged");drawDirector()}}});
+  else if(!card.querySelector(".inline-input")){card.insertAdjacentHTML("beforeend",`<div class="inline-input"><input placeholder="What must change, field by field" aria-label="Return comment"><button class="btn sm bad">Return</button></div>`);const box=card.querySelector(".inline-input");box.querySelector("input").focus();box.querySelector("button").onclick=()=>{t.status="In progress";S.issues.unshift({id:nextIssueId(),date:TODAY,project:pr.code,dept:t.dept,what:"Returned: "+t.name+" — "+(box.querySelector("input").value||"see comments"),type:"Error",sev:"Low",told:"—",decision:"—",status:"Open"});save();toast("Returned and logged");drawDirector()}}});
  $("#addIssue").onclick=()=>quickAdd("issue");$("#addLesson").onclick=()=>quickAdd("lesson");
 }
 function gantt(p){const s0=p.tasks.reduce((m,t)=>t.start<m?t.start:m,p.tasks[0].start),e0=p.tasks.reduce((m,t)=>t.due>m?t.due:m,p.tasks[0].due);const total=days(s0,e0)+1;
@@ -580,7 +600,7 @@ function quickAdd(kind){const p=proj(S.sel);const isI=kind==="issue";
   <div class="acts" style="justify-content:flex-end"><button class="btn" id="qa-c">Cancel</button><button class="btn primary" id="qa-s">Save</button></div></div></div>`;
  $("#qa-c").onclick=()=>$("#modalRoot").innerHTML="";
  $("#qa-s").onclick=()=>{const what=$("#qa-what").value.trim();if(!what){toast("Describe what happened");return}
-  if(isI){const sev=$("#qa-sev").value,more=$("#qa-more").value.trim();S.issues.unshift({id:"IS-"+String(S.issues.length+1).padStart(3,"0"),date:TODAY,project:p?p.code:"—",dept:$("#qa-dept").value,what,type:$("#qa-type").value,sev,told:more||"—",decision:sev==="High"?"Waiting on CEO":"—",status:sev==="High"?"Waiting on CEO":"Open"});if(sev==="High")S.decisions.unshift({id:uid(),type:$("#qa-type").value==="Override request"?"Override":"Escalation",project:p?p.code:"—",title:what,detail:"Logged by the Project Director as high severity.",rec:more||"See the issues log."})}
+  if(isI){const sev=$("#qa-sev").value,more=$("#qa-more").value.trim();S.issues.unshift({id:nextIssueId(),date:TODAY,project:p?p.code:"—",dept:$("#qa-dept").value,what,type:$("#qa-type").value,sev,told:more||"—",decision:sev==="High"?"Waiting on CEO":"—",status:sev==="High"?"Waiting on CEO":"Open"});if(sev==="High")S.decisions.unshift({id:uid(),type:$("#qa-type").value==="Override request"?"Override":"Escalation",project:p?p.code:"—",title:what,detail:"Logged by the Project Director as high severity.",rec:more||"See the issues log."})}
   else S.lessons.unshift({id:"LL-"+String(S.lessons.length+1).padStart(3,"0"),date:TODAY,project:p?p.code:"—",dept:$("#qa-dept").value,what,type:$("#qa-type").value,change:$("#qa-more").value.trim()||"—"});
   save();$("#modalRoot").innerHTML="";toast("Saved");drawDirector()};
  $("#qa-what").focus()}

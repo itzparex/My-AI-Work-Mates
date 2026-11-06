@@ -51,7 +51,21 @@ const ROUTES = ["#/home", "#/ceo/home",
       W.localStorage.setItem(k, JSON.stringify(o)); await new Promise(r => setTimeout(r, 700)); const d = D.load().deliverables.find(x => x.id === "copy:copymaps:smoke1");
       if (old == null) W.localStorage.removeItem(k); else W.localStorage.setItem(k, old); return d ? d.kind + " · " + d.title + " · " + d.project : null; });
     if (live !== "Copy map · Product page copy map v2 · FL-PDP") errors.push("data model: a saved copy map didn't reach the model (" + live + ")");
-    console.log("OK: data model " + JSON.stringify(r.counts));
+    // 2a-ii: the CEO page reads the model and saves through it (old key kept current); a decision lands in the decided history
+    const rt = await page.evaluate(() => { const D = window.MAWM_DATA || document.getElementById("frame").contentWindow.MAWM_DATA; const S = D.readHq(), old = JSON.parse(localStorage.getItem("facelove-hq-v1"));
+      const norm = o => JSON.stringify(o, (k, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.keys(v).sort().reduce((r, x) => (r[x] = v[x], r), {}) : v);
+      const strip = o => Object.assign({}, o, { decided: o.decided || [] });
+      return { same: norm(strip(S)) === norm(strip(old)), projects: S.projects.length, tasks: S.projects.reduce((n, p) => n + p.tasks.length, 0) }; });
+    if (!rt.same) errors.push("data model: the CEO page's data doesn't read back from the model exactly as saved");
+    await page.goto(base + "index.html#/ceo/decisions"); await page.waitForTimeout(1200);
+    const dec = await page.evaluate(async () => { const W = document.getElementById("frame").contentWindow, d = W.document; const before = W.MAWM_DATA.load().decisions.filter(x => x.status === "Waiting on CEO").length;
+      const card = d.querySelector("#decisions [data-id]"); if (!card) return "no decision card"; const title = card.querySelector("b").textContent; card.querySelector('[data-dec="disallow"]').click(); await new Promise(r => setTimeout(r, 300));
+      const m = W.MAWM_DATA.load(), old = JSON.parse(W.localStorage.getItem("facelove-hq-v1")); const got = m.decisions.find(x => x.status === "Decided" && x.title === title && x.result === "Disallowed" && x.from !== "issues");
+      if (!got) return "decision not in the decided history"; if (m.decisions.filter(x => x.status === "Waiting on CEO").length !== before - 1) return "still waiting in the model";
+      if (!old.decided.some(x => x.title === title) || old.decisions.some(x => x.title === title)) return "old key not kept current"; if (!m.issues.some(i => i.id === got.issue)) return "decision not linked to the issues log";
+      if (m.decisions.filter(x => x.issue === got.issue).length !== 1) return "decision counted twice"; if (!d.querySelector(".dhist")) return "decided history not shown"; return "ok"; });
+    if (dec !== "ok") errors.push("data model: CEO decision: " + dec);
+    console.log("OK: data model " + JSON.stringify(r.counts) + ", CEO page reads it back (" + rt.projects + " projects, " + rt.tasks + " tasks), decision recorded");
     await page.close();
   }
   await browser.close(); server.close();
