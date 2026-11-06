@@ -43,7 +43,11 @@ The loop works through this backlog one item per round, top to bottom, and stops
   - [x] **1c-i. Carousel planner.** The nine standard slides in belief-chain order per project (job, what it shows, exact words linked from the copy map, proof IDs, alt text, automatic file name), reorder and drop, checked against the rulebook's carousel rules; any image set opens the same planner, with the inputs check, AI and rights notes, open questions and the image list as text.
   - [x] **1c-ii. Image size and format guide.** The rulebook's sizes, shapes, formats, compression and sRGB per image type, shown in the planner per image, with a self-check (the Images gate list) before hand-off.
   - [x] **1c-iii. AI image approvals.** Asking for approval of an AI product image creates a CEO decision (with the spec it was checked against); the CEO's Allow or Disallow is recorded back on the image with the date.
-- [ ] **1d. Shopify Developer.** Build tracker with preview links and theme copy names, the QA checklist per project, backup log, and a hand-over note generator for the CEO.
+- [ ] **1d. Shopify Developer.** Build tracker with preview links and theme copy names, the QA checklist per project, backup log, and a hand-over note generator for the CEO. Split into:
+  - [ ] **1d-i. Build tracker.** Each build opens as an editor: header (project, task, live theme, duplicate theme named [project code] build [date], preview link), the Code Studio items being built (only past design review), the rulebook's inputs check, the seven safe build steps with dates, the change list (build notes) with checks, warnings, stop-and-ask issues logged with the Project Director (guardrail ones also go to the CEO), and the build notes copied as text.
+  - [ ] **1d-ii. QA checklist per build.** The rulebook's testing-before-QA checks and the build handoff checklist per build (checked by the app where it can be), with speed before and after and theme check results.
+  - [ ] **1d-iii. Backup log.** Theme backups linked to builds (required before the Install step), kept until the project closes, with the rollback theme.
+  - [ ] **1d-iv. Hand-over note for the CEO.** Publish plan, rollback plan and post-publish checks assembled into one note the CEO can copy; the CEO publishes.
 
 ### 2. Hand-offs between departments
 - [ ] **2a. One shared project data model** used by every page (projects, tasks, deliverables, decisions, issues, lessons), with a safe migration of existing saved data.
