@@ -460,10 +460,14 @@ function drawCEO(){
   if(b.dataset.dec!=="note")decide(d,b.dataset.dec==="allow"?"Allowed":"Disallowed")});
 }
 function decide(d,result){S.decisions=S.decisions.filter(x=>x!==d);
- const open=S.issues.find(i=>i.project===d.project&&i.status==="Waiting on CEO");
+ const open=d.issue?S.issues.find(i=>i.id===d.issue):S.issues.find(i=>i.project===d.project&&i.status==="Waiting on CEO");
+ if(d.ai)aiAnswer(d,result);
  if(open&&d.type!=="Approval"){open.decision=result+" ("+fmt(TODAY)+")";open.status="Resolved"}
  else S.issues.unshift({id:"IS-"+String(S.issues.length+1).padStart(3,"0"),date:TODAY,project:d.project,dept:"CEO decision",what:d.title,type:d.type==="Override"?"Override request":d.type,sev:"Medium",told:d.rec,decision:result,status:"Resolved"});
  save();toast(result.split(":")[0]+" · recorded in the issues log");drawCEO()}
+/* AI product image approvals (1c-iii): the CEO's answer is written back on the department's request with the date */
+function aiAnswer(d,result){const k="mawm-dept-"+(d.ai.dept||"graphic");try{const G=JSON.parse(localStorage.getItem(k)||"null"),row=G&&G.rows&&(G.rows.aiimages||[]).find(x=>x._id===d.ai.row);if(!row)return;
+ const note=result.includes(": ")?result.split(": ").slice(1).join(": "):"";row.decision=/^Allowed/.test(result)?"Approved":"Rejected";row.date=TODAY;row.note=note==="no note"?"":note;row.by="CEO";localStorage.setItem(k,JSON.stringify(G))}catch(e){}}
 function issuesTable(list){return list.length?`<div class="tablewrap"><table><thead><tr><th>ID</th><th>Date</th><th>Project</th><th>Department</th><th>What happened</th><th>Severity</th><th>CEO decision</th><th>Status</th></tr></thead><tbody>${list.map(i=>`<tr><td class="mono">${esc(i.id)}</td><td>${fmt(i.date)}</td><td class="mono">${esc(i.project)}</td><td>${esc(i.dept)}</td><td>${esc(i.what)}${i.example?' <span class="example">Example</span>':""}</td><td><span class="pill ${i.sev==="High"?"p-block":i.sev==="Medium"?"p-wait":""}">${esc(i.sev)}</span></td><td>${esc(i.decision)}</td><td><span class="pill ${i.status==="Resolved"?"p-done":"p-wait"}">${esc(i.status)}</span></td></tr>`).join("")}</tbody></table></div>`:'<div class="empty">No open issues.</div>'}
 function openCreate(){let mk=new Set(["US"]);
  $("#modalRoot").innerHTML=`<div class="modalwrap"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="cpT"><div><div class="eyebrow">New project</div><h2 id="cpT" style="font-size:22px">Create a project</h2><p class="sub small">The Project Director builds the nine-step timeline from these answers using the standard task times. You can adjust dates afterwards.</p></div>
