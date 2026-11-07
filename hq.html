@@ -256,15 +256,15 @@ function seed(){
 }
 const KEY="facelove-hq-v1";
 /* 2a-ii: this page reads its projects, tasks, decisions (waiting and decided), issues and lessons from the shared model
-   (data.js) and saves through it; the model also keeps the old key current for pages that don't read the model yet.
-   Without the model (it failed to load), the page falls back to the old key as before. */
+   (data.js) and saves through it. 2a-iv-b: the model is the only saved source; the old key is a read-only backup.
+   Without the model (it failed to load), the page shows the old key's data but saves nothing. */
 const DM=window.MAWM_DATA||null;let fromModel=false;
 const readS=()=>{let x=null;if(DM){try{x=DM.readHq()}catch(e){x=null}if(x){fromModel=true;return x}}fromModel=false;try{x=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){x=null}return x};
 let S=readS();
-if(!S||!S.projects){S=seed();if(DM)DM.writeHq(S);else try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(DM)S=readS()||S}
+if(!S||!S.projects){S=seed();if(DM){DM.writeHq(S);S=readS()||S}}
 if(!Array.isArray(S.decided))S.decided=[];
 let UI;try{UI=JSON.parse(localStorage.getItem(KEY+"-ui")||"null")}catch(e){UI=null}if(!UI)UI={theme:"system"};
-const save=()=>{if(DM){const err=DM.writeHq(S);if(err)toast(err);return}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const save=()=>{if(DM){const err=DM.writeHq(S);if(err)toast(err);return}toast("Not saved: the shared data couldn't load on this device")};
 /* every decision the CEO made, newest first: from the model's decided history (plus older ones read from the issues log) */
 const decidedAll=()=>DM&&DM.load()?DM.decided():(S.decided||[]).slice().sort((a,b)=>(b.date||"")<(a.date||"")?-1:1);
 /* new work from another page (a department logging an issue or asking for a decision) reaches the model; show it here
@@ -487,7 +487,7 @@ function decidedHTML(list){if(!list.length)return "";const res=r=>/^Disallow/.te
 /* Shared data model (2a-i): what's in it, where it came from, and checks */
 function drawData(){const DM=window.MAWM_DATA;
  if(!DM){$("#main").innerHTML='<section class="card"><h2>Data model</h2><div class="empty">The shared data model couldn\'t load on this device. Your saved data is untouched.</div></section>';return}
- const m=DM.migrate("view")||DM.load(),bk=DM.backupInfo(),chk=DM.check(m),err=DM.error();
+ const m=DM.migrate("view")||DM.load(),bk=DM.backupInfo(),chk=DM.check(m),err=DM.error(),ret=m&&m.meta.retired;
  const ago=iso=>{if(!iso)return"never";const d=new Date(iso);return d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" "+d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})};
  const kb=n=>n>=1024?(n/1024).toFixed(n>=10240?0:1)+" KB":n+" B";
  const cols=Object.keys(DM.SCHEMA);
@@ -498,9 +498,9 @@ function drawData(){const DM=window.MAWM_DATA;
   <div class="hero-top"><div>
    <div class="eyebrow">CEO · Data</div>
    <h1 class="hello" style="font-size:clamp(26px,4vw,36px)">One shared data model</h1>
-   <p class="status">${bad?`<span class="st st-bad">${plural(bad,"problem")} found</span>`:warn?`<span class="st st-warn">${plural(warn,"thing")} to look at</span>`:`<span class="st st-good">Model checks pass</span>`}<span class="dot" aria-hidden="true">·</span><span class="st">Updated ${esc(ago(m&&m.meta.built))}</span></p></div>
+   <p class="status">${bad?`<span class="st st-bad">${plural(bad,"problem")} found</span>`:warn?`<span class="st st-warn">${plural(warn,"thing")} to look at</span>`:`<span class="st st-good">Model checks pass</span>`}<span class="dot" aria-hidden="true">·</span><span class="st">Updated ${esc(ago(m&&m.meta.built))}</span>${ret?`<span class="dot" aria-hidden="true">·</span><span class="st">Old keys retired ${esc(ago(ret.at))}</span>`:""}</p></div>
    <button class="btn" id="dmRebuild">Rebuild now</button></div>
-  <p class="small muted" style="margin:10px 0 0;max-width:760px">Every page's projects, tasks, deliverables, decisions, issues and lessons now sit in one model on this device, built from what each page saved before. Your old saved data is never changed: a backup copy was kept before the first build. The CEO and Project Director pages read and save this model directly${fromModel?"":" (this time they fell back to the old saved data)"}; the department pages and the Design Studio follow next.</p>
+  <p class="small muted" style="margin:10px 0 0;max-width:760px">Every page's projects, tasks, deliverables, decisions, issues and lessons sit in one model on this device, and it is now the only place any page saves: the CEO and Project Director pages, the four department pages and the Design Studio all read from it and save into it${fromModel?"":" (this time this page couldn't read it and showed the old saved data instead)"}. The old saved keys were kept as read-only backups and are never written again; a separate backup copy was also kept before the first build.</p>
   ${err?`<p class="small t-bad" style="margin:8px 0 0">${esc(err)}</p>`:""}
  </section>
  <section class="card" style="margin-top:16px"><h2>What's in it</h2>
@@ -511,8 +511,9 @@ function drawData(){const DM=window.MAWM_DATA;
   <section class="card"><h2>Checks <span class="pill ${bad?"p-block":warn?"p-wait":"p-done"}">${bad?bad+" problem"+(bad>1?"s":""):warn?warn+" to look at":"All clear"}</span></h2>
    <div>${chk.map(([l,t])=>`<div class="dchk"><span class="ic ${l==="bad"?"t-bad":l==="ok"?"t-good":""}" style="${l==="warn"?"color:var(--warn)":""}" aria-label="${l==="bad"?"Problem":l==="warn"?"Look at":"Fine"}">${l==="bad"?"✕":l==="warn"?"!":"✓"}</span><span>${esc(t)}</span></div>`).join("")}</div>
    <p class="hint" style="margin:10px 0 0">Problems here never change your data. The Project Director logs anything that needs fixing in the issues log.</p></section>
-  <section class="card"><h2>Migration</h2>
-   <div class="tablewrap"><table class="dsrc"><thead><tr><th>Saved by</th><th>Holds</th><th>Size</th></tr></thead><tbody>${DM.SOURCES.map(([k,who,what])=>{const s=m&&m.meta.sources[k]||{};return `<tr><td><b>${esc(who)}</b><div class="mono small muted">${esc(k)}</div></td><td>${esc(what)}</td><td>${s.unreadable?'<span class="pill p-block">Unreadable</span>':s.found?kb(s.bytes):'<span class="muted">Nothing saved yet</span>'}</td></tr>`}).join("")}</tbody></table></div>
+  <section class="card"><h2>Where it's saved <span class="pill ${ret?"p-done":"p-wait"}">${ret?"Model only":"Not retired yet"}</span></h2>
+   <p class="hint" style="margin:0 0 8px">Each page's part now lives in the shared model (<span class="mono">${esc(DM.KEY)}</span>). Its old key stays beside it as a read-only backup${ret?`, kept since ${esc(ago(ret.at))} and never written again`:""}.</p>
+   <div class="tablewrap"><table class="dsrc"><thead><tr><th>Page</th><th>Holds</th><th>In the model</th><th>Old key (read-only backup)</th></tr></thead><tbody>${DM.SOURCES.map(([k,who,what])=>{const s=m&&m.meta.sources[k]||{},b=s.backup||{},ch=ret&&DM.sig(DM.raw(k))!==(ret.sigs||{})[k];return `<tr><td><b>${esc(who)}</b></td><td>${esc(what)}</td><td>${s.found?kb(s.bytes):'<span class="muted">Nothing saved yet</span>'}</td><td><div class="mono small muted">${esc(k)}</div>${b.unreadable?'<span class="pill p-block">Unreadable</span>':b.found?`${kb(b.bytes)} · ${ch?'<span class="pill p-wait">Changed: taken in on next open</span>':'<span class="pill p-done">Untouched</span>'}`:'<span class="muted">None</span>'}</td></tr>`}).join("")}</tbody></table></div>
    <div class="lgroup"><span class="k">Backup of the old data</span><div class="small">${bk?`Kept ${esc(ago(bk.at))} · ${bk.keys.length} part${bk.keys.length===1?"":"s"} · ${kb(bk.bytes)} · <span class="mono">${esc(DM.BACKUP)}</span>`:'<span class="t-bad">No backup yet</span> (nothing saved, or not enough storage)'}</div></div>
    <div class="lgroup"><span class="k">Log</span><div class="dlog">${(m&&m.meta.log||[]).slice(0,8).map(([at,t])=>`<div><span class="mono">${esc(ago(at))}</span><span>${esc(t)}</span></div>`).join("")||'<div class="muted">Nothing yet.</div>'}</div></div></section>
  </div>
@@ -531,8 +532,8 @@ function decide(d,result){S.decisions=S.decisions.filter(x=>x!==d);
  S.decided=[Object.assign({},d,{result,date:TODAY,by:"CEO",issue:logged}),...(S.decided||[])];
  save();toast(result.split(":")[0]+" · recorded in the issues log");drawCEO()}
 /* AI product image approvals (1c-iii): the CEO's answer is written back on the department's request with the date */
-function aiAnswer(d,result){const k="mawm-dept-"+(d.ai.dept||"graphic");try{const G=JSON.parse(localStorage.getItem(k)||"null"),row=G&&G.rows&&(G.rows.aiimages||[]).find(x=>x._id===d.ai.row);if(!row)return;
- const note=result.includes(": ")?result.split(": ").slice(1).join(": "):"";row.decision=/^Allowed/.test(result)?"Approved":"Rejected";row.date=TODAY;row.note=note==="no note"?"":note;row.by="CEO";localStorage.setItem(k,JSON.stringify(G))}catch(e){}}
+function aiAnswer(d,result){if(!DM)return;const k="mawm-dept-"+(d.ai.dept||"graphic");try{const G=DM.page(k),row=G&&G.rows&&(G.rows.aiimages||[]).find(x=>x._id===d.ai.row);if(!row)return;
+ const note=result.includes(": ")?result.split(": ").slice(1).join(": "):"";row.decision=/^Allowed/.test(result)?"Approved":"Rejected";row.date=TODAY;row.note=note==="no note"?"":note;row.by="CEO";const err=DM.saveDept(k,G);if(err)toast(err)}catch(e){}}
 const nextIssueId=()=>{const n=S.issues.reduce((m,i)=>{const k=+String(i.id||"").replace(/^IS-/,"");return isNaN(k)?m:Math.max(m,k)},0);return "IS-"+String(n+1).padStart(3,"0")};
 function issuesTable(list){return list.length?`<div class="tablewrap"><table><thead><tr><th>ID</th><th>Date</th><th>Project</th><th>Department</th><th>What happened</th><th>Severity</th><th>CEO decision</th><th>Status</th></tr></thead><tbody>${list.map(i=>`<tr><td class="mono">${esc(i.id)}</td><td>${fmt(i.date)}</td><td class="mono">${esc(i.project)}</td><td>${esc(i.dept)}</td><td>${esc(i.what)}${i.example?' <span class="example">Example</span>':""}</td><td><span class="pill ${i.sev==="High"?"p-block":i.sev==="Medium"?"p-wait":""}">${esc(i.sev)}</span></td><td>${esc(i.decision)}</td><td><span class="pill ${i.status==="Resolved"?"p-done":"p-wait"}">${esc(i.status)}</span></td></tr>`).join("")}</tbody></table></div>`:'<div class="empty">No open issues.</div>'}
 function openCreate(){let mk=new Set(["US"]);

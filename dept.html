@@ -175,12 +175,14 @@ const CFG={
 };
 const C=CFG[D]||CFG.research;document.title=C.name+" · My AI Work Mates";
 const KEY="mawm-dept-"+D;
-let S;try{S=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){S=null}if(!S)S={rows:{},checks:{}};S.qa=S.qa||{};
-/* 2a-iii: the department's records (its deliverables) are saved through the shared model (data.js) */
+/* 2a-iii / 2a-iv-b: the department's records (its deliverables) live in the shared model (data.js), the only saved source;
+   the old key is a read-only backup. Without the model (it failed to load) the page shows the old key's data but saves nothing. */
 const DM=window.MAWM_DATA||null;let saveErr="";
-const save=()=>{if(DM){const e=DM.saveDept(KEY,S);saveErr=e;return}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const readPage=k=>{if(DM)try{return DM.page(k)}catch(e){return null}try{return JSON.parse(localStorage.getItem(k)||"null")}catch(e){return null}};
+let S=readPage(KEY);if(!S)S={rows:{},checks:{}};S.rows=S.rows||{};S.checks=S.checks||{};S.qa=S.qa||{};
+const save=()=>{if(DM){const e=DM.saveDept(KEY,S);saveErr=e;return}saveErr="Not saved: the shared data couldn't load on this device."};
 /* other departments read the Research & Strategist's ledger and Booklet (read-only) */
-let RSD={rows:{}};const loadRS=()=>{if(D==="research"){RSD=S;return}try{RSD=JSON.parse(localStorage.getItem("mawm-dept-research")||"null")||{rows:{}}}catch(e){RSD={rows:{}}}};loadRS();
+let RSD={rows:{}};const loadRS=()=>{if(D==="research"){RSD=S;return}RSD=readPage("mawm-dept-research")||{rows:{}};RSD.rows=RSD.rows||{}};loadRS();
 /* projects, tasks and this department's decisions and issues come from the shared model (CEO and Project Director data);
    without the model (it failed to load) the page falls back to reading the CEO's saved data as before */
 let DV=null,projects=[];
@@ -198,7 +200,8 @@ function draw(){loadRS();loadDV();const {v,a}=route();try{if(parent!==window)par
 addEventListener("hashchange",draw);
 /* when the CEO or Project Director changes tasks or decides (another tab), the model changes: refresh the overview */
 addEventListener("storage",e=>{if(!DM||e.key!==DM.KEY)return;loadDV();const a=document.activeElement;if(view()==="overview"&&!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))overview()});
-addEventListener("storage",e=>{if(e.key!==KEY||!e.newValue)return;try{S=JSON.parse(e.newValue);S.rows=S.rows||{};S.checks=S.checks||{};S.qa=S.qa||{}}catch(_){return}const a=document.activeElement;if(!a||!/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))draw()});
+/* this department's records changed in another tab (they live in the model): pick them up, unless typing */
+addEventListener("storage",e=>{if(!DM||e.key!==DM.KEY||!e.newValue)return;const x=readPage(KEY);if(!x||JSON.stringify(x)===JSON.stringify(S))return;S=x;S.rows=S.rows||{};S.checks=S.checks||{};S.qa=S.qa||{};const a=document.activeElement;if(!a||!/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))draw()});
 function overview(){const tasks=projects.flatMap(p=>(p.tasks||[]).filter(t=>t.dept===C.hq).map(t=>({...t,project:p.code})));
  $("#main").innerHTML=`<div class="head"><div><div class="eyebrow">${esc(C.name)} · Overview</div><h1>${esc(C.name)}</h1><p class="sub">${esc(C.role)}</p></div></div>
  <div class="kpis">${Object.entries(C.secs).map(([k,s])=>`<a class="kpi" href="#${k}"><div class="n">${s.count?s.count():s.checklist?Object.keys(S.checks).length:(S.rows[k]||[]).length}</div><div class="l">${esc(s.title)}</div></a>`).join("")}<a class="kpi" href="#overview" onclick="document.getElementById('tasks').scrollIntoView();return false"><div class="n">${tasks.filter(t=>t.status!=="Done").length}</div><div class="l">Open tasks</div></a></div>
@@ -665,7 +668,7 @@ const GD_WORDS=10;
 const slugify=s=>String(s||"").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g,"").replace(/&/g," and ").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,40);
 const gdSlide=(i,job)=>{const s=GD_STD[i];return {id:Math.random().toString(36).slice(2,9),std:s?i:-1,name:s?s[0]:job||"New image",q:s?s[1]:"",shows:"",words:"",ev:"",alt:"",deco:false,drop:false,ok:false,src:"",ext:"jpg",slug:s?s[5]:slugify(job||"image")}};
 /* the Copywriter's saved copy maps (read-only) */
-const copyMaps=c=>{try{return (((JSON.parse(localStorage.getItem("mawm-dept-copy")||"null")||{}).rows||{}).copymaps||[]).filter(r=>!c||r[P]===c)}catch(e){return []}};
+const copyMaps=c=>{try{return ((((D==="copy"?S:readPage("mawm-dept-copy"))||{}).rows||{}).copymaps||[]).filter(r=>!c||r[P]===c)}catch(e){return []}};
 const cmItem=(cm,id)=>{for(const [i,b] of (cm&&cm.blocks||[]).entries()){const j=(b.imgs||[]).findIndex(m=>m.id===id);if(j>=0)return {b,i,m:b.imgs[j],j}}return null};
 const wordCount=s=>String(s||"").split(/\s+/).filter(Boolean).length;
 /* default file name start: client code (first part of the project code) and the product from the research brief */

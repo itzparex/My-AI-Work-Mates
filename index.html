@@ -153,7 +153,8 @@ window.addEventListener("message",e=>{if(e.origin!==location.origin||!e.data)ret
  if(e.data.flView&&r.d==="uiux"&&e.data.flView!==r.s){history.replaceState(null,"","#/uiux/"+e.data.flView);route()}
  if(e.data.flSub&&e.data.flSub!==r.s){history.replaceState(null,"","#/"+r.d+"/"+e.data.flSub);syncing=true;route();syncing=false}});
 frame.addEventListener("load",()=>{try{frame.contentWindow.postMessage({flTheme:theme},location.origin)}catch(e){}});
-function readHQ(){try{return JSON.parse(localStorage.getItem("facelove-hq-v1")||"null")}catch(e){return null}}
+/* the CEO's data exists on this device: in the shared model (2a-iv-b), or in the old key before the model was built */
+function readHQ(){try{const m=JSON.parse(localStorage.getItem("mawm-data-v1")||"null");if(m&&m.meta&&(m.meta.hasHq||(m.meta.sources&&m.meta.sources["facelove-hq-v1"]&&m.meta.sources["facelove-hq-v1"].found)))return m;return JSON.parse(localStorage.getItem("facelove-hq-v1")||"null")}catch(e){return null}}
 applyTheme();route();
 if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))navigator.serviceWorker.register("sw.js").catch(()=>{});
 /* New version check: every 3 minutes (and when you come back to the tab) compare the live app files with the ones loaded.

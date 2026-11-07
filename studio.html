@@ -527,14 +527,15 @@ const SEED={
 
 const KEY="facelove-studio-v2";
 let S;
-try{S=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){S=null}
+/* 2a-iv-b: the Design Studio's work lives in the shared model (data.js); the old key is a read-only backup, read only if the model failed to load */
+try{S=window.MAWM_DATA?MAWM_DATA.studio():JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){S=null}
 if(!S||!S.items){S=JSON.parse(JSON.stringify(SEED))}
 if(!S.kit)S.kit={status:"new",step:0,brandConfirmed:false,brand:{name:"Facelove",primary:"#6B3FA0",secondary:"#3B2056",bg:"#FFFFFF",text:"#2A1738",hfont:"Caprasimo",bfont:"Poppins",logo:null},theme:null,themeName:"",css:"",cssName:"",snippets:{}};
 if(!S.ui)S.ui={theme:"system",markers:true};
 let TH;try{TH=JSON.parse(localStorage.getItem(KEY+"-theme")||"null")}catch(e){TH=null}
 if(!TH||!TH.meta){TH={files:{},meta:{},sel:null,importedAt:null,name:"",needsSeed:true}}
 /* 2a-iv: saved through the shared model (data.js), which links concepts and Code Studio items to projects */
-const persist=()=>{let err="";try{err=window.MAWM_DATA?MAWM_DATA.saveStudio(S):(localStorage.setItem(KEY,JSON.stringify(S)),"")}catch(e){err="Couldn't save on this device."}if(err)setTimeout(()=>toast(err),0)};
+const persist=()=>{let err="";try{err=window.MAWM_DATA?MAWM_DATA.saveStudio(S):"Not saved: the shared data couldn't load on this device."}catch(e){err="Couldn't save on this device."}if(err)setTimeout(()=>toast(err),0)};
 /* projects come from the shared model; a concept or item with no project is shared across projects */
 const projList=()=>{try{return window.MAWM_DATA?MAWM_DATA.projects():[]}catch(e){return []}};
 const projName=c=>{const p=projList().find(x=>x.code===c);return p?(p.name?c+" · "+p.name:c):c};

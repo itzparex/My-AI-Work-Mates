@@ -1,6 +1,6 @@
 /* Offline support. App files: always try the network first so new versions show at once; use the saved copy only when offline.
    Fonts and code libraries from CDNs: saved copy first (they never change at a fixed version). */
-const CACHE = "mawm-v3";
+const CACHE = "mawm-v4";
 const APP = ["./", "index.html", "hq.html", "studio.html", "dept.html", "data.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(APP)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(n => n !== CACHE).map(n => caches.delete(n)))).then(() => self.clients.claim())); });

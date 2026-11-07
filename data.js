@@ -9,8 +9,12 @@
    their own records (the deliverables) through saveDept, which keeps the model's deliverables current.
    Step 2a-iv (first part): the Design Studio (studio.html) links concepts and Code Studio items to projects through the model
    (projects, studio, saveStudio, studioFor); dept.html reads the Design Studio's work for a project the same way.
-   The old saved data is never changed or deleted by the migration: a one-time backup copy is kept under "mawm-data-backup-v0",
-   and the model is rebuilt from the saved data whenever a page saves.
+   Step 2a-iv-b: the old keys are retired. The model is the one saved source for every page: the CEO's data lives in its
+   collections and settings, each department's and the Design Studio's full records in its "pages" part (read with page(),
+   saved with savePart()/writeHq/saveDept/saveStudio). The first time a device runs this, the model is built once more from
+   the old keys and they become read-only backups: kept, never written again. If an older version of a page (a tab left
+   open from before) still writes an old key, the next load notices the change, takes that newer data into the model and logs it.
+   A one-time backup copy of the old data is also kept under "mawm-data-backup-v0".
    Used by hq.html, dept.html and studio.html as window.MAWM_DATA. No network, no accounts: everything stays on this device. */
 (function (g) {
   "use strict";
@@ -52,14 +56,25 @@
   const arr = x => Array.isArray(x) ? x : [];
   const pick = (o, keys) => { const r = {}; keys.forEach(k => { if (o[k] !== undefined) r[k] = o[k] }); return r };
   const omit = (o, keys) => { const r = Object.assign({}, o); keys.forEach(k => delete r[k]); return r };
-  const HQ = "facelove-hq-v1", HQ_SETTINGS = ["sel", "reviews", "claude", "autowork"];
+  const HQ = "facelove-hq-v1", HQ_PARTS = ["projects", "decisions", "decided", "issues", "lessons"];
+  const PAGE_KEYS = SOURCES.map(s => s[0]).filter(k => k !== HQ);
 
-  /* Build the model from the data the pages saved before. Pure: reads only, never writes. */
-  function build() {
+  /* a short fingerprint of a saved value, to notice when an old key changes after it was retired */
+  const sig = s => { if (s == null) return ""; let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return s.length + ":" + (h >>> 0).toString(36) };
+  /* read the old keys: { src: {key: data or null}, info: {key: {found, bytes, unreadable}} } */
+  function readOld() {
+    const src = {}, info = {};
+    SOURCES.forEach(([k]) => { const s = raw(k), v = parse(s); src[k] = v || null; info[k] = { found: s != null, bytes: s ? s.length : 0, unreadable: v === undefined } });
+    return { src, info };
+  }
+  /* Build the model from the data the pages saved before (the old keys). Pure: reads only, never writes. */
+  function build() { const o = readOld(); return buildFrom(o.src, o.info) }
+  /* Build the model's collections from each page's data: src = { key: that page's data or null }. Pure. */
+  function buildFrom(src, info) {
     const meta = { version: VERSION, built: new Date().toISOString(), sources: {} };
     const m = { projects: [], tasks: [], deliverables: [], decisions: [], issues: [], lessons: [] };
-    const src = {};
-    SOURCES.forEach(([k]) => { const s = raw(k), v = parse(s); src[k] = v || null; meta.sources[k] = { found: s != null, bytes: s ? s.length : 0, unreadable: v === undefined } });
+    SOURCES.forEach(([k]) => { const i = info && info[k]; meta.sources[k] = i ? i : { found: src[k] != null, bytes: src[k] != null ? JSON.stringify(src[k]).length : 0, unreadable: false } });
+    meta.hasHq = !!src[HQ];
     const hq = src["facelove-hq-v1"] || {};
     arr(hq.projects).forEach(p => {
       if (!p || !p.code) return;
@@ -89,9 +104,12 @@
     arr(st.concepts).filter(c => c && c.stage !== "Ideas").forEach(c => m.deliverables.push({ id: "uiux:concepts:" + c.id, project: c.project || "", dept: "UI/UX Designer", kind: "Design concept", title: c.name || "Concept", status: c.stage || "", version: "", updated: c.updated || "", source: { key: "facelove-studio-v2", path: "concepts", row: c.id }, example: !!c.example }));
     arr(st.items).forEach(c => c && m.deliverables.push(Object.assign({ id: "uiux:items:" + c.id, project: c.project || "", dept: "UI/UX Designer", kind: "Code Studio item", title: c.name || "Item", status: c.status || "", version: c.version != null ? String(c.version) : "", updated: c.updated || "", source: { key: "facelove-studio-v2", path: "items", row: c.id }, example: !!c.example }, c.concept ? { from: "uiux:concepts:" + c.concept } : {})));
     meta.counts = Object.fromEntries(Object.keys(m).map(k => [k, m[k].length]));
-    /* page settings that travel with the CEO's data (selected project, plan usage notes, Auto-work later) */
-    const settings = { hq: pick(hq, HQ_SETTINGS) };
-    return Object.assign({ meta }, m, { settings });
+    /* page settings that travel with the CEO's data (selected project, reviews, plan usage notes, Auto-work later):
+       everything the CEO page saved besides the collections, so it reads back exactly as saved */
+    const settings = { hq: omit(hq, HQ_PARTS) };
+    /* the full records of the department pages and the Design Studio (2a-iv-b: the model is their saved source) */
+    const pages = {}; PAGE_KEYS.forEach(k => { if (src[k] != null) pages[k] = src[k] });
+    return Object.assign({ meta }, m, { settings, pages });
   }
 
   /* Checks on the model: [level ("bad" | "warn" | "ok"), text] */
@@ -113,6 +131,14 @@
     const badSt = m.tasks.filter(t => t.status && !TASK_STATUSES.includes(t.status));
     if (badSt.length) out.push(["warn", "Tasks: " + badSt.length + " with an unknown status"]);
     Object.entries(m.meta.sources || {}).forEach(([k, s]) => { if (s.unreadable) out.push(["bad", "Saved data " + k + " couldn't be read; it was left untouched"]) });
+    const r = m.meta.retired;
+    if (!r) out.push(["warn", "The old saved keys haven't been retired on this device yet (open any page once)."]);
+    else {
+      const changed = SOURCES.filter(([k]) => sig(raw(k)) !== (r.sigs || {})[k]).map(s => s[1]);
+      if (changed.length) out.push(["warn", "Old saved data changed since it was retired (" + changed.join(", ") + "); it is taken into the model the next time a page opens."]);
+      else if (arr(r.adopted).length) out.push(["warn", "An older version of a page saved to an old key after it was retired (" + [...new Set(arr(r.adopted).map(a => a[1]))].join(", ") + "); its newer data was taken into the model. Refresh any tab left open from before."]);
+      else out.push(["ok", "Every page saves to the shared model only; the old keys are read-only backups, untouched since they were retired."]);
+    }
     if (!out.some(x => x[0] !== "ok")) out.unshift(["ok", "Every item has a unique ID and every project link points to a real project."]);
     return out;
   }
@@ -120,46 +146,93 @@
   function load() { const v = parse(raw(KEY)); return v && v.meta && v.meta.version === VERSION ? v : null }
   function backupInfo() { const v = parse(raw(BACKUP)); return v && v.at ? { at: v.at, keys: Object.keys(v.data || {}), bytes: (raw(BACKUP) || "").length } : null }
 
-  /* Migration: keep a one-time backup of the old saved data, then build and save the model. Old data is never changed. */
-  let lastError = "";
-  function migrate(reason) {
-    if (!ls) return null;
-    const prev = load(), log = prev && Array.isArray(prev.meta.log) ? prev.meta.log : [];
-    if (!backupInfo()) {
-      const data = {}; SOURCES.forEach(([k]) => { const s = raw(k); if (s != null) data[k] = s });
-      if (Object.keys(data).length) try { ls.setItem(BACKUP, JSON.stringify({ at: new Date().toISOString(), note: "Copy of the saved data before the shared model (2a). Never changed by the app.", data })); log.unshift([new Date().toISOString(), "Backup of the old saved data kept (" + Object.keys(data).length + " parts)"]) } catch (e) { log.unshift([new Date().toISOString(), "Backup skipped: not enough storage on this device"]) }
-    }
-    const m = build();
-    if (!prev && !Object.values(m.meta.sources).some(s => s.found)) return m; /* nothing saved yet on this device: build once the pages save */
-    const first = !prev, changed = !prev || JSON.stringify(prev.meta.counts) !== JSON.stringify(m.meta.counts);
-    if (first) log.unshift([m.meta.built, "Shared model built from the saved data (" + Object.entries(m.meta.counts).map(([k, n]) => n + " " + (n === 1 ? k.slice(0, -1) : k)).join(", ") + ")"]);
-    else if (changed || reason === "manual") log.unshift([m.meta.built, (reason === "manual" ? "Rebuilt by the CEO" : "Updated after a save") + " (" + Object.entries(m.meta.counts).map(([k, n]) => n + " " + (n === 1 ? k.slice(0, -1) : k)).join(", ") + ")"]);
-    m.meta.log = log.slice(0, 20); m.meta.firstBuilt = prev && prev.meta.firstBuilt || m.meta.built;
-    try { ls.setItem(KEY, JSON.stringify(m)); lastError = "" } catch (e) { lastError = "Not enough storage on this device to save the shared model." }
-    return m;
-  }
-  /* 2a-ii: the CEO and Project Director page reads its data from the model ... */
+  /* 2a-ii: the CEO page's data, rebuilt from the model's collections and settings in the shape the page saves */
   /* projects with their timeline tasks, in the shape the pages used before */
   const projectsOf = m => m.projects.map(p => Object.assign(omit(p, ["id"]), { code: p.code || p.id, tasks: m.tasks.filter(t => t.project === p.id && t.kind !== "person").map(t => Object.assign(omit(t, ["project", "kind"]), { gate: t.kind === "gate" })) }));
-  const hasHq = m => !!(m && m.meta.sources && m.meta.sources[HQ] && m.meta.sources[HQ].found);
-  function readHq() {
-    const m = load(); if (!hasHq(m)) return null;
-    const S = Object.assign({}, (m.settings && m.settings.hq) || {}, {
+  const hasHq = m => !!(m && (m.meta.hasHq || (m.meta.sources && m.meta.sources[HQ] && m.meta.sources[HQ].found)));
+  function hqOf(m) {
+    if (!hasHq(m)) return null;
+    return Object.assign({}, (m.settings && m.settings.hq) || {}, {
       projects: projectsOf(m),
       decisions: m.decisions.filter(d => d.status !== "Decided").map(d => omit(d, ["status"])),
       decided: m.decisions.filter(d => d.status === "Decided" && d.from !== "issues").map(d => omit(d, ["status"])),
       issues: m.issues.map(i => Object.assign({}, i)), lessons: m.lessons.map(l => Object.assign({}, l))
     });
-    return S;
   }
-  /* ... and saves through it: the old key is written in the same step (other pages still read it until 2a-iii/2a-iv),
-     then the model is rebuilt at once so it is current before the page reads it again. Returns "" or an error message. */
-  function writeHq(S) {
+  const readHq = () => hqOf(load());
+  const clone = v => v == null ? null : JSON.parse(JSON.stringify(v));
+  const labelOf = k => (SOURCES.find(s => s[0] === k) || [k, k])[1];
+  const stamp = () => new Date().toISOString();
+  const countsText = m => Object.entries(m.meta.counts).map(([k, n]) => n + " " + (n === 1 ? k.slice(0, -1) : k)).join(", ");
+
+  /* The data every page saved, as it stands now: from the model once the old keys are retired (taking in any old key an
+     older version of a page wrote since), otherwise from the old keys. Reads only. */
+  function current() {
+    const prev = load(), log = prev && Array.isArray(prev.meta.log) ? prev.meta.log.slice() : [];
+    if (prev && prev.meta.retired) {
+      const retired = clone(prev.meta.retired), src = {};
+      src[HQ] = hqOf(prev); PAGE_KEYS.forEach(k => { src[k] = prev.pages && prev.pages[k] != null ? prev.pages[k] : null });
+      let adopted = false;
+      SOURCES.forEach(([k]) => {
+        const s = raw(k), now = sig(s); if (now === (retired.sigs || {})[k]) return;
+        retired.sigs[k] = now; adopted = true; const v = parse(s);
+        if (v) { src[k] = v; retired.adopted = [[stamp(), labelOf(k)]].concat(arr(retired.adopted)).slice(0, 10); log.unshift([stamp(), labelOf(k) + ": an older version of the page saved to its old key after it was retired; that newer data was taken into the model"]) }
+      });
+      return { prev, src, log, retired, adopted, info: null };
+    }
+    const o = readOld();
+    return { prev, src: o.src, log, retired: null, adopted: false, info: o.info, fresh: !prev && !Object.values(o.info).some(i => i.found) };
+  }
+  /* save the model built from c.src: the one place anything is saved (the old keys are never written) */
+  function commit(c, reason) {
+    const m = buildFrom(c.src, null), log = c.log, first = !c.prev;
+    if (!c.retired) {
+      const found = SOURCES.filter(([k]) => raw(k) != null).map(s => s[0]);
+      c.retired = { at: stamp(), keys: found, sigs: Object.fromEntries(SOURCES.map(([k]) => [k, sig(raw(k))])), adopted: [] };
+      if (found.length) log.unshift([c.retired.at, "Old saved keys retired: " + found.length + " part" + (found.length === 1 ? "" : "s") + " kept as read-only backups; every page now saves to the shared model only"]);
+    }
+    /* sizes: each part as saved in the model; the old key alongside as its backup */
+    SOURCES.forEach(([k]) => { const s = raw(k), v = parse(s); m.meta.sources[k].backup = { found: s != null, bytes: s ? s.length : 0, unreadable: v === undefined } });
+    const changed = first || JSON.stringify(c.prev.meta.counts) !== JSON.stringify(m.meta.counts);
+    if (first) log.unshift([m.meta.built, "Shared model built from the saved data (" + countsText(m) + ")"]);
+    else if (changed || reason === "manual") log.unshift([m.meta.built, (reason === "manual" ? "Rebuilt by the CEO" : "Updated after a save") + " (" + countsText(m) + ")"]);
+    m.meta.log = log.slice(0, 20); m.meta.firstBuilt = c.prev && c.prev.meta.firstBuilt || m.meta.built; m.meta.retired = c.retired;
+    try { ls.setItem(KEY, JSON.stringify(m)); lastError = "" } catch (e) { lastError = "Not enough storage on this device to save the shared model." }
+    return m;
+  }
+  /* Migration: keep a one-time backup of the old saved data, retire the old keys, then build and save the model. */
+  let lastError = "";
+  function migrate(reason) {
+    if (!ls) return null;
+    if (!backupInfo()) {
+      const data = {}; SOURCES.forEach(([k]) => { const s = raw(k); if (s != null) data[k] = s });
+      if (Object.keys(data).length) {
+        let note; try { ls.setItem(BACKUP, JSON.stringify({ at: stamp(), note: "Copy of the saved data before the shared model (2a). Never changed by the app.", data })); note = "Backup of the old saved data kept (" + Object.keys(data).length + " part" + (Object.keys(data).length === 1 ? "" : "s") + ")" } catch (e) { note = "Backup skipped: not enough storage on this device" }
+        const p = load(); if (p) { p.meta.log = [[stamp(), note]].concat(arr(p.meta.log)).slice(0, 20); try { ls.setItem(KEY, JSON.stringify(p)) } catch (e) { } } else pendingNote = note;
+      }
+    }
+    const c = current();
+    if (c.fresh) return buildFrom(c.src, c.info); /* nothing saved yet on this device: the model is saved when a page first saves */
+    if (pendingNote) { c.log.unshift([stamp(), pendingNote]); pendingNote = "" }
+    if (c.prev && c.retired && !c.adopted && reason !== "manual" && reason !== "view") return c.prev; /* already current */
+    return commit(c, reason);
+  }
+  let pendingNote = "";
+  /* save one page's data into the model. Returns "" or an error message. */
+  function savePart(key, data) {
     if (!ls) return "This device doesn't allow saving.";
-    try { ls.setItem(HQ, JSON.stringify(S)) } catch (e) { return "Not enough storage on this device to save." }
-    clearTimeout(t); t = null; migrate("save");
-    return lastError;
+    if (!SRC_KEYS.has(key)) return "Not a page's saved data.";
+    const c = current(); c.src[key] = data == null ? null : clone(data);
+    commit(c, "save"); return lastError;
   }
+  /* one page's saved data from the model (a copy), or null; before the model exists, read from its old key */
+  function page(key) {
+    if (key === HQ) return readHq();
+    const m = load(); if (m && m.meta.retired) return clone(m.pages && m.pages[key]);
+    const v = parse(raw(key)); return v || null;
+  }
+  /* the CEO page saves through the model (its collections and settings). Returns "" or an error message. */
+  function writeHq(S) { return savePart(HQ, S) }
   /* 2a-iii: what a department page reads from the model: projects and their tasks, plus the decisions and issues that
      came from this department (waiting and decided), newest first. Returns null until the CEO page has saved once. */
   const DEPT_OF = { graphic: "Graphic Designer", shopify: "Shopify Developer", copy: "Copywriter", research: "Research & Strategist" };
@@ -201,13 +274,11 @@
   /* an issue in the Project Director's log, read from the model */
   const issue = id => { const m = load(); return m && arr(m.issues).find(i => i.id === id) || null };
   const hqReady = () => !!readHq() || (() => { const v = parse(raw(HQ)); return !!(v && Array.isArray(v.issues)) })();
-  /* a department saves its own records (its deliverables) through the model: the department's key is written and the
-     model's deliverables are rebuilt shortly after (at once when the page closes). Returns "" or an error message. */
+  /* a department saves its own records (its deliverables) into the model's pages part; the model's deliverables are rebuilt
+     in the same step. Returns "" or an error message. */
   function saveDept(key, data) {
-    if (!ls) return "This device doesn't allow saving.";
     if (!/^mawm-dept-/.test(key)) return "Not a department's saved data.";
-    try { ls.setItem(key, JSON.stringify(data)) } catch (e) { return "Not enough storage on this device to save." }
-    touch(); return "";
+    return savePart(key, data);
   }
   /* every decision the CEO made, newest first (decided history plus older ones read from the issues log) */
   const decided = m => arr((m || load() || {}).decisions).filter(d => d.status === "Decided").sort((a, b) => (b.date || "") < (a.date || "") ? -1 : (b.date || "") > (a.date || "") ? 1 : 0);
@@ -220,13 +291,9 @@
   }
   const STUDIO = "facelove-studio-v2";
   /* the Design Studio's full saved work (concepts, Code Studio items, references, kit), or null */
-  const studio = () => { const v = parse(raw(STUDIO)); return v && typeof v === "object" ? v : null };
-  /* the Design Studio saves through the model: its key is written and the model's deliverables rebuilt shortly after */
-  function saveStudio(data) {
-    if (!ls) return "This device doesn't allow saving.";
-    try { ls.setItem(STUDIO, JSON.stringify(data)) } catch (e) { return "Not enough storage on this device to save." }
-    touch(); return "";
-  }
+  const studio = () => { const v = page(STUDIO); return v && typeof v === "object" ? v : null };
+  /* the Design Studio saves into the model's pages part */
+  const saveStudio = data => savePart(STUDIO, data);
   /* the concepts (past Ideas) or Code Studio items a department can use for a project: that project's first, then the shared
      ones (no project); work linked to another project is left out unless keep(item) says it is already in use */
   function studioFor(kind, project, keep) {
@@ -236,15 +303,14 @@
     const mine = list.filter(x => x.project === project), shared = list.filter(x => !x.project), other = list.filter(x => x.project && x.project !== project && keep && keep(x));
     return mine.concat(shared, other);
   }
-  let t = null;
-  const touch = () => { clearTimeout(t); t = setTimeout(() => { t = null; migrate("save") }, 400) };
-  const flush = () => { if (t) { clearTimeout(t); t = null; migrate("save") } };
-  /* keep the model current: rebuild shortly after any page saves to one of the old keys */
+  /* saves go straight into the model now, so there is nothing waiting to be written (kept for pages that call them) */
+  const touch = () => { }, flush = () => { };
+  /* the old keys are never written again: a write to one from this window (code that still saves the old way) goes into the
+     model instead, and the old key stays as it was */
   try {
     const set = Storage.prototype.setItem;
-    if (!set.__mawm) { const w = function (k, v) { set.call(this, k, v); if (this === ls && SRC_KEYS.has(k)) touch() }; w.__mawm = true; Storage.prototype.setItem = w }
+    if (!set.__mawm) { const w = function (k, v) { if (this === ls && SRC_KEYS.has(k)) { const d = parse(v); if (d) savePart(k, d); return } set.call(this, k, v) }; w.__mawm = true; Storage.prototype.setItem = w }
   } catch (e) { }
-  g.addEventListener && g.addEventListener("pagehide", flush);
-  g.MAWM_DATA = { KEY, BACKUP, VERSION, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, projects, studio, saveStudio, studioFor, STUDIO, HQ, error: () => lastError, today };
+  g.MAWM_DATA = { KEY, BACKUP, VERSION, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, projects, studio, saveStudio, studioFor, STUDIO, HQ, page, savePart, retired: () => { const m = load(); return m && m.meta.retired || null }, sig, raw, error: () => lastError, today };
   migrate("load");
 })(typeof window !== "undefined" ? window : globalThis);
