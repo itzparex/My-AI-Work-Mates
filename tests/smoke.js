@@ -166,10 +166,42 @@ const ROUTES = ["#/home", "#/ceo/home",
     await page.goto(base + "index.html#/uiux/research"); await page.waitForTimeout(1200);
     const sin = await page.evaluate(() => { const el = document.getElementById("frame").contentWindow.document.querySelector("#inputs"); return el && !el.hidden && /Smoke copy map/.test(el.textContent) ? "ok" : "Design Studio doesn't show the approved copy map"; });
     if (sin !== "ok") errors.push("deliverables flow: studio inputs: " + sin);
+    // 2b-iii: return with comments from the review queue: task back to In progress, deliverable Returned, issue logged; a second return is flagged
+    await page.goto(base + "index.html#/director/review"); await page.waitForTimeout(400);
+    const rt0 = await page.evaluate(async () => { const W = document.getElementById("frame").contentWindow, D = W.MAWM_DATA, wait = ms => new Promise(r => setTimeout(r, ms));
+      try {
+        const k = "mawm-dept-graphic", c = D.page(k) || { rows: {}, checks: {} }; c.rows.images = (c.rows.images || []).concat([{ _id: "smoke4", project: "SM-2B", set: "Smoke return set", status: "In progress" }]); D.savePart(k, c);
+        const sres = D.submit({ dept: "Graphic Designer", project: "SM-2B", deliv: { id: "graphic:images:smoke4", kind: "Image set", title: "Smoke return set", section: "images", row: "smoke4" } }); if (sres.error) return "submit failed: " + sres.error;
+        W.location.reload(); await wait(900); const W2 = document.getElementById("frame").contentWindow, d = W2.document, D2 = W2.MAWM_DATA;
+        const card = [...d.querySelectorAll("[data-tid]")].find(x => /Smoke return set/.test(x.textContent)); if (!card) return "review queue doesn't show the set";
+        card.querySelector('[data-rv="back"]').click(); await wait(100); const box = card.querySelector(".inline-input"); if (!box) return "no comment box";
+        box.querySelector("button").click(); await wait(100); if (D2.readHq().projects.find(p => p.code === "SM-2B").tasks.find(x => x.id === sres.task).status !== "Waiting on approval") return "returned without a comment";
+        box.querySelector("input").value = "Slide 2 headline must match the copy map"; box.querySelector("button").click(); await wait(200);
+        let S = D2.readHq(), t = S.projects.find(p => p.code === "SM-2B").tasks.find(x => x.id === sres.task);
+        if (t.status !== "In progress" || t.submission.state !== "Returned" || t.submission.comments !== "Slide 2 headline must match the copy map" || t.returns !== 1) return "task not returned properly: " + t.status + " " + t.submission.state;
+        const i1 = S.issues.find(x => x.id === t.submission.issue); if (!i1 || !/^Returned:/.test(i1.what) || i1.dept !== "Graphic Designer" || i1.sev !== "Low") return "issue not logged";
+        if (D2.page(k).rows.images.find(x => x._id === "smoke4").status !== "Returned") return "image set not marked Returned";
+        if (!D2.returnedFor("Graphic Designer").some(x => x.title === "Smoke return set")) return "returnedFor misses it";
+        if (D2.submit({ dept: "Graphic Designer", project: "SM-2B", deliv: { id: "graphic:images:smoke4", kind: "Image set", title: "Smoke return set", section: "images", row: "smoke4" } }).error) return "resubmit failed";
+        if (D2.page(k).rows.images.find(x => x._id === "smoke4").status !== "Waiting on approval") return "resubmitted set not waiting again";
+        if (!D2.returnTask("SM-2B", sres.task, "").error) return "empty comment not refused";
+        const r2 = D2.returnTask("SM-2B", sres.task, "Alt text still missing"); if (r2.error || !r2.repeated || r2.returns !== 2) return "second return not flagged";
+        const i2 = D2.readHq().issues.find(x => x.id === r2.issue); if (!i2 || i2.type !== "Repeated return" || i2.sev !== "Medium") return "repeated return not flagged in the log";
+        return "ok";
+      } catch (e) { return "error: " + e.message } });
+    if (rt0 !== "ok") errors.push("deliverables flow: return: " + rt0);
+    await page.goto(base + "index.html#/graphic/overview"); await page.waitForTimeout(1200);
+    const rov = await page.evaluate(() => { const d = document.getElementById("frame").contentWindow.document, h = d.querySelector("#returned"), l = h && h.nextElementSibling.nextElementSibling; return l && /Alt text still missing/.test(l.textContent) && /Returned 2 times/.test(l.textContent) ? "ok" : "Graphic Designer Overview doesn't show the returned set with comments"; });
+    if (rov !== "ok") errors.push("deliverables flow: returned on Overview: " + rov);
+    if (shots) { await page.evaluate(() => document.getElementById("frame").contentWindow.document.querySelector("#returned").scrollIntoView()); await page.screenshot({ path: path.join(ROOT, "tests", "shots", "2b-returned-desktop.png") });
+      await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300); await page.evaluate(() => document.getElementById("frame").contentWindow.document.querySelector("#returned").scrollIntoView()); await page.screenshot({ path: path.join(ROOT, "tests", "shots", "2b-returned-phone.png") });
+      await page.evaluate(() => document.getElementById("frame").contentWindow.MAWM_DATA.submit({ dept: "Graphic Designer", project: "SM-2B", deliv: { id: "graphic:images:smoke4", kind: "Image set", title: "Smoke return set", section: "images", row: "smoke4" } }));
+      await page.goto(base + "index.html#/director/review"); await page.waitForTimeout(1200); await page.evaluate(() => { const c = [...document.getElementById("frame").contentWindow.document.querySelectorAll("[data-tid]")].find(x => /Smoke return set/.test(x.textContent)); if (c) c.scrollIntoView() }); await page.screenshot({ path: path.join(ROOT, "tests", "shots", "2b-review-phone.png") }); await page.setViewportSize({ width: 1280, height: 720 }); }
+    await page.evaluate(() => { const D = document.getElementById("frame").contentWindow.MAWM_DATA, c = D.page("mawm-dept-graphic"); c.rows.images = c.rows.images.filter(x => x._id !== "smoke4"); D.savePart("mawm-dept-graphic", c) });
     await page.evaluate(() => { const D = document.getElementById("frame").contentWindow.MAWM_DATA, S = D.readHq(); S.projects = S.projects.filter(p => p.code !== "SM-2B"); D.writeHq(S) });
     if (!errors.some(e => /deliverables flow/.test(e))) await page.evaluate(() => { const D = document.getElementById("frame").contentWindow.MAWM_DATA, S = D.readHq(); S.projects.forEach(p => p.tasks.forEach(t => { if (t.submission && t.submission.id === "graphic:images:smoke3") { delete t.submission; delete t.doneAt; t.history = []; t.status = "Waiting on a person" } })); D.writeHq(S);
       const c = D.page("mawm-dept-graphic"); c.rows.images = c.rows.images.filter(x => x._id !== "smoke3"); D.savePart("mawm-dept-graphic", c) });
-    console.log("OK: data model " + JSON.stringify(r.counts) + ", CEO page reads it back (" + rt.projects + " projects, " + rt.tasks + " tasks), decision recorded, department logs and saves through it, Design Studio links work to projects, old keys retired (never written; an older page's write is taken in), a submitted deliverable waits in the review queue, approving it starts the next tasks and hands it on");
+    console.log("OK: data model " + JSON.stringify(r.counts) + ", CEO page reads it back (" + rt.projects + " projects, " + rt.tasks + " tasks), decision recorded, department logs and saves through it, Design Studio links work to projects, old keys retired (never written; an older page's write is taken in), a submitted deliverable waits in the review queue, approving it starts the next tasks and hands it on, returning it sends it back with comments and logs an issue (repeats flagged)");
     await page.close();
   }
   await browser.close(); server.close();

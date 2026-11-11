@@ -17,7 +17,8 @@
    A one-time backup copy of the old data is also kept under "mawm-data-backup-v0".
    Step 2b-i: departments submit a deliverable for review (submit): it is attached to their task, which goes to
    "Waiting on approval" in the Project Director's review queue. Step 2b-ii: approving it (approve) marks the task Done and
-   the deliverable Approved, starts the next task(s), and the next department sees it as an input (inputsFor).
+   the deliverable Approved, starts the next task(s), and the next department sees it as an input (inputsFor). Step 2b-iii:
+   returning it (returnTask) sends the task back to "In progress" with comments and logs an issue (returnedFor).
    Used by hq.html, dept.html and studio.html as window.MAWM_DATA. No network, no accounts: everything stays on this device. */
 (function (g) {
   "use strict";
@@ -331,8 +332,13 @@
     if (t.status === "Waiting on approval" && t.submission && t.submission.id === d.id) return { error: "Already with the Project Director for review." };
     const sub = Object.assign({ at: today(), dept: o.dept, note: String(o.note || "").trim() }, pick(d, ["id", "kind", "title", "version", "section", "row"]));
     t.history = arr(t.history).concat([{ date: sub.at, what: "Submitted", title: sub.title || "", version: sub.version || "", note: sub.note, by: o.dept }]).slice(-20);
+    if (t.returns) sub.after = t.returns; /* 2b-iii: a new version after N returns */
     t.submission = sub; t.status = "Waiting on approval";
-    const err = writeHq(S);
+    let err = writeHq(S);
+    if (!err && sub.section && sub.row != null) { /* 2b-iii: a returned deliverable sent again is waiting on approval again */
+      const key = "mawm-dept-" + String(sub.id || "").split(":")[0];
+      if (SRC_KEYS.has(key)) { const dd = page(key), r = dd && dd.rows && arr(dd.rows[sub.section]).find(x => x && x._id === sub.row); if (r && r.status === "Returned") { r.status = "Waiting on approval"; err = savePart(key, dd) } }
+    }
     return err ? { error: "Couldn't save the submission on this device. " + err } : { task: t.id, name: t.name };
   }
   /* 2b-ii: the Project Director approves a task from the review queue. The task becomes Done, its submitted deliverable is
@@ -376,6 +382,46 @@
     }
     return err ? { error: "Couldn't save the approval on this device. " + err } : { task: t.id, name: t.name, started: started.map(n => ({ id: n.id, name: n.name, dept: n.dept })), deliverable: deliv };
   }
+  /* 2b-iii: the Project Director returns a task from the review queue with comments. The task goes back to "In progress",
+     its deliverable is marked Returned (on the task and in the department's own records) with the comments, the number of
+     returns is kept on the task, and an issue is logged in the Project Director's log; a task returned more than once is
+     flagged as a repeated return (higher severity). Nothing is sent to anyone. Returns { task, issue, returns } or { error }. */
+  function returnTask(project, taskId, comment) {
+    if (!ls) return { error: "This device doesn't allow saving." };
+    const S = readHq(); if (!S) return { error: "Open the CEO page once on this device first." };
+    const p = arr(S.projects).find(x => x.code === project); if (!p) return { error: "That project no longer exists." };
+    const t = arr(p.tasks).find(x => x.id === taskId); if (!t) return { error: "That task is no longer on " + project + "'s timeline." };
+    if (t.status === "Done") return { error: t.id + " is already approved." };
+    const c = String(comment || "").trim(); if (!c) return { error: "Say what must change before returning it." };
+    const at = today(), n = (parseInt(t.returns, 10) || 0) + 1, deliv = t.submission || null;
+    t.status = "In progress"; t.doneAt = undefined; t.returns = n;
+    if (deliv) { deliv.state = "Returned"; deliv.returned = at; deliv.comments = c; deliv.returns = n }
+    t.history = arr(t.history).concat([{ date: at, what: "Returned", title: deliv ? deliv.title || "" : "", version: deliv ? deliv.version || "" : "", note: c, by: "Project Director" }]).slice(-20);
+    S.issues = arr(S.issues);
+    const k = S.issues.reduce((mx, i) => Math.max(mx, parseInt(String(i && i.id || "").replace(/^\D+/, ""), 10) || 0), 0) + 1, id = "IS-" + String(k).padStart(3, "0");
+    const rep = n > 1, what = (rep ? "Repeated return (" + n + (n === 2 ? "nd" : n === 3 ? "rd" : "th") + " time): " : "Returned: ") + t.name + (deliv && deliv.title ? " · " + deliv.title + (deliv.version ? " v" + deliv.version : "") : "") + " — " + c;
+    S.issues.unshift({ id, date: at, project: p.code, dept: t.dept || (deliv && deliv.dept) || "—", what, type: rep ? "Repeated return" : "Error", sev: rep ? "Medium" : "Low", told: "—", decision: "—", status: "Open", task: t.id, returns: n });
+    if (deliv) deliv.issue = id;
+    if (p.status !== "Planning") p.status = "Active";
+    let err = writeHq(S);
+    if (!err && deliv && deliv.section && deliv.row != null) {
+      const key = "mawm-dept-" + String(deliv.id || "").split(":")[0];
+      if (SRC_KEYS.has(key)) {
+        const d = page(key), r = d && d.rows && arr(d.rows[deliv.section]).find(x => x && x._id === deliv.row);
+        if (r) { r.status = "Returned"; r.returned = { at, task: t.id, comments: c, returns: n, issue: id }; err = savePart(key, d) }
+      }
+    }
+    return err ? { error: "Couldn't save the return on this device. " + err } : { task: t.id, name: t.name, issue: id, returns: n, repeated: rep };
+  }
+  /* 2b-iii: a department's tasks that came back from the Project Director and are not resubmitted yet, newest first */
+  function returnedFor(dept) {
+    const S = readHq(), out = []; if (!S) return out;
+    arr(S.projects).forEach(p => arr(p.tasks).forEach(t => {
+      const s = t && t.submission; if (!t || t.dept !== dept || t.status !== "In progress" || !s || s.state !== "Returned") return;
+      out.push({ project: p.code, projectName: p.name || "", task: t.id, taskName: t.name, title: s.title || s.kind || "Deliverable", kind: s.kind || "", version: s.version || "", returned: s.returned, comments: s.comments || "", returns: s.returns || t.returns || 1, issue: s.issue || "", link: LINK[s.kind] || "", due: t.due });
+    }));
+    return out.sort((a, b) => a.returned < b.returned ? 1 : a.returned > b.returned ? -1 : 0);
+  }
   /* 2b-ii: approved deliverables a department works from: for each project where it still has open work, what the other
      departments delivered and the Project Director approved on earlier tasks, newest first */
   function inputsFor(dept) {
@@ -398,6 +444,6 @@
     const set = Storage.prototype.setItem;
     if (!set.__mawm) { const w = function (k, v) { if (this === ls && SRC_KEYS.has(k)) { const d = parse(v); if (d) savePart(k, d); return } set.call(this, k, v) }; w.__mawm = true; Storage.prototype.setItem = w }
   } catch (e) { }
-  g.MAWM_DATA = { KEY, BACKUP, VERSION, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, projects, studio, saveStudio, studioFor, STUDIO, submit, reviewTask, approve, inputsFor, LINK, HQ, page, savePart, retired: () => { const m = load(); return m && m.meta.retired || null }, sig, raw, error: () => lastError, today };
+  g.MAWM_DATA = { KEY, BACKUP, VERSION, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, projects, studio, saveStudio, studioFor, STUDIO, submit, reviewTask, approve, returnTask, returnedFor, inputsFor, LINK, HQ, page, savePart, retired: () => { const m = load(); return m && m.meta.retired || null }, sig, raw, error: () => lastError, today };
   migrate("load");
 })(typeof window !== "undefined" ? window : globalThis);
