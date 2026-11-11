@@ -15,7 +15,7 @@ const ROUTES = ["#/home", "#/ceo/home",
   "#/director/timeline", "#/director/review", "#/director/lessons",
   "#/research/overview", "#/research/briefs", "#/research/questions", "#/research/documents", "#/research/documents/none", "#/research/booklet", "#/research/evidence", "#/research/persontasks",
   "#/copy/overview", "#/copy/copymaps", "#/copy/claims", "#/copy/images", "#/copy/swipe",
-  "#/uiux/research", "#/uiux/concepts", "#/uiux/studio", "#/uiux/library", "#/uiux/theme",
+  "#/uiux/research", "#/uiux/concepts", "#/uiux/studio", "#/uiux/library", "#/uiux/review", "#/uiux/theme",
   "#/graphic/overview", "#/graphic/carousel", "#/graphic/images", "#/graphic/aiimages", "#/graphic/assets",
   "#/shopify/overview", "#/shopify/builds", "#/shopify/builds/none", "#/shopify/qa", "#/shopify/backups", "#/shopify/handover"];
 (async () => {
@@ -197,11 +197,63 @@ const ROUTES = ["#/home", "#/ceo/home",
       await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300); await page.evaluate(() => document.getElementById("frame").contentWindow.document.querySelector("#returned").scrollIntoView()); await page.screenshot({ path: path.join(ROOT, "tests", "shots", "2b-returned-phone.png") });
       await page.evaluate(() => document.getElementById("frame").contentWindow.MAWM_DATA.submit({ dept: "Graphic Designer", project: "SM-2B", deliv: { id: "graphic:images:smoke4", kind: "Image set", title: "Smoke return set", section: "images", row: "smoke4" } }));
       await page.goto(base + "index.html#/director/review"); await page.waitForTimeout(1200); await page.evaluate(() => { const c = [...document.getElementById("frame").contentWindow.document.querySelectorAll("[data-tid]")].find(x => /Smoke return set/.test(x.textContent)); if (c) c.scrollIntoView() }); await page.screenshot({ path: path.join(ROOT, "tests", "shots", "2b-review-phone.png") }); await page.setViewportSize({ width: 1280, height: 720 }); }
+    // 2b-iv: the Design Studio submits a wireframe, a page design and a QA report into the same flow, with its rulebook checks
+    await page.goto(base + "index.html#/uiux/review"); await page.waitForTimeout(1500);
+    const st4 = await page.evaluate(async () => { const W = document.getElementById("frame").contentWindow, D = W.MAWM_DATA, wait = ms => new Promise(r => setTimeout(r, ms));
+      try {
+        const S = D.readHq(), base = S.projects.find(p => p.code === "FL-COL"), tasks = JSON.parse(JSON.stringify(base.tasks)).map((x, i) => Object.assign(x, { id: "SM-2C-" + String(i + 1).padStart(2, "0"), status: i < 1 ? "Done" : i === 1 ? "In progress" : "Not started", submission: undefined, returns: undefined }));
+        S.projects.push({ code: "SM-2C", name: "Smoke 2c", status: "Active", tasks }); D.writeHq(S);
+        if (!D.studio()) { const d0 = W.document; (d0.querySelector("#themesw button.on") || d0.querySelector('#themesw [data-t="system"]')).click(); } /* a fresh device: the Studio saves its starting work */
+        const st = D.studio(); st.concepts.unshift({ id: "smc1", name: "Smoke wireframe", page: "Product page", metric: "Conversion rate", hyp: "If…", stage: "Wireframe", refs: "", project: "SM-2C", updated: "2026-11-11" });
+        st.items.unshift({ id: "smi1", name: "Smoke design", type: "Section", cat: "FAQ", status: "Draft", file: "sections/fl-smoke.liquid", code: "<p>x</p>", ctype: "auto", version: 2, project: "SM-2C", updated: "2026-11-11" }); D.saveStudio(st);
+        W.location.reload(); await wait(1500); const W2 = document.getElementById("frame").contentWindow, d = W2.document, D2 = W2.MAWM_DATA;
+        const btn = () => d.querySelector('[data-rvsub="wire:smc1"]'); if (!btn()) return "no Submit for the wireframe";
+        if (!btn().disabled) return "Submit allowed before the rulebook checks";
+        for (let i = 0; i < 4; i++) { d.querySelector(`[data-rvc="wire:smc1:${i}"]`).click(); await wait(60) }
+        if (btn().disabled) return "Submit still disabled after every check";
+        d.querySelector('[data-rvnote="wire:smc1"]').value = "Smoke wire note"; btn().click(); await wait(200);
+        let t = D2.readHq().projects.find(p => p.code === "SM-2C").tasks[1];
+        if (t.status !== "Waiting on approval" || !t.submission || t.submission.id !== "uiux:concepts:smc1" || t.submission.note !== "Smoke wire note") return "wireframe task not waiting with the submission";
+        if (!/With the Project Director/.test(d.querySelector('[data-rvrow="wire:smc1"]').textContent)) return "Studio doesn't show it with the Project Director";
+        const r1 = D2.returnTask("SM-2C", t.id, "Add the FAQ section"); if (r1.error) return "return failed: " + r1.error; await wait(300);
+        W2.dispatchEvent(new W2.StorageEvent("storage", { key: D2.KEY })); await wait(200);
+        if (!/Returned/.test(d.querySelector('[data-rvrow="wire:smc1"]').textContent) || !/Add the FAQ section/.test((d.querySelector("#rvReturned") || {}).textContent || "")) return "Studio doesn't show the return with comments";
+        d.querySelector('[data-rvsub="wire:smc1"]').click(); await wait(200);
+        const a1 = D2.approve("SM-2C", t.id); if (a1.error) return "approve failed: " + a1.error;
+        if (!D2.inputsFor("Copywriter").some(i => i.title === "Smoke wireframe · wireframe")) return "Copywriter doesn't get the approved wireframe";
+        // page design: the Code Studio item goes to the Page design task (once it's open) and becomes Design review
+        const S2 = D2.readHq(); S2.projects.find(p => p.code === "SM-2C").tasks[3].status = "In progress"; D2.writeHq(S2);
+        W2.dispatchEvent(new W2.StorageEvent("storage", { key: D2.KEY })); await wait(200);
+        for (let i = 0; i < 5; i++) { d.querySelector(`[data-rvc="design:smi1:${i}"]`).click(); await wait(60) }
+        d.querySelector('[data-rvsub="design:smi1"]').click(); await wait(200);
+        t = D2.readHq().projects.find(p => p.code === "SM-2C").tasks[3]; if (t.status !== "Waiting on approval" || t.submission.kind !== "Code Studio item" || t.submission.version !== "2") return "page design not submitted to " + t.name;
+        if (D2.studio().items.find(i => i.id === "smi1").status !== "Design review") return "design not marked Design review";
+        // QA report: started from the form, a failed check logs an issue, then submitted to the QA task
+        d.querySelector("#addQa").click(); await wait(100); const sel = d.querySelector("#qf-project"); sel.value = "SM-2C"; sel.dispatchEvent(new W2.Event("change")); d.querySelector("#qf-item").value = "smi1"; d.querySelector("#qfSave").click(); await wait(200);
+        const q = D2.studio().qa.find(x => x.project === "SM-2C"); if (!q || q.item !== "smi1") return "QA report not saved";
+        const ta = d.querySelector(`[data-rvn="${q.id}"]`); ta.value = "Cart drawer broke on Android"; ta.dispatchEvent(new W2.Event("change", { bubbles: true })); await wait(60);
+        d.querySelector(`[data-rvlog="${q.id}"]`).click(); await wait(200);
+        const iss = D2.readHq().issues.find(i => /QA failed: Smoke design — Cart drawer broke/.test(i.what)); if (!iss || iss.dept !== "UI/UX Designer") return "failed QA check not logged";
+        const S3 = D2.readHq(); S3.projects.find(p => p.code === "SM-2C").tasks.find(x => /^QA/.test(x.name)).status = "In progress"; D2.writeHq(S3);
+        W2.dispatchEvent(new W2.StorageEvent("storage", { key: D2.KEY })); await wait(200);
+        for (let i = 0; i < 5; i++) { d.querySelector(`[data-rvc="qa:${q.id}:${i}"]`).click(); await wait(60) }
+        d.querySelector(`[data-rvsub="qa:${q.id}"]`).click(); await wait(200);
+        t = D2.readHq().projects.find(p => p.code === "SM-2C").tasks.find(x => /^QA/.test(x.name)); if (t.status !== "Waiting on approval" || t.submission.kind !== "QA report") return "QA report not submitted to the QA task";
+        if (!D2.load().deliverables.some(x => x.id === "uiux:qa:" + q.id && x.kind === "QA report")) return "QA report not in the model's deliverables";
+        return "ok";
+      } catch (e) { return "error: " + e.message } });
+    if (st4 !== "ok") errors.push("deliverables flow: Design Studio submits: " + st4);
+    if (shots) { await page.goto(base + "index.html#/uiux/review"); await page.waitForTimeout(1500); await page.evaluate(() => { const d = document.getElementById("frame").contentWindow.document, s = d.querySelector("#rproj"); s.value = "SM-2C"; s.dispatchEvent(new Event("change")) }); await page.waitForTimeout(300);
+      await page.screenshot({ path: path.join(ROOT, "tests", "shots", "2b-studio-review-desktop.png"), fullPage: true });
+      await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(400); await page.screenshot({ path: path.join(ROOT, "tests", "shots", "2b-studio-review-phone.png"), fullPage: true }); await page.setViewportSize({ width: 1280, height: 720 });
+      await page.goto(base + "index.html#/director/review"); await page.waitForTimeout(1200); await page.evaluate(() => { const c = [...document.getElementById("frame").contentWindow.document.querySelectorAll("[data-tid]")].find(x => /QA report/.test(x.textContent)); if (c) c.scrollIntoView() }); await page.screenshot({ path: path.join(ROOT, "tests", "shots", "2b-review-qa-desktop.png") }); }
+    await page.evaluate(() => { const D = document.getElementById("frame").contentWindow.MAWM_DATA, S = D.readHq(); S.projects = S.projects.filter(p => p.code !== "SM-2C"); S.issues = S.issues.filter(i => !/Smoke design|Smoke wireframe/.test(i.what)); D.writeHq(S);
+      const st = D.studio(); if (!st) return; st.concepts = st.concepts.filter(c => c.id !== "smc1"); st.items = st.items.filter(i => i.id !== "smi1"); st.qa = (st.qa || []).filter(q => q.project !== "SM-2C"); D.saveStudio(st) });
     await page.evaluate(() => { const D = document.getElementById("frame").contentWindow.MAWM_DATA, c = D.page("mawm-dept-graphic"); c.rows.images = c.rows.images.filter(x => x._id !== "smoke4"); D.savePart("mawm-dept-graphic", c) });
     await page.evaluate(() => { const D = document.getElementById("frame").contentWindow.MAWM_DATA, S = D.readHq(); S.projects = S.projects.filter(p => p.code !== "SM-2B"); D.writeHq(S) });
     if (!errors.some(e => /deliverables flow/.test(e))) await page.evaluate(() => { const D = document.getElementById("frame").contentWindow.MAWM_DATA, S = D.readHq(); S.projects.forEach(p => p.tasks.forEach(t => { if (t.submission && t.submission.id === "graphic:images:smoke3") { delete t.submission; delete t.doneAt; t.history = []; t.status = "Waiting on a person" } })); D.writeHq(S);
       const c = D.page("mawm-dept-graphic"); c.rows.images = c.rows.images.filter(x => x._id !== "smoke3"); D.savePart("mawm-dept-graphic", c) });
-    console.log("OK: data model " + JSON.stringify(r.counts) + ", CEO page reads it back (" + rt.projects + " projects, " + rt.tasks + " tasks), decision recorded, department logs and saves through it, Design Studio links work to projects, old keys retired (never written; an older page's write is taken in), a submitted deliverable waits in the review queue, approving it starts the next tasks and hands it on, returning it sends it back with comments and logs an issue (repeats flagged)");
+    console.log("OK: data model " + JSON.stringify(r.counts) + ", CEO page reads it back (" + rt.projects + " projects, " + rt.tasks + " tasks), decision recorded, department logs and saves through it, Design Studio links work to projects, old keys retired (never written; an older page's write is taken in), a submitted deliverable waits in the review queue, approving it starts the next tasks and hands it on, returning it sends it back with comments and logs an issue (repeats flagged), the Design Studio submits wireframes, page designs and QA reports");
     await page.close();
   }
   await browser.close(); server.close();

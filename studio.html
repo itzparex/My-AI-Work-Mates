@@ -68,6 +68,7 @@ h2{font-family:var(--f-display);font-weight:700;font-size:18px;margin:0}
 .btn.ghost{border-color:transparent;background:transparent}
 .btn.sm{padding:5px 10px;font-size:12px;border-radius:8px}
 .btn.danger{color:var(--bad)}
+.btn:disabled,.btn.primary:disabled{background:var(--sunk);border-color:var(--line);color:var(--muted);cursor:not-allowed;filter:none}
 .pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}
 .pill.draft{background:var(--warn-soft);color:var(--warn)}
 .pill.review{background:var(--blush-soft);color:var(--blush)}
@@ -241,6 +242,22 @@ pre.code{background:var(--code-bg);color:var(--code-ink);font-family:var(--f-mon
 @media (max-width:980px){.tl{grid-template-columns:1fr}.tl-list{max-height:none}}
 /* add forms inline */
 .addbox{background:var(--surface);border:1px solid var(--accent);border-radius:var(--r);padding:14px;margin-bottom:14px}
+/* 2b-iv: submit for review */
+.rvh{font-family:var(--f-display);font-size:18px;margin:22px 0 8px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}.rvh small{font-family:var(--f-body);font-size:12.5px;font-weight:500;color:var(--muted)}
+.rvlist{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:2px 16px}
+.rvrow{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1.5fr);gap:8px 16px;align-items:start;padding:14px 0;border-top:1px solid var(--line)}
+.rvrow:first-child{border-top:0}.rvrow .sm{font-size:12.5px;color:var(--muted)}.rvrow b{font-size:14px}
+.rvrow .retc{display:block;margin-top:4px;font-size:13px;line-height:1.4}
+.rvact{display:flex;flex-direction:column;gap:8px;min-width:0}
+.rvact details{border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:var(--bg)}
+.rvact summary{cursor:pointer;font-weight:700;font-size:13px}.rvact summary .ok{color:var(--good)}.rvact summary .no{color:var(--warn)}
+.rvact label{display:flex;gap:8px;align-items:flex-start;font-size:13px;padding:5px 0;line-height:1.35}.rvact label input{width:16px;height:16px;margin-top:1px;accent-color:var(--accent);flex:none}
+.rvsend{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.rvsend input,.rvact textarea{flex:1;min-width:140px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:7px 10px;color:var(--ink);font:inherit;font-size:13px}
+.rvact textarea{width:100%;resize:vertical}
+.rvmsg{font-size:12.5px;margin:0}.rvmsg.bad{color:var(--bad)}.rvmsg.good{color:var(--good)}
+.pill.back{background:var(--blush-soft);color:var(--bad)}
+.rvback{border-color:var(--bad);margin-bottom:6px}
+@media (max-width:860px){.rvrow{grid-template-columns:1fr}}
 @media (max-width:1100px){.studio{grid-template-columns:1fr}.form{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:860px){
   .app{grid-template-columns:1fr}
@@ -269,6 +286,7 @@ pre.code{background:var(--code-bg);color:var(--code-ink);font-family:var(--f-mon
         <button data-view="concepts"><span class="step">2</span>Concepts<span class="count" id="c-concepts"></span></button>
         <button data-view="studio"><span class="step">3</span>Code Studio</button>
         <button data-view="library"><span class="step">4</span>Library<span class="count" id="c-library"></span></button>
+        <button data-view="review"><span class="step">5</span>Submit for review<span class="count" id="c-review"></span></button>
         <div class="navlabel" style="margin-top:14px">Store theme</div>
         <button data-view="theme"><span class="step">◆</span>Theme library<span class="count" id="c-theme"></span></button>
       </nav>
@@ -410,6 +428,27 @@ pre.code{background:var(--code-bg);color:var(--code-ink);font-family:var(--f-mon
         <label class="toggle" for="lreuse"><input type="checkbox" id="lreuse">Reusable only</label>
       </div>
       <div class="grid" id="libGrid"></div>
+    </section>
+
+    <!-- SUBMIT FOR REVIEW (2b-iv) -->
+    <section class="view" id="v-review" hidden>
+      <div class="top">
+        <div><div class="eyebrow">Step 5 · Hand-off</div><h1>Submit for review</h1><p class="sub">Send a wireframe, a page design or a QA report to the Project Director. It's attached to its task on the project's timeline, which turns "Waiting on approval" in the review queue. Nothing is sent to anyone.</p></div>
+        <button class="btn primary" id="addQa">+ New QA report</button>
+      </div>
+      <div class="addbox" id="qaForm" hidden>
+        <div class="form">
+          <div class="field"><label for="qf-project">Project</label><select id="qf-project"></select></div>
+          <div class="field wide"><label for="qf-item">Design being checked (Code Studio item)</label><select id="qf-item"></select></div>
+          <div class="field wide"><label for="qf-link">Duplicate theme preview link (from the Shopify Developer)</label><input id="qf-link" placeholder="https://…myshopify.com/?preview_theme_id=…"></div>
+        </div>
+        <div class="sheetfoot"><span class="example">QA is done by someone other than the builder: the designer checks the Shopify Developer's build.</span><div style="display:flex;gap:8px"><button class="btn ghost" id="qfCancel">Cancel</button><button class="btn primary" id="qfSave">Start QA report</button></div></div>
+      </div>
+      <div class="toolbar"><select id="rproj" aria-label="Filter by project"></select><span class="example" id="rprojNote"></span></div>
+      <div id="rvReturned"></div>
+      <h2 class="rvh">Wireframes <small>go to each project's Wireframe task</small></h2><div class="rvlist" id="rvWire"></div>
+      <h2 class="rvh">Page designs <small>go to the Page design in Code Studio task</small></h2><div class="rvlist" id="rvDesign"></div>
+      <h2 class="rvh">QA reports <small>go to the QA task, after the Shopify Developer's build</small></h2><div class="rvlist" id="rvQa"></div>
     </section>
   </main>
 </div>
@@ -649,7 +688,7 @@ $("#themesw").addEventListener("click",e=>{const b=e.target.closest("button");if
 applyTheme();
 /* ---------- navigation ---------- */
 function go(v){view=v;try{if(parent!==window)parent.postMessage({flView:v},location.origin)}catch(e){};$$(".view").forEach(s=>s.hidden=s.id!=="v-"+v);$$("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.view===v));renderPipeline();
- if(v==="library")renderLib();if(v==="theme")renderTheme();if(v==="studio"){refresh();if(S.kit.status==="new")openSetup(0)}window.scrollTo({top:0})}
+ if(v==="library")renderLib();if(v==="theme")renderTheme();if(v==="review")renderReview();if(v==="studio"){refresh();if(S.kit.status==="new")openSetup(0)}window.scrollTo({top:0})}
 $("#nav").addEventListener("click",e=>{const b=e.target.closest("button");if(b)go(b.dataset.view)});
 document.addEventListener("click",e=>{const g=e.target.closest("[data-go]");if(g){if(g.dataset.go==="studio")blank();go(g.dataset.go)}});
 
@@ -658,7 +697,7 @@ function renderPipeline(){
  const appr=S.items.filter(i=>i.status==="Approved").length;
  const data=[["research",S.refs.length,"References","Sites studied"],["concepts",inProg,"Concepts in play",S.concepts.filter(c=>c.stage==="Review").length+" waiting on review"],["studio",S.items.filter(i=>i.status==="Draft").length,"Drafts in studio","Open and keep building"],["library",S.items.length,"Saved designs",appr+" approved · "+S.items.filter(i=>i.reusable).length+" reusable"]];
  $("#pipeline").innerHTML=data.map(d=>`<button class="stage ${d[0]===view?"on":""}" data-p="${d[0]}"><span class="n">${d[1]}</span><span class="l">${d[2]}</span><span class="d">${esc(d[3])}</span></button>`).join("");
- renderInputs();$("#c-research").textContent=S.refs.length;$("#c-concepts").textContent=inProg;$("#c-library").textContent=S.items.length;
+ renderInputs();try{const n=window.MAWM_DATA&&MAWM_DATA.returnedFor?MAWM_DATA.returnedFor("UI/UX Designer").length:0;$("#c-review").textContent=n||""}catch(e){}$("#c-research").textContent=S.refs.length;$("#c-concepts").textContent=inProg;$("#c-library").textContent=S.items.length;
 }
 /* 2b-ii: deliverables other departments handed on and the Project Director approved, for the UI/UX Designer's open tasks */
 function renderInputs(){const el=$("#inputs");let l=[];try{l=window.MAWM_DATA&&MAWM_DATA.inputsFor?MAWM_DATA.inputsFor("UI/UX Designer"):[]}catch(e){l=[]}
@@ -919,6 +958,81 @@ function drawer(id){const i=S.items.find(x=>x.id===id);if(!i)return;
   $("#dNo").onclick=()=>$("#dConfirm").innerHTML="";$("#dYes").onclick=()=>{S.items=S.items.filter(x=>x.id!==i.id);persist();closeDrawer();renderLib();renderPipeline();toast("Deleted")}};
 }
 function closeDrawer(){$("#drawerRoot").innerHTML=""}
+
+/* ---------- 2b-iv: submit for review ----------
+   The UI/UX Designer sends a wireframe (a concept past Ideas), a page design (a Code Studio item) or a QA report on the
+   Shopify Developer's build into the same review flow as the departments (MAWM_DATA.submit): it is attached to the project's
+   Wireframe, Page design or QA task, which turns "Waiting on approval" in the Project Director's review queue. The state shown
+   here (with the Project Director, approved, returned with comments) is read from that task, so nothing is copied. Each kind
+   carries its rulebook checks, which must all be ticked before it can be submitted. Nothing is sent to anyone. */
+const DEPT="UI/UX Designer";
+const RV={
+ wire:{kind:"Design concept",sec:"concepts",checks:["Sections in order, top to bottom, with the job of each (hook, proof, offer, guarantee, FAQ).","Rough room for text per field at mobile width (for example: heading up to 45 characters, description up to 220).","Which existing library components can be reused, and which are new.","Built as a rough version in Code Studio or a simple sketch; no colors or final images needed."]},
+ design:{kind:"Code Studio item",sec:"items",checks:["Code type set to Shopify section (or theme block / snippet).","\"Needs from you\" list reviewed; anything left open is in the setup notes.","Preview checked at mobile, tablet and desktop with at least two presets.","Uses the Copywriter's final copy exactly; no text changed by the designer.","Contrast, tap sizes, focus outlines and alt text pass."]},
+ qa:{kind:"QA report",sec:"qa",checks:["Checked on a real iPhone and Android phone, plus Chrome and Safari on desktop.","Every link and button goes to the right place; nothing shows \"Link not set\".","Copy matches the Copywriter's final version word for word.","The rest of the page and store still work: cart, variant picker, other sections, apps.","No console errors; page speed within budget compared with the current live page."]}};
+let rvProj="*";
+if(!Array.isArray(S.qa))S.qa=[];
+const rvList=k=>k==="wire"?S.concepts.filter(c=>c.stage!=="Ideas"):k==="design"?S.items:S.qa;
+const rvFind=(k,id)=>rvList(k).find(r=>r.id===id);
+const itemName=id=>{const i=S.items.find(x=>x.id===id);return i?i.name:""};
+const rvId=(k,r)=>"uiux:"+RV[k].sec+":"+r.id;
+const rvTitle=(k,r)=>k==="wire"?r.name+" · wireframe":k==="design"?r.name:"QA report · "+(itemName(r.item)||"build")+" v"+(r.version||1);
+const rvTask=(k,r)=>{try{return r.project&&window.MAWM_DATA&&MAWM_DATA.reviewTask?MAWM_DATA.reviewTask(r.project,DEPT,RV[k].kind):null}catch(e){return null}};
+const rvChecks=(k,r)=>RV[k].checks.map((_,i)=>!!(Array.isArray(r.rvChecks)&&r.rvChecks[i]));
+function rvRow(k,r){const t=rvTask(k,r),id=rvId(k,r),mine=!!(t&&t.submission&&t.submission.id===id),ch=rvChecks(k,r),done=ch.filter(Boolean).length,all=done===ch.length,key=k+":"+r.id;let st="",can=false;
+ if(!r.project)st=`<span class="pill draft">No project</span><br><span class="sm">Link it to a project first${k==="wire"?" (menu on its Concept board card)":k==="design"?" (in its Library details)":""}.</span>`;
+ else if(!projKnown(r.project))st=`<span class="pill draft">Project not found</span><br><span class="sm">${esc(r.project)} isn't in the Project Director's projects.</span>`;
+ else if(!t)st=`<span class="pill">No task</span><br><span class="sm">${esc(r.project)}'s timeline has no UI/UX Designer task for this.</span>`;
+ else if(t.status==="Done")st=mine?`<span class="pill approved">Approved</span><br><span class="sm">${t.submission.approved?esc(t.submission.approved)+" · ":""}${esc(t.id)} is done</span>`:`<span class="pill approved">Done</span><br><span class="sm">${esc(t.id)} is already approved</span>`;
+ else if(t.status==="Waiting on approval"&&mine)st=`<span class="pill review">With the Project Director</span><br><span class="sm">Submitted ${esc(t.submission.at)}${t.submission.note?" · “"+esc(t.submission.note)+"”":""}</span>`;
+ else{can=true;const back=mine&&t.submission.state==="Returned";
+  st=back?`<span class="pill back">Returned${t.submission.returns>1?" ×"+t.submission.returns:""}</span> <span class="sm">${esc(t.submission.returned||"")}</span><span class="retc">“${esc(t.submission.comments||"")}”</span><span class="sm">Fix it, then submit the new version</span>`:t.status==="Waiting on approval"?`<span class="pill review">Task waiting on another version</span><br><span class="sm">Submitting replaces it</span>`:`<span class="pill">${esc(t.status)}</span><br><span class="sm">Task due ${esc(t.due||"—")}</span>`}
+ const checks=`<details ${can&&!all?"open":""}><summary>Rulebook checks <span class="${all?"ok":"no"}">${done}/${ch.length}</span></summary>${RV[k].checks.map((c,i)=>`<label><input type="checkbox" data-rvc="${key}:${i}" ${ch[i]?"checked":""}>${esc(c)}</label>`).join("")}</details>`;
+ const notes=k==="qa"?`<textarea rows="2" data-rvn="${esc(r.id)}" aria-label="QA notes" placeholder="What was checked, and anything that failed">${esc(r.notes||"")}</textarea>`:"";
+ const send=can?`<div class="rvsend"><input data-rvnote="${key}" placeholder="Note for the Project Director (optional)" aria-label="Note for the Project Director"><button class="btn sm primary" data-rvsub="${key}" ${all?"":`disabled title="Tick every rulebook check first"`}>Submit</button></div>${all?"":`<p class="rvmsg sm">Tick every rulebook check before submitting.</p>`}`:"";
+ const more=k==="qa"?`<div class="rvsend">${r.link?`<a class="btn sm" href="${esc(r.link)}" target="_blank" rel="noopener">Preview ↗</a>`:""}<button class="btn sm" data-rvlog="${esc(r.id)}">Log a failed check</button><button class="btn sm danger" data-rvdel="${esc(r.id)}">Delete</button></div>`:`<div class="rvsend"><button class="btn sm" data-rvopen="${key}">${k==="wire"?"Open on the board":"Open in the Library"}</button></div>`;
+ const sub=k==="wire"?`${esc(r.page||"")} · ${esc(r.stage)} · ${esc(r.metric||"")}`:k==="design"?`${esc(r.file||"no file name")} · v${esc(r.version)} · ${esc(r.status)}`:`Started ${esc(r.date||"")}${r.issues&&r.issues.length?" · logged "+r.issues.map(esc).join(", "):""}`;
+ return `<div class="rvrow" data-rvrow="${key}"><div><b>${esc(rvTitle(k,r))}</b><br><span class="sm">${sub}</span><div class="meta" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${projPill(r.project)}${t?`<span class="pill">→ ${esc(t.id)} ${esc(t.name)}</span>`:""}</div></div><div>${st}</div><div class="rvact">${checks}${notes}${send}${more}<p class="rvmsg" data-rvmsg="${key}" role="status" hidden></p></div></div>`}
+function renderReview(){if(!Array.isArray(S.qa))S.qa=[];
+ const every=[...rvList("wire"),...S.items,...S.qa];$("#rproj").innerHTML=filterOpts(rvProj,every);$("#rproj").value=rvProj;
+ /* under "All projects", shared work (no project) is left out: it can't be submitted until it is linked to a project */
+ const f=r=>rvProj==="*"?!!r.project:(r.project||"")===rvProj;
+ const shared=[...rvList("wire"),...S.items].filter(r=>!r.project).length;
+ $("#rprojNote").textContent=!projList().length?"No projects yet: add one on the Project Director page first.":rvProj==="*"&&shared?shared+" shared concept"+(shared>1?"s and designs aren't":" or design isn't")+" linked to a project, so not listed. Link one to submit it.":"";
+ const empty={wire:"No wireframes for "+(rvProj==="*"?"any project":"this filter")+" yet. Start one from a concept on the Concept board.",design:"No page designs here yet. Save a design in Code Studio with its project.",qa:"No QA reports yet. Start one after the Shopify Developer's build is on a duplicate theme."};
+ [["wire","#rvWire"],["design","#rvDesign"],["qa","#rvQa"]].forEach(([k,sel])=>{const l=rvList(k).filter(f);$(sel).innerHTML=l.length?l.map(r=>rvRow(k,r)).join(""):`<div class="empty" style="border:0;padding:22px 8px">${esc(empty[k])}</div>`});
+ let back=[];try{back=window.MAWM_DATA&&MAWM_DATA.returnedFor?MAWM_DATA.returnedFor(DEPT):[]}catch(e){back=[]}
+ $("#rvReturned").innerHTML=back.length?`<h2 class="rvh" id="returned">Returned with comments <span class="pill back">${back.length}</span><small>the Project Director sent these back; each return is in the issues log</small></h2><div class="rvlist rvback">${back.map(i=>`<div class="rvrow"><div><b>${esc(i.title)}</b><br><span class="sm">${esc(i.kind)}${i.version?" · v"+esc(i.version):""} · ${esc(i.project)} → ${esc(i.task)} ${esc(i.taskName)}</span></div><div><span class="pill back">Returned ${esc(i.returned||"")}</span>${i.returns>1?` <span class="pill draft">${i.returns} times</span>`:""}<span class="retc">“${esc(i.comments||"See the issues log")}”</span></div><div class="sm">${i.issue?"Logged as "+esc(i.issue)+" · ":""}task due ${esc(i.due||"—")}. Make every change asked for, then submit the new version below.</div></div>`).join("")}</div>`:"";
+ $("#c-review").textContent=back.length||"";
+}
+function rvMsg(key,txt,ok){const m=document.querySelector(`[data-rvmsg="${key}"]`);if(!m){toast(txt);return}m.hidden=false;m.className="rvmsg "+(ok?"good":"bad");m.textContent=txt}
+$("#rproj").onchange=e=>{rvProj=e.target.value;renderReview()};
+$("#v-review").addEventListener("change",e=>{const c=e.target.closest("[data-rvc]");if(c){const [k,id,i]=c.dataset.rvc.split(":"),r=rvFind(k,id);if(!r)return;const a=rvChecks(k,r);a[+i]=c.checked;r.rvChecks=a;persist();renderReview();const d=document.querySelector(`[data-rvrow="${k}:${id}"] details`);if(d)d.open=true;return}
+ const n=e.target.closest("[data-rvn]");if(n){const q=S.qa.find(x=>x.id===n.dataset.rvn);if(q){q.notes=n.value;persist()}}});
+$("#v-review").addEventListener("click",e=>{
+ const s=e.target.closest("[data-rvsub]");if(s){const key=s.dataset.rvsub,[k,id]=key.split(":"),r=rvFind(k,id);if(!r)return;
+  if(!rvChecks(k,r).every(Boolean)){rvMsg(key,"Tick every rulebook check first.");return}
+  if(!window.MAWM_DATA||!MAWM_DATA.submit){rvMsg(key,"The shared data couldn't load on this device, so nothing was submitted.");return}
+  const note=(document.querySelector(`[data-rvnote="${key}"]`)||{}).value||"";
+  const res=MAWM_DATA.submit({dept:DEPT,project:r.project,deliv:{id:rvId(k,r),kind:RV[k].kind,title:rvTitle(k,r),version:k==="design"?String(r.version||""):k==="qa"?String(r.version||1):""},note});
+  if(res.error){rvMsg(key,res.error);return}
+  r.submitted={at:today(),task:res.task};if(k==="design"&&r.status==="Draft")r.status="Design review";if(k==="wire"&&r.stage==="Wireframe")r.updated=today();
+  persist();renderReview();renderPipeline();rvMsg(key,"Submitted to "+res.task+" ("+res.name+"). It's waiting in the Project Director's review queue.",true);return}
+ const l=e.target.closest("[data-rvlog]");if(l){const q=S.qa.find(x=>x.id===l.dataset.rvlog);if(!q)return;const key="qa:"+q.id,n=String(q.notes||"").trim();
+  if(!n){rvMsg(key,"Write what failed in the QA notes first.");return}
+  if(!window.MAWM_DATA||!MAWM_DATA.report){rvMsg(key,"The shared data couldn't load on this device, so nothing was logged.");return}
+  const t=rvTask("qa",q),res=MAWM_DATA.report({dept:DEPT,project:q.project||"—",issue:{what:"QA failed: "+(itemName(q.item)||"build")+" — "+n,type:"QA fail",sev:"Medium",task:t?t.id:undefined}});
+  if(res.error){rvMsg(key,res.error);return}q.issues=(q.issues||[]).concat([res.id]);persist();renderReview();rvMsg(key,"Logged with the Project Director as "+res.id+". Fixes go back to whoever owns them; check again on the next build.",true);return}
+ const d=e.target.closest("[data-rvdel]");if(d){if(d.dataset.sure!=="1"){d.dataset.sure="1";d.textContent="Delete for good?";return}S.qa=S.qa.filter(x=>x.id!==d.dataset.rvdel);persist();renderReview();toast("QA report deleted");return}
+ const o=e.target.closest("[data-rvopen]");if(o){const [k,id]=o.dataset.rvopen.split(":");if(k==="wire"){const c=rvFind(k,id);boardProj=c&&c.project?c.project:"*";go("concepts")}else{go("library");drawer(id)}}});
+function qaItems(){const p=$("#qf-project").value,l=S.items.filter(i=>i.project===p).concat(S.items.filter(i=>!i.project));
+ $("#qf-item").innerHTML=l.length?l.map(i=>`<option value="${esc(i.id)}">${esc(i.name)}${i.project?"":" (shared)"} · v${esc(i.version)} · ${esc(i.status)}</option>`).join(""):'<option value="">No designs saved yet</option>'}
+$("#addQa").onclick=()=>{$("#qf-project").innerHTML=projOpts(rvProj!=="*"?rvProj:"","Pick a project");qaItems();$("#qaForm").hidden=false;$("#qf-project").focus()};
+$("#qf-project").onchange=qaItems;
+$("#qfCancel").onclick=()=>$("#qaForm").hidden=true;
+$("#qfSave").onclick=()=>{const p=$("#qf-project").value;if(!p){toast("Pick the project this QA is for");return}
+ S.qa.unshift({id:uid(),project:p,item:$("#qf-item").value,link:$("#qf-link").value.trim(),rvChecks:[],notes:"",issues:[],date:today(),version:S.qa.filter(q=>q.project===p).length+1});
+ persist();$("#qaForm").hidden=true;$("#qf-link").value="";if(rvProj!=="*"&&rvProj!==p)rvProj=p;renderReview();toast("QA report started")};
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDrawer()});
 
 /* ---------- theme library ---------- */
@@ -1002,10 +1116,10 @@ let tt;function toast(m){const el=$("#toast");el.textContent=m;el.hidden=false;c
 
 blank();$("#code").value=STARTERS["Facelove guarantee (Shopify section)"];$("#ctype").value="section";$("#s-name").value="Facelove guarantee";$("#s-type").value="Section";$("#s-cat").value="Guarantee & Trust";$("#s-file").value="sections/fl-guarantee.liquid";
 renderRefs();renderBoard();drawMatch();$("#c-theme").textContent=thItems().length;
-const VIEWS=["research","concepts","studio","library","theme"];const startView=()=>{const h=location.hash.slice(1);return VIEWS.includes(h)?h:"studio"};
+const VIEWS=["research","concepts","studio","library","theme","review"];const startView=()=>{const h=location.hash.slice(1);return VIEWS.includes(h)?h:"studio"};
 go(startView());window.addEventListener("hashchange",()=>go(startView()));
 /* when the Project Director adds or renames a project in another tab, refresh the project lists */
-window.addEventListener("storage",e=>{if(window.MAWM_DATA&&e.key===MAWM_DATA.KEY){if(view==="concepts")renderBoard();if(view==="library")renderLib()}});
+window.addEventListener("storage",e=>{if(window.MAWM_DATA&&e.key===MAWM_DATA.KEY){if(view==="concepts")renderBoard();if(view==="library")renderLib();const a=document.activeElement;if(view==="review"&&!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))renderReview();else if(view!=="review")renderInputs()}});
 })();
 </script>
 <script>

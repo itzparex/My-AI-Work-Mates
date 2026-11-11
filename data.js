@@ -19,6 +19,8 @@
    "Waiting on approval" in the Project Director's review queue. Step 2b-ii: approving it (approve) marks the task Done and
    the deliverable Approved, starts the next task(s), and the next department sees it as an input (inputsFor). Step 2b-iii:
    returning it (returnTask) sends the task back to "In progress" with comments and logs an issue (returnedFor).
+   Step 2b-iv: the Design Studio submits too: a wireframe (concept), a page design (Code Studio item) and a QA report go to the
+   project's Wireframe, Page design and QA tasks the same way; its own records keep only the rulebook checks and QA notes.
    Used by hq.html, dept.html and studio.html as window.MAWM_DATA. No network, no accounts: everything stays on this device. */
 (function (g) {
   "use strict";
@@ -30,7 +32,7 @@
     ["mawm-dept-copy", "Copywriter", "copy maps"],
     ["mawm-dept-graphic", "Graphic Designer", "image sets"],
     ["mawm-dept-shopify", "Shopify Developer", "builds, theme backups"],
-    ["facelove-studio-v2", "UI/UX Designer", "concepts, Code Studio items"]
+    ["facelove-studio-v2", "UI/UX Designer", "concepts, Code Studio items, QA reports"]
   ];
   const SRC_KEYS = new Set(SOURCES.map(s => s[0]));
   const TASK_STATUSES = ["Not started", "In progress", "Waiting on approval", "Waiting on a person", "Done", "Blocked"];
@@ -107,6 +109,7 @@
     const st = src["facelove-studio-v2"] || {};
     arr(st.concepts).filter(c => c && c.stage !== "Ideas").forEach(c => m.deliverables.push({ id: "uiux:concepts:" + c.id, project: c.project || "", dept: "UI/UX Designer", kind: "Design concept", title: c.name || "Concept", status: c.stage || "", version: "", updated: c.updated || "", source: { key: "facelove-studio-v2", path: "concepts", row: c.id }, example: !!c.example }));
     arr(st.items).forEach(c => c && m.deliverables.push(Object.assign({ id: "uiux:items:" + c.id, project: c.project || "", dept: "UI/UX Designer", kind: "Code Studio item", title: c.name || "Item", status: c.status || "", version: c.version != null ? String(c.version) : "", updated: c.updated || "", source: { key: "facelove-studio-v2", path: "items", row: c.id }, example: !!c.example }, c.concept ? { from: "uiux:concepts:" + c.concept } : {})));
+    arr(st.qa).forEach(q => q && m.deliverables.push({ id: "uiux:qa:" + q.id, project: q.project || "", dept: "UI/UX Designer", kind: "QA report", title: "QA report v" + (q.version || 1), status: "", version: String(q.version || 1), updated: q.date || "", source: { key: "facelove-studio-v2", path: "qa", row: q.id } }));
     meta.counts = Object.fromEntries(Object.keys(m).map(k => [k, m[k].length]));
     /* page settings that travel with the CEO's data (selected project, reviews, plan usage notes, Auto-work later):
        everything the CEO page saved besides the collections, so it reads back exactly as saved */
@@ -309,10 +312,10 @@
   }
   /* 2b: a department submits a deliverable for the Project Director's review. It is attached to the project's timeline task
      for that department's step (Booklet: Research, copy map: Product page copy, image set: Carousel and website images,
-     Shopify build: Build on duplicate theme, concept: Wireframe, Code Studio item: Page design), and that task becomes
+     Shopify build: Build on duplicate theme, concept: Wireframe, Code Studio item: Page design, QA report: QA), and that task becomes
      "Waiting on approval", so it shows in the review queue with what was submitted. Saved through the model (writeHq).
      Nothing is sent to anyone. */
-  const STEP_FOR = { "Marketer's Booklet": /^Research/i, "Research document": /^Research/i, "Copy map": /copy/i, "Image set": /image/i, "Shopify build": /^Build/i, "Design concept": /^Wireframe/i, "Code Studio item": /^Page design/i };
+  const STEP_FOR = { "Marketer's Booklet": /^Research/i, "Research document": /^Research/i, "Copy map": /copy/i, "Image set": /image/i, "Shopify build": /^Build/i, "Design concept": /^Wireframe/i, "Code Studio item": /^Page design/i, "QA report": /^QA\b/i };
   function stepOf(p, dept, kind) {
     const ts = arr(p && p.tasks).filter(t => t && t.dept === dept); if (!ts.length) return null;
     const rx = STEP_FOR[kind]; return (rx && ts.find(t => rx.test(t.name || ""))) || ts.find(t => t.status !== "Done") || ts[0];
@@ -346,7 +349,7 @@
      "In progress": a "Not started" task starts once every earlier task that ends before it starts is Done (so the images
      step, which runs alongside Page design, starts with it, and Design approval waits for both). Nothing is sent to anyone.
      Returns { task, started: [{id,name,dept}], deliverable } or { error }. */
-  const LINK = { "Marketer's Booklet": "index.html#/research/booklet", "Research document": "index.html#/research/documents", "Copy map": "index.html#/copy/copymaps", "Image set": "index.html#/graphic/images", "Shopify build": "index.html#/shopify/builds", "Design concept": "index.html#/uiux/concepts", "Code Studio item": "index.html#/uiux/library" };
+  const LINK = { "Marketer's Booklet": "index.html#/research/booklet", "Research document": "index.html#/research/documents", "Copy map": "index.html#/copy/copymaps", "Image set": "index.html#/graphic/images", "Shopify build": "index.html#/shopify/builds", "Design concept": "index.html#/uiux/concepts", "Code Studio item": "index.html#/uiux/library", "QA report": "index.html#/uiux/review" };
   function nextReady(p) {
     const ts = arr(p.tasks), out = [];
     ts.forEach((t, j) => {

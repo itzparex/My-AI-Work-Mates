@@ -596,7 +596,7 @@ function drawDirector(){
  $("#addIssue").onclick=()=>quickAdd("issue");$("#addLesson").onclick=()=>quickAdd("lesson");
 }
 /* 2b-i: what the department submitted for this task (from its page), with a link to open it */
-const SUB_AT={"Marketer's Booklet":"index.html#/research/booklet","Research document":"index.html#/research/documents","Copy map":"index.html#/copy/copymaps","Image set":"index.html#/graphic/images","Shopify build":"index.html#/shopify/builds","Design concept":"index.html#/uiux/concepts","Code Studio item":"index.html#/uiux/library"};
+const SUB_AT={"Marketer's Booklet":"index.html#/research/booklet","Research document":"index.html#/research/documents","Copy map":"index.html#/copy/copymaps","Image set":"index.html#/graphic/images","Shopify build":"index.html#/shopify/builds","Design concept":"index.html#/uiux/concepts","Code Studio item":"index.html#/uiux/library","QA report":"index.html#/uiux/review"};
 function subInfo(t){const s=t.submission;if(!s)return `<span class="small muted">Nothing submitted through the app yet: the status was set on the timeline.</span>`;
  const at=SUB_AT[s.kind];return `<div class="subm"><span class="small muted">Submitted ${fmt(s.at)} by ${esc(s.dept||t.dept)}${s.after?` · new version after ${s.after} return${s.after>1?"s":""}`:""}</span><b>${esc(s.title||s.kind||"Deliverable")}</b>${s.kind?`<span class="small muted">${esc(s.kind)}${s.version?" · version "+esc(s.version):""}</span>`:""}${s.note?`<span class="small">“${esc(s.note)}”</span>`:""}${at?`<a class="more" href="${at}" target="_top">Open it →</a>`:""}</div>`}
 function gantt(p){const s0=p.tasks.reduce((m,t)=>t.start<m?t.start:m,p.tasks[0].start),e0=p.tasks.reduce((m,t)=>t.due>m?t.due:m,p.tasks[0].due);const total=days(s0,e0)+1;
