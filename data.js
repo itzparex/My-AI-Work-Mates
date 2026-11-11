@@ -19,6 +19,8 @@
    "Waiting on approval" in the Project Director's review queue. Step 2b-ii: approving it (approve) marks the task Done and
    the deliverable Approved, starts the next task(s), and the next department sees it as an input (inputsFor). Step 2b-iii:
    returning it (returnTask) sends the task back to "In progress" with comments and logs an issue (returnedFor).
+   Step 2c: gates (gateView, gates, passGate, askOverride): Design approval and Launch approval show everything being approved
+   in one view; the Project Director passes a clean gate, and guardrail hits become an Override decision only the CEO can allow.
    Step 2b-iv: the Design Studio submits too: a wireframe (concept), a page design (Code Studio item) and a QA report go to the
    project's Wireframe, Page design and QA tasks the same way; its own records keep only the rulebook checks and QA notes.
    Used by hq.html, dept.html and studio.html as window.MAWM_DATA. No network, no accounts: everything stays on this device. */
@@ -439,6 +441,54 @@
     });
     return out.sort((a, b) => a.approved < b.approved ? 1 : a.approved > b.approved ? -1 : 0);
   }
+  /* 2c: gates. Design approval and Launch approval are the Project Director's gate tasks. gateView puts everything being
+     approved in one place: every earlier task with what was submitted and approved on it (tasks before the previous gate are
+     marked "earlier": they already passed it), the work that isn't approved yet (the gate waits for it; nobody can override
+     that), and the guardrail hits that stop the Project Director passing it alone: open High issues on the project and CEO
+     decisions still waiting on it. Open Medium and Low issues are shown as notes. Returns null when it isn't a gate. */
+  function gateView(project, taskId, S0) {
+    const S = S0 || readHq(), p = S && arr(S.projects).find(x => x.code === project); if (!p) return null;
+    const ts = arr(p.tasks), g = ts.findIndex(t => t && t.id === taskId), gt = ts[g]; if (!gt || !gt.gate) return null;
+    let from = 0; ts.slice(0, g).forEach((t, i) => { if (t && t.gate) from = i + 1 });
+    const items = ts.slice(0, g).filter(Boolean).map((t, i) => { const s = t.submission || null;
+      return { id: t.id, name: t.name, dept: t.dept, status: t.status, gate: !!t.gate, earlier: i < from, done: t.status === "Done", submission: s, link: s ? LINK[s.kind] || "" : "", gatePass: t.gatePass || null } });
+    const missing = items.filter(x => !x.done);
+    const linked = new Set(arr(S.decisions).map(d => d && d.issue).filter(Boolean));
+    const open = arr(S.issues).filter(i => i && i.project === p.code && i.status !== "Resolved" && !linked.has(i.id) && !(i.task === gt.id && i.type === "Override request"));
+    const guardrails = open.filter(i => i.sev === "High").map(i => ({ kind: "issue", id: i.id, text: i.id + " (High, " + (i.dept || "—") + "): " + (i.what || "") }))
+      .concat(arr(S.decisions).filter(d => d && d.project === p.code && !d.gate).map(d => ({ kind: "decision", id: d.id, text: (d.type || "Decision") + " waiting on the CEO: " + (d.title || "") })));
+    const notes = open.filter(i => i.sev !== "High").map(i => ({ id: i.id, text: i.id + " (" + (i.sev || "—") + ", " + (i.dept || "—") + "): " + (i.what || "") }));
+    const asked = arr(S.decisions).find(d => d && d.gate && d.gate.project === p.code && d.gate.task === gt.id) || null;
+    return { project: p.code, projectName: p.name || "", task: { id: gt.id, name: gt.name, status: gt.status, due: gt.due, gatePass: gt.gatePass || null }, items, missing, guardrails, notes, asked,
+      ready: gt.status !== "Done" && !missing.length && !guardrails.length, canAsk: gt.status !== "Done" && !missing.length && guardrails.length > 0 && !asked };
+  }
+  /* every gate on a project, in timeline order */
+  const gates = project => { const S = readHq(), p = S && arr(S.projects).find(x => x.code === project); return p ? arr(p.tasks).filter(t => t && t.gate).map(t => gateView(project, t.id, S)) : [] };
+  /* the Project Director passes a gate: only when everything before it is approved; with guardrail hits only after the CEO
+     allowed the override (o.override, set by the CEO's decision). The gate task becomes Done (approve), the next task starts,
+     and what was approved is kept on the gate. o = { note, by, override }. Returns approve's result or { error }. */
+  function passGate(project, taskId, o) {
+    o = o || {}; const v = gateView(project, taskId); if (!v) return { error: "That isn't a gate on " + project + "'s timeline." };
+    if (v.task.status === "Done") return { error: v.task.id + " (" + v.task.name + ") has already passed." };
+    if (v.missing.length) return { error: "Not everything is approved yet: " + v.missing.map(x => x.id + " " + x.name).join(", ") + "." };
+    if (v.guardrails.length && !o.override) return { error: "Guardrail hits need the CEO: ask for an override." };
+    const res = approve(project, taskId, o.note || ""); if (res.error) return res;
+    const S = readHq(), p = S && arr(S.projects).find(x => x.code === project), t = p && arr(p.tasks).find(x => x.id === taskId);
+    if (t) { t.gatePass = { at: today(), by: o.by || "Project Director", override: !!o.override, note: String(o.note || "").trim(), approved: v.items.filter(x => !x.earlier).map(x => ({ id: x.id, name: x.name, title: x.submission ? x.submission.title || x.submission.kind || "" : "", version: x.submission ? x.submission.version || "" : "" })), guardrails: v.guardrails.map(x => x.text) }; const err = writeHq(S); if (err) return { error: "Passed, but the gate record couldn't be saved. " + err } }
+    return res;
+  }
+  /* the Project Director informs the CEO: a gate with guardrail hits becomes an Override decision for the CEO (with
+     everything being approved and every hit listed), and the request is logged in the issues log. Never contacts anyone. */
+  function askOverride(project, taskId, rec) {
+    const v = gateView(project, taskId); if (!v) return { error: "That isn't a gate on " + project + "'s timeline." };
+    if (v.asked) return { error: "Already with the CEO." };
+    if (!v.canAsk) return { error: v.missing.length ? "Wait until everything before the gate is approved." : v.task.status === "Done" ? "This gate has already passed." : "No guardrail hits: pass the gate yourself." };
+    const r = String(rec || "").trim(); if (!r) return { error: "Give the CEO your recommendation." };
+    const being = v.items.filter(x => !x.earlier && !x.gate).map(x => x.name + (x.submission ? " (" + (x.submission.title || x.submission.kind) + (x.submission.version ? " v" + x.submission.version : "") + ")" : "")).join("; ");
+    const hits = v.guardrails.map(x => x.text);
+    return report({ dept: "Project Director", project, issue: { what: v.task.name + " needs a guardrail override: " + hits.join(" · "), type: "Override request", sev: "High", told: r, decision: "Waiting on CEO", status: "Waiting on CEO", task: v.task.id },
+      decision: { type: "Override", title: "Pass " + v.task.name + " for " + (v.projectName || project) + " despite " + hits.length + " guardrail hit" + (hits.length === 1 ? "" : "s"), detail: "Being approved: " + (being || "—") + ". Guardrail hits: " + hits.join(" · ") + ". If you allow it, the gate passes and the next step starts; if not, it waits until the hits are cleared.", rec: r, gate: { project, task: v.task.id }, hits } });
+  }
   /* saves go straight into the model now, so there is nothing waiting to be written (kept for pages that call them) */
   const touch = () => { }, flush = () => { };
   /* the old keys are never written again: a write to one from this window (code that still saves the old way) goes into the
@@ -447,6 +497,6 @@
     const set = Storage.prototype.setItem;
     if (!set.__mawm) { const w = function (k, v) { if (this === ls && SRC_KEYS.has(k)) { const d = parse(v); if (d) savePart(k, d); return } set.call(this, k, v) }; w.__mawm = true; Storage.prototype.setItem = w }
   } catch (e) { }
-  g.MAWM_DATA = { KEY, BACKUP, VERSION, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, projects, studio, saveStudio, studioFor, STUDIO, submit, reviewTask, approve, returnTask, returnedFor, inputsFor, LINK, HQ, page, savePart, retired: () => { const m = load(); return m && m.meta.retired || null }, sig, raw, error: () => lastError, today };
+  g.MAWM_DATA = { KEY, BACKUP, VERSION, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, projects, studio, saveStudio, studioFor, STUDIO, submit, reviewTask, approve, returnTask, gateView, gates, passGate, askOverride, returnedFor, inputsFor, LINK, HQ, page, savePart, retired: () => { const m = load(); return m && m.meta.retired || null }, sig, raw, error: () => lastError, today };
   migrate("load");
 })(typeof window !== "undefined" ? window : globalThis);

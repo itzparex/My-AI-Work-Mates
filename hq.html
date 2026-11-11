@@ -209,6 +209,23 @@ a.btn{text-decoration:none;color:inherit}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 .subm{display:flex;flex-direction:column;gap:2px;background:var(--sunk,rgba(127,127,127,.08));border-radius:10px;padding:8px 10px;margin:4px 0}
 .subm a{margin:2px 0 0;align-self:flex-start;font-size:12.5px;font-weight:700;color:var(--accent);text-decoration:none}
+/* 2c: gates */
+a.more{font-size:12.5px;font-weight:700;color:var(--accent);text-decoration:none}
+.gates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.gate{border:1px solid var(--line);border-left:4px solid var(--muted);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.gate.ready{border-left-color:var(--accent)}.gate.hit{border-left-color:var(--bad)}.gate.asked{border-left-color:var(--blush)}.gate.passed{border-left-color:var(--good)}
+.gate h3{margin:0;font-size:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.gate .gk{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0}
+.gl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.gl li{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:8px;align-items:start;font-size:13px;background:var(--sunk);border-radius:10px;padding:8px 10px}
+.gl li .ic{font-weight:800;text-align:center}.gl li.ok .ic{color:var(--good)}.gl li.no .ic{color:var(--warn)}.gl li.bad .ic{color:var(--bad)}
+.gl li a{font-size:12.5px;font-weight:700;color:var(--accent);text-decoration:none;white-space:nowrap}
+.gl li .s{display:block;color:var(--muted);font-size:12px}
+.gate details summary{cursor:pointer;font-size:12.5px;color:var(--muted);font-weight:600}.gate details .gl{margin-top:6px}
+.gate .acts{display:flex;gap:8px;flex-wrap:wrap}
+.gstate{font-size:13px;border-radius:10px;padding:8px 10px;background:var(--sunk)}.gstate.good{background:var(--good-soft);color:var(--good)}.gstate.pink{background:var(--blush-soft);color:var(--blush)}
+@media (max-width:980px){.gates{grid-template-columns:1fr}}
+@media (max-width:560px){.gl li{grid-template-columns:22px minmax(0,1fr)}.gl li>a,.gl li>.pill{grid-column:2;justify-self:start}}
 </style>
 
 <header class="top"><div class="in">
@@ -438,7 +455,7 @@ function drawCEO(){
   <section class="card" data-sec="decisions"><h2>Decisions waiting <span class="pill ${waiting?"p-wait":"p-done"}">${waiting}</span></h2><p class="hint">No reply means disallowed. The Project Director has already checked each one.</p><div class="grid" id="decisions">${S.decisions.map(d=>`
    <article class="decision ${d.type.toLowerCase()}" data-id="${d.id}">
     <div class="meta"><span class="pill ${d.type==="Approval"?"p-wait":d.type==="Override"?"p-person":"p-block"}">${esc(d.type)}</span><span class="mono">${esc(d.project)}</span>${d.example?'<span class="example">Example</span>':""}</div>
-    <b>${esc(d.title)}</b><p class="small">${esc(d.detail)}</p><div class="rec"><b>Project Director recommends:</b> ${esc(d.rec)}</div>
+    <b>${esc(d.title)}</b><p class="small">${esc(d.detail)}</p><div class="rec"><b>Project Director recommends:</b> ${esc(d.rec)}</div>${d.gate?`<a class="more" href="index.html#/director/gates" target="_top" data-gsel="${esc(d.gate.project)}">See everything being approved →</a>`:""}
     <div class="acts"><button class="btn sm good" data-dec="allow">Allow</button><button class="btn sm bad" data-dec="disallow">Disallow</button><button class="btn sm" data-dec="note">Allow with a note</button></div>
    </article>`).join("")||'<div class="empty">You\'re all caught up. New decisions from the Project Director will appear here.</div>'}</div>${decidedHTML(decidedList)}</section>
   <section class="card" data-sec="projects"><h2>Project health <span class="pill">${active.length} open</span></h2><div class="grid">${S.projects.map(p=>{const g=prog(p),n=nextTask(p),risk=riskOf(p),left=days(TODAY,p.due);return `<button class="proj ${risk?"risk":""}" data-open="${p.code}">
@@ -479,6 +496,7 @@ function drawCEO(){
  paintRuns();
  $$("#main a[href^='#ceo:']").forEach(a=>a.onclick=e=>{e.preventDefault();const sub=a.getAttribute("href").split(":")[1];if(parent!==window)parent.location.hash="#/ceo/"+sub;else location.hash="ceo:"+sub});
  $$("[data-open]").forEach(b=>b.onclick=()=>{S.sel=b.dataset.open;save();if(parent!==window)parent.location.hash="#/director/timeline";else location.hash="director"});
+ $$("#decisions [data-gsel]").forEach(l=>l.onclick=()=>{S.sel=l.dataset.gsel;save()});
  $$("#decisions [data-dec]").forEach(b=>b.onclick=()=>{const card=b.closest("[data-id]");const d=S.decisions.find(x=>x.id===card.dataset.id);
   if(b.dataset.dec==="note"&&!card.querySelector(".inline-input")){card.insertAdjacentHTML("beforeend",`<div class="inline-input"><input placeholder="Scope or condition, e.g. slide 1 only" aria-label="Note"><button class="btn sm good">Allow</button></div>`);const box=card.querySelector(".inline-input");box.querySelector("button").onclick=()=>decide(d,"Allowed: "+(box.querySelector("input").value||"no note"));box.querySelector("input").focus();return}
   if(b.dataset.dec!=="note")decide(d,b.dataset.dec==="allow"?"Allowed":"Disallowed")});
@@ -532,7 +550,12 @@ function decide(d,result){S.decisions=S.decisions.filter(x=>x!==d);
  else{logged=nextIssueId();S.issues.unshift({id:logged,date:TODAY,project:d.project,dept:"CEO decision",what:d.title,type:d.type==="Override"?"Override request":d.type,sev:"Medium",told:d.rec,decision:result,status:"Resolved"})}
  /* decided history in the shared model: the decision as it was put to the CEO, with the answer and date */
  S.decided=[Object.assign({},d,{result,date:TODAY,by:"CEO",issue:logged}),...(S.decided||[])];
- save();toast(result.split(":")[0]+" · recorded in the issues log");drawCEO()}
+ save();
+ /* 2c: the CEO's Allow on a gate override passes the gate (the next step starts); Disallow leaves it waiting */
+ if(d.gate&&DM&&DM.passGate){if(/^Allow/.test(result)){const res=DM.passGate(d.gate.project,d.gate.task,{override:true,by:"CEO",note:result});const x=readS();if(x&&x.projects){S=x;if(!Array.isArray(S.decided))S.decided=[]}
+   toast(res.error?"Recorded, but the gate didn't pass: "+res.error:res.name+" passed by your override"+(res.started.length?" · started "+res.started.map(n=>n.id).join(", "):""));drawCEO();return}
+  toast("Disallowed · the gate waits until the hits are cleared");drawCEO();return}
+ toast(result.split(":")[0]+" · recorded in the issues log");drawCEO()}
 /* AI product image approvals (1c-iii): the CEO's answer is written back on the department's request with the date */
 function aiAnswer(d,result){if(!DM)return;const k="mawm-dept-"+(d.ai.dept||"graphic");try{const G=DM.page(k),row=G&&G.rows&&(G.rows.aiimages||[]).find(x=>x._id===d.ai.row);if(!row)return;
  const note=result.includes(": ")?result.split(": ").slice(1).join(": "):"";row.decision=/^Allowed/.test(result)?"Approved":"Rejected";row.date=TODAY;row.note=note==="no note"?"":note;row.by="CEO";const err=DM.saveDept(k,G);if(err)toast(err)}catch(e){}}
@@ -573,9 +596,10 @@ function drawDirector(){
   <div class="field" style="min-width:240px"><label for="pd-proj">Project</label><select id="pd-proj">${S.projects.map(x=>`<option value="${x.code}" ${x.code===S.sel?"selected":""}>${esc(x.code)} · ${esc(x.name)}</option>`).join("")}</select></div></div>
  ${p?`<section class="card" data-sec="timeline"><h2>Timeline <span class="pill">${prog(p).d}/${prog(p).n} done</span>${p.example?'<span class="example">Example</span>':""}</h2>${gantt(p)}
   <div class="legend"><span style="color:var(--good)">Done</span><span style="color:var(--accent)">In progress</span><span style="color:var(--warn)">Waiting on approval</span><span style="color:var(--blush)">Waiting on a person</span><span style="color:var(--bad)">Blocked</span><span style="color:var(--muted)">Not started</span></div></section>
- <section class="card" data-sec="tasks" style="margin-top:16px"><h2>Tasks</h2><div class="tablewrap"><table><thead><tr><th>Task</th><th>Department</th><th>Start</th><th>Due</th><th>Status</th></tr></thead><tbody>${p.tasks.map((t,i)=>`<tr><td><span class="mono">${esc(t.id)}</span><br><b>${esc(t.name)}</b>${t.gate?' <span class="pill p-wait">Approval</span>':""}</td><td>${esc(t.dept)}</td><td><input type="date" value="${t.start}" data-ti="${i}" data-f="start" aria-label="Start date" style="border:1px solid var(--line);border-radius:8px;padding:4px 6px;background:var(--surface)"></td><td><input type="date" value="${t.due}" data-ti="${i}" data-f="due" aria-label="Due date" style="border:1px solid var(--line);border-radius:8px;padding:4px 6px;background:var(--surface)"></td><td><select data-ti="${i}" data-f="status" aria-label="Status" style="border:1px solid var(--line);border-radius:8px;padding:4px 6px;background:var(--surface)">${STATUSES.map(s=>`<option ${s===t.status?"selected":""}>${s}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table></div></section>`:""}
+ <section class="card" data-sec="tasks" style="margin-top:16px"><h2>Tasks</h2><div class="tablewrap"><table><thead><tr><th>Task</th><th>Department</th><th>Start</th><th>Due</th><th>Status</th></tr></thead><tbody>${p.tasks.map((t,i)=>`<tr><td><span class="mono">${esc(t.id)}</span><br><b>${esc(t.name)}</b>${t.gate?' <span class="pill p-wait">Approval</span>':""}</td><td>${esc(t.dept)}</td><td><input type="date" value="${t.start}" data-ti="${i}" data-f="start" aria-label="Start date" style="border:1px solid var(--line);border-radius:8px;padding:4px 6px;background:var(--surface)"></td><td><input type="date" value="${t.due}" data-ti="${i}" data-f="due" aria-label="Due date" style="border:1px solid var(--line);border-radius:8px;padding:4px 6px;background:var(--surface)"></td><td><select data-ti="${i}" data-f="status" aria-label="Status" style="border:1px solid var(--line);border-radius:8px;padding:4px 6px;background:var(--surface)">${STATUSES.map(s=>`<option ${s===t.status?"selected":""}>${s}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table></div></section>
+ ${gatesHTML(p)}`:""}
  <div class="cols" style="margin-top:16px">
-  <section class="card" data-sec="review"><h2>Review queue <span class="pill">${waitRev.length}</span></h2>${waitRev.length?`<div class="grid">${waitRev.map(t=>`<div class="decision" data-proj="${t.project}" data-tid="${t.id}"><div class="meta"><span class="mono">${esc(t.project)} · ${esc(t.id)}</span><span class="pill">${esc(t.dept)}</span></div><b>${esc(t.name)}</b>${t.returns?`<span class="small"><span class="pill ${t.returns>1?"p-block":"p-wait"}">Returned ${t.returns} time${t.returns>1?"s":""} before</span>${t.returns>1?" Repeated returns are flagged in the issues log.":""}</span>`:""}${subInfo(t)}<span class="small muted">Check it against the department checklist and run the spot-checks before approving.</span><div class="acts"><button class="btn sm good" data-rv="ok">Approve</button><button class="btn sm bad" data-rv="back">Return with comments</button><button class="btn sm" data-rv="ceo">Send to CEO</button></div></div>`).join("")}</div>`:'<div class="empty">Nothing waiting for review. Set a task to "Waiting on approval" to queue it here.</div>'}</section>
+  <section class="card" data-sec="review"><h2>Review queue <span class="pill">${waitRev.length}</span></h2>${waitRev.length?`<div class="grid">${waitRev.map(t=>`<div class="decision" data-proj="${t.project}" data-tid="${t.id}"><div class="meta"><span class="mono">${esc(t.project)} · ${esc(t.id)}</span><span class="pill">${esc(t.dept)}</span></div><b>${esc(t.name)}</b>${t.gate?`<span class="small">This is a gate: <a class="more" href="#director:gates" data-gsel="${t.project}">see everything being approved →</a></span>`:""}${t.returns?`<span class="small"><span class="pill ${t.returns>1?"p-block":"p-wait"}">Returned ${t.returns} time${t.returns>1?"s":""} before</span>${t.returns>1?" Repeated returns are flagged in the issues log.":""}</span>`:""}${subInfo(t)}<span class="small muted">Check it against the department checklist and run the spot-checks before approving.</span><div class="acts"><button class="btn sm good" data-rv="ok">Approve</button><button class="btn sm bad" data-rv="back">Return with comments</button><button class="btn sm" data-rv="ceo">Send to CEO</button></div></div>`).join("")}</div>`:'<div class="empty">Nothing waiting for review. Set a task to "Waiting on approval" to queue it here.</div>'}</section>
   <section class="card" data-sec="workload"><h2>Department workload</h2><div class="grid">${DEPTS.map(([n])=>{const c=S.projects.flatMap(x=>x.tasks).filter(t=>t.dept===n&&t.status!=="Done"&&t.status!=="Not started").length,q=S.projects.flatMap(x=>x.tasks).filter(t=>t.dept===n&&t.status==="Not started").length;return `<div class="wl"><span>${esc(n)}</span><div class="bar"><i style="width:${Math.min(100,c*34)}%"></i></div><span class="small muted" title="${q} queued">${c}</span></div>`}).join("")}<span class="small muted">Bars show active tasks; queued tasks are on each project's timeline.</span></div></section>
  </div>
  <section class="card" data-sec="issues" style="margin-top:16px"><h2>Issues log <button class="btn sm" id="addIssue" style="margin-left:auto">+ Log issue</button></h2>${issuesTable(S.issues)}</section>
@@ -583,6 +607,9 @@ function drawDirector(){
  $("#pd-proj").onchange=e=>{S.sel=e.target.value;save();drawDirector()};
  $$("[data-ti]").forEach(el=>el.onchange=()=>{const t=p.tasks[+el.dataset.ti];t[el.dataset.f]=el.value;if(el.dataset.f==="status")t.doneAt=el.value==="Done"?TODAY:undefined;if(el.dataset.f==="due"&&t.due<t.start)t.start=t.due;p.due=p.tasks.reduce((m,x)=>x.due>m?x.due:m,p.tasks[0].due);if(p.tasks.every(x=>x.status==="Done"))p.status="Launched";else if(p.status!=="Planning")p.status="Active";save();toast("Timeline updated");drawDirector()});
  $$("[data-rv]").forEach(b=>b.onclick=()=>{const card=b.closest("[data-tid]"),pr=proj(card.dataset.proj),t=pr.tasks.find(x=>x.id===card.dataset.tid);
+  if(b.dataset.rv==="ok"&&t.gate&&DM&&DM.passGate){/* 2c: a gate passes only through its checks */
+   const res=DM.passGate(pr.code,t.id,{by:"Project Director"});if(res.error){toast(res.error);if(pr.code!==S.sel){S.sel=pr.code;save();drawDirector()}const g=document.querySelector(`[data-gate="${t.id}"]`);g&&g.scrollIntoView({block:"start"});return}
+   const x=readS();if(x&&x.projects){S=x;if(!Array.isArray(S.decided))S.decided=[]}toast(t.name+" passed"+(res.started.length?" · started "+res.started.map(n=>n.id).join(", "):""));drawDirector();return}
   if(b.dataset.rv==="ok"){/* 2b-ii: approve through the model: task Done, deliverable Approved, next task(s) start */
    if(DM&&DM.approve){const res=DM.approve(pr.code,t.id);if(res.error){toast(res.error);return}const x=readS();if(x&&x.projects){S=x;if(!Array.isArray(S.decided))S.decided=[]}
     toast("Approved"+(res.started.length?" · started "+res.started.map(n=>n.id+" ("+n.dept+")").join(", "):""));drawDirector();return}
@@ -594,7 +621,42 @@ function drawDirector(){
     t.status="In progress";S.issues.unshift({id:nextIssueId(),date:TODAY,project:pr.code,dept:t.dept,what:"Returned: "+t.name+" — "+c,type:"Error",sev:"Low",told:"—",decision:"—",status:"Open"});save();toast("Returned and logged");drawDirector()};
    box.querySelector("input").onkeydown=e=>{if(e.key==="Enter")ret()};box.querySelector("button").onclick=ret;}});
  $("#addIssue").onclick=()=>quickAdd("issue");$("#addLesson").onclick=()=>quickAdd("lesson");
+ $$("[data-gsel]").forEach(a=>a.onclick=e=>{e.preventDefault();S.sel=a.dataset.gsel;save();drawDirector();const g=document.querySelector('[data-sec="gates"]');g&&g.scrollIntoView({block:"start"})});
+ wireGates(p);
 }
+/* 2c: gates. Design approval and Launch approval in one view each: what is being approved (every step since the last gate,
+   with the submitted deliverable and a link), what isn't approved yet, and the guardrail hits. The Project Director passes a
+   clean gate; a gate with guardrail hits becomes an Override decision for the CEO (logged in the issues log), and only the
+   CEO's Allow passes it. */
+function gatesHTML(p){if(!DM||!DM.gates)return "";const gs=DM.gates(p.code).filter(Boolean);if(!gs.length)return "";
+ const item=x=>{const s=x.submission;return `<li class="${x.done?"ok":"no"}"><span class="ic" aria-hidden="true">${x.done?"✓":"○"}</span><span><b>${esc(x.name)}</b><span class="s">${esc(x.dept)}${s?` · ${esc(s.title||s.kind||"Deliverable")}${s.version?" v"+esc(s.version):""}${s.approved?" · approved "+fmt(s.approved):""}`:x.gate&&x.gatePass?` · passed ${fmt(x.gatePass.at)}${x.gatePass.override?" by CEO override":""}`:x.done?" · approved on the timeline (nothing submitted through the app)":""}</span></span>${x.done?(x.link?`<a href="${x.link}" target="_top">Open →</a>`:""):`<span class="pill ${PCLS[x.status]||""}">${esc(x.status)}</span>`}</li>`};
+ const card=v=>{const t=v.task,now=v.items.filter(x=>!x.earlier),old=v.items.filter(x=>x.earlier),gp=t.gatePass,passed=t.status==="Done";
+  const cls=passed?"passed":v.asked?"asked":v.guardrails.length&&!v.missing.length?"hit":v.ready?"ready":"";
+  const state=passed?`<div class="gstate good">✓ Passed ${gp?fmt(gp.at)+" by "+esc(gp.by)+(gp.override?" (CEO override)":""):""}${gp&&gp.note?" · "+esc(gp.note):""}</div>`
+   :v.asked?`<div class="gstate pink">With the CEO since ${fmt(v.asked.asked)}: an Override decision is waiting. If the CEO allows it, the gate passes; no reply means it waits.</div>`
+   :v.missing.length?`<div class="gstate">Waiting for ${plural(v.missing.length,"step")} to be approved. The gate can't pass, or be overridden, until then.</div>`
+   :v.guardrails.length?`<div class="gstate">Everything is approved, but ${plural(v.guardrails.length,"guardrail hit")} ${v.guardrails.length===1?"stops":"stop"} you passing it. Only the CEO can override.</div>`
+   :`<div class="gstate">Everything is approved and no guardrails are hit. Check it once more, then pass the gate.</div>`;
+  return `<article class="gate ${cls}" data-gate="${t.id}" data-gp="${v.project}"><div><p class="gk">${esc(t.id)} · due ${fmt(t.due)}</p><h3>${esc(t.name)} <span class="pill ${PCLS[t.status]||""}">${esc(t.status)}</span></h3></div>
+   <div><p class="gk">Being approved (${now.filter(x=>x.done).length}/${now.length})</p><ul class="gl">${now.map(item).join("")}</ul></div>
+   ${old.length?`<details><summary>Passed at an earlier gate (${old.length})</summary><ul class="gl">${old.map(item).join("")}</ul></details>`:""}
+   ${v.guardrails.length?`<div><p class="gk">Guardrail hits (${v.guardrails.length})</p><ul class="gl">${v.guardrails.map(g=>`<li class="bad"><span class="ic" aria-hidden="true">!</span><span>${esc(g.text)}</span></li>`).join("")}</ul></div>`:""}
+   ${v.notes.length?`<div><p class="gk">Open issues to note (${v.notes.length})</p><ul class="gl">${v.notes.map(g=>`<li><span class="ic" aria-hidden="true">·</span><span>${esc(g.text)}</span></li>`).join("")}</ul></div>`:""}
+   ${state}
+   ${v.ready?`<div class="acts"><button class="btn sm primary" data-gpass>Pass ${esc(t.name)}</button></div>`:v.canAsk?`<div class="acts"><button class="btn sm" data-gask>Ask the CEO to override</button></div>`:""}</article>`};
+ return `<section class="card" data-sec="gates" style="margin-top:16px"><h2>Gates <span class="pill">${gs.filter(v=>v.task.status==="Done").length}/${gs.length} passed</span></h2><p class="hint">Everything each approval covers, in one view. You pass a gate when it's clean; a guardrail hit goes to the CEO as an override decision.</p><div class="gates">${gs.map(card).join("")}</div></section>`}
+function wireGates(p){
+ $$("[data-gpass]").forEach(b=>b.onclick=()=>{const g=b.closest("[data-gate]");if(g.querySelector(".inline-input"))return;
+  g.insertAdjacentHTML("beforeend",`<div class="inline-input"><input placeholder="Optional note, e.g. spot-checked copy and alt text" aria-label="Gate note"><button class="btn sm good">Pass</button></div>`);
+  const box=g.querySelector(".inline-input"),go=()=>{const res=DM.passGate(g.dataset.gp,g.dataset.gate,{by:"Project Director",note:box.querySelector("input").value});if(res.error){toast(res.error);return}
+   const x=readS();if(x&&x.projects){S=x;if(!Array.isArray(S.decided))S.decided=[]}toast(res.name+" passed"+(res.started.length?" · started "+res.started.map(n=>n.id+" ("+n.dept+")").join(", "):""));drawDirector();const s=document.querySelector('[data-sec="gates"]');s&&s.scrollIntoView({block:"start"})};
+  box.querySelector("button").onclick=go;box.querySelector("input").onkeydown=e=>{if(e.key==="Enter")go()};box.querySelector("input").focus()});
+ $$("[data-gask]").forEach(b=>b.onclick=()=>{const g=b.closest("[data-gate]");if(g.querySelector(".inline-input"))return;
+  g.insertAdjacentHTML("beforeend",`<div class="inline-input"><input placeholder="Your recommendation to the CEO" aria-label="Recommendation"><button class="btn sm">Send to CEO</button></div>`);
+  const box=g.querySelector(".inline-input"),go=()=>{const r=box.querySelector("input").value.trim();if(!r){toast("Give the CEO your recommendation");box.querySelector("input").focus();return}
+   const res=DM.askOverride(g.dataset.gp,g.dataset.gate,r);if(res.error){toast(res.error);return}
+   const x=readS();if(x&&x.projects){S=x;if(!Array.isArray(S.decided))S.decided=[]}toast("Sent to the CEO · logged as "+res.id);drawDirector();const s=document.querySelector('[data-sec="gates"]');s&&s.scrollIntoView({block:"start"})};
+  box.querySelector("button").onclick=go;box.querySelector("input").onkeydown=e=>{if(e.key==="Enter")go()};box.querySelector("input").focus()})}
 /* 2b-i: what the department submitted for this task (from its page), with a link to open it */
 const SUB_AT={"Marketer's Booklet":"index.html#/research/booklet","Research document":"index.html#/research/documents","Copy map":"index.html#/copy/copymaps","Image set":"index.html#/graphic/images","Shopify build":"index.html#/shopify/builds","Design concept":"index.html#/uiux/concepts","Code Studio item":"index.html#/uiux/library","QA report":"index.html#/uiux/review"};
 function subInfo(t){const s=t.submission;if(!s)return `<span class="small muted">Nothing submitted through the app yet: the status was set on the timeline.</span>`;

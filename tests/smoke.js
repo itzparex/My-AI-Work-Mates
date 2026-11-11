@@ -12,7 +12,7 @@ const server = http.createServer((req, res) => {
 });
 const ROUTES = ["#/home", "#/ceo/home",
   "#/ceo/decisions", "#/ceo/projects", "#/ceo/claude", "#/ceo/issues", "#/ceo/data",
-  "#/director/timeline", "#/director/review", "#/director/lessons",
+  "#/director/timeline", "#/director/review", "#/director/gates", "#/director/lessons",
   "#/research/overview", "#/research/briefs", "#/research/questions", "#/research/documents", "#/research/documents/none", "#/research/booklet", "#/research/evidence", "#/research/persontasks",
   "#/copy/overview", "#/copy/copymaps", "#/copy/claims", "#/copy/images", "#/copy/swipe",
   "#/uiux/research", "#/uiux/concepts", "#/uiux/studio", "#/uiux/library", "#/uiux/review", "#/uiux/theme",
@@ -36,7 +36,7 @@ const ROUTES = ["#/home", "#/ceo/home",
     await page.close();
   }
   { // shared data model (2a): built from the saved data, old data untouched, backup kept, checks pass
-    const ctx = await browser.newContext(), page = await ctx.newPage(); page.on("pageerror", e => errors.push("data model: " + e.message));
+    const ctx = await browser.newContext(), page = await ctx.newPage(); page.on("pageerror", e => errors.push("data model: " + e.message + " " + (e.stack||"").split("\n").slice(0,4).join(" | ")));
     /* a device with data saved before the shared model: the Copywriter's old key holds a copy map */
     const LEGACY = JSON.stringify({ rows: { copymaps: [{ _id: "legacy1", project: "FL-PDP", page: "Legacy page", version: "1", status: "Draft" }] }, checks: {} });
     await page.goto(base + "manifest.webmanifest"); await page.evaluate(v => localStorage.setItem("mawm-dept-copy", v), LEGACY);
@@ -251,6 +251,56 @@ const ROUTES = ["#/home", "#/ceo/home",
       const st = D.studio(); if (!st) return; st.concepts = st.concepts.filter(c => c.id !== "smc1"); st.items = st.items.filter(i => i.id !== "smi1"); st.qa = (st.qa || []).filter(q => q.project !== "SM-2C"); D.saveStudio(st) });
     await page.evaluate(() => { const D = document.getElementById("frame").contentWindow.MAWM_DATA, c = D.page("mawm-dept-graphic"); c.rows.images = c.rows.images.filter(x => x._id !== "smoke4"); D.savePart("mawm-dept-graphic", c) });
     await page.evaluate(() => { const D = document.getElementById("frame").contentWindow.MAWM_DATA, S = D.readHq(); S.projects = S.projects.filter(p => p.code !== "SM-2B"); D.writeHq(S) });
+    // 2c: gates: everything being approved in one view; guardrail hits become a CEO override decision; the CEO's Allow passes the gate
+    await page.evaluate(() => { const D = document.getElementById("frame").contentWindow.MAWM_DATA, S = D.readHq(), base = S.projects.find(p => p.code === "FL-COL");
+      const tasks = JSON.parse(JSON.stringify(base.tasks)).map((x, i) => Object.assign(x, { id: "SM-GT-" + String(i + 1).padStart(2, "0"), status: i < 5 ? "Done" : i === 5 ? "In progress" : "Not started", submission: undefined }));
+      tasks[2].submission = { id: "copy:copymaps:none", kind: "Copy map", title: "Smoke gate copy map", version: "2", dept: "Copywriter", at: "2026-11-11", approved: "2026-11-11", state: "Approved" };
+      S.projects.push({ code: "SM-GT", name: "Smoke gates", status: "Active", markets: ["US"], depth: "Quick", tasks }); S.sel = "SM-GT";
+      S.issues.unshift({ id: "IS-9901", date: "2026-11-11", project: "SM-GT", dept: "Copywriter", what: "Smoke gate: claim without proof", type: "Rule hit", sev: "High", told: "—", decision: "—", status: "Open" });
+      S.issues.unshift({ id: "IS-9902", date: "2026-11-11", project: "SM-GT", dept: "Graphic Designer", what: "Smoke gate: alt text late", type: "Delay", sev: "Low", told: "—", decision: "—", status: "Open" }); D.writeHq(S) });
+    await page.goto(base + "index.html#/director/gates"); await page.waitForTimeout(600); await page.evaluate(() => document.getElementById("frame").contentWindow.location.reload()); await page.waitForTimeout(1000);
+    const gt1 = await page.evaluate(async () => { const W = document.getElementById("frame").contentWindow, d = W.document, D = W.MAWM_DATA, wait = ms => new Promise(r => setTimeout(r, ms));
+      try {
+        const g = d.querySelector('[data-gate="SM-GT-06"]'); if (!g) return "Design approval gate not shown";
+        if (!/Smoke gate copy map/.test(g.textContent) || !/v2/.test(g.textContent) || !/Being approved \(5\/5\)/.test(g.textContent)) return "gate doesn't show what's being approved";
+        if (!/Smoke gate: claim without proof/.test(g.textContent) || !/Smoke gate: alt text late/.test(g.textContent)) return "gate misses the guardrail hit or the note";
+        if (g.querySelector("[data-gpass]")) return "Pass offered despite a guardrail hit"; if (!D.passGate("SM-GT", "SM-GT-06").error) return "passGate allowed a guardrail hit";
+        const l = d.querySelector('[data-gate="SM-GT-09"]'); if (!l || !/Waiting for 3 steps/.test(l.textContent) || l.querySelector("[data-gask],[data-gpass]")) return "Launch approval should wait for 3 steps";
+        g.querySelector("[data-gask]").click(); await wait(100); const box = g.querySelector(".inline-input"); box.querySelector("button").click(); await wait(100);
+        if (D.readHq().decisions.some(x => x.gate)) return "sent without a recommendation";
+        box.querySelector("input").value = "Allow: the claim is cut from the live page"; box.querySelector("button").click(); await wait(200);
+        const S = D.readHq(), dec = S.decisions.find(x => x.gate && x.gate.task === "SM-GT-06"); if (!dec || dec.type !== "Override" || !/claim without proof/.test(dec.detail) || !/Smoke gate copy map/.test(dec.detail)) return "no Override decision with the hits and what's approved";
+        const is = S.issues.find(i => i.id === dec.issue); if (!is || is.type !== "Override request" || is.sev !== "High" || is.dept !== "Project Director") return "override request not logged";
+        if (!/With the CEO/.test(d.querySelector('[data-gate="SM-GT-06"]').textContent)) return "gate doesn't say it's with the CEO";
+        if (!D.askOverride("SM-GT", "SM-GT-06", "again").error) return "a second ask wasn't refused";
+        return "ok";
+      } catch (e) { return "error: " + e.message } });
+    if (gt1 !== "ok") errors.push("gates: director: " + gt1);
+    if (shots) { await page.evaluate(() => document.getElementById("frame").contentWindow.document.querySelector('[data-sec="gates"]').scrollIntoView()); await page.screenshot({ path: path.join(ROOT, "tests", "shots", "2c-gates-desktop.png") }); }
+    await page.goto(base + "index.html#/ceo/decisions"); await page.waitForTimeout(600); await page.evaluate(() => document.getElementById("frame").contentWindow.location.reload()); await page.waitForTimeout(1000);
+    const gt2 = await page.evaluate(async () => { const W = document.getElementById("frame").contentWindow, d = W.document, D = W.MAWM_DATA, wait = ms => new Promise(r => setTimeout(r, ms));
+      try {
+        const dec = D.readHq().decisions.find(x => x.gate && x.gate.task === "SM-GT-06"), card = d.querySelector(`[data-id="${dec.id}"]`); if (!card) return "decision not on the CEO page";
+        if (!card.querySelector("[data-gsel]")) return "no link to the gate"; card.querySelector('[data-dec="allow"]').click(); await wait(200);
+        const S = D.readHq(), p = S.projects.find(x => x.code === "SM-GT"), g = p.tasks[5];
+        if (g.status !== "Done" || !g.gatePass || !g.gatePass.override || g.gatePass.by !== "CEO") return "gate not passed by the CEO's override";
+        if (p.tasks[6].status !== "In progress") return "Build didn't start"; if (S.issues.find(i => i.id === dec.issue).status !== "Resolved") return "override request not resolved";
+        return "ok";
+      } catch (e) { return "error: " + e.message } });
+    if (gt2 !== "ok") errors.push("gates: CEO override: " + gt2);
+    await page.evaluate(() => { const D = document.getElementById("frame").contentWindow.MAWM_DATA, S = D.readHq(), p = S.projects.find(x => x.code === "SM-GT"); p.tasks[6].status = "Done"; p.tasks[7].status = "Done"; p.tasks[8].status = "In progress"; S.issues.find(i => i.id === "IS-9901").status = "Resolved"; S.sel = "SM-GT"; D.writeHq(S) });
+    await page.goto(base + "index.html#/director/gates"); await page.waitForTimeout(600); await page.evaluate(() => document.getElementById("frame").contentWindow.location.reload()); await page.waitForTimeout(1000);
+    const gt3 = await page.evaluate(async () => { const W = document.getElementById("frame").contentWindow, d = W.document, D = W.MAWM_DATA, wait = ms => new Promise(r => setTimeout(r, ms));
+      try {
+        const l = d.querySelector('[data-gate="SM-GT-09"]'); if (!/Passed at an earlier gate \(6\)/.test(l.textContent)) return "Launch approval doesn't fold in what passed Design approval";
+        const b = l.querySelector("[data-gpass]"); if (!b) return "no Pass on a clean gate"; b.click(); await wait(100); l.querySelector(".inline-input input").value = "Smoke launch check"; l.querySelector(".inline-input button").click(); await wait(200);
+        const p = D.readHq().projects.find(x => x.code === "SM-GT"); if (p.tasks[8].status !== "Done" || p.tasks[8].gatePass.note !== "Smoke launch check" || p.tasks[8].gatePass.override) return "Launch approval not passed";
+        if (p.tasks[9].status !== "In progress") return "CEO publishes step didn't start";
+        return "ok";
+      } catch (e) { return "error: " + e.message } });
+    if (gt3 !== "ok") errors.push("gates: pass: " + gt3);
+    if (shots) { await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300); await page.evaluate(() => document.getElementById("frame").contentWindow.document.querySelector('[data-sec="gates"]').scrollIntoView()); await page.screenshot({ path: path.join(ROOT, "tests", "shots", "2c-gates-phone.png") }); await page.setViewportSize({ width: 1280, height: 720 }); }
+    await page.evaluate(() => { const D = document.getElementById("frame").contentWindow.MAWM_DATA, S = D.readHq(); S.projects = S.projects.filter(p => p.code !== "SM-GT"); S.issues = S.issues.filter(i => i.project !== "SM-GT"); S.decisions = S.decisions.filter(x => x.project !== "SM-GT"); S.decided = (S.decided || []).filter(x => x.project !== "SM-GT"); S.sel = "FL-PDP"; D.writeHq(S) });
     if (!errors.some(e => /deliverables flow/.test(e))) await page.evaluate(() => { const D = document.getElementById("frame").contentWindow.MAWM_DATA, S = D.readHq(); S.projects.forEach(p => p.tasks.forEach(t => { if (t.submission && t.submission.id === "graphic:images:smoke3") { delete t.submission; delete t.doneAt; t.history = []; t.status = "Waiting on a person" } })); D.writeHq(S);
       const c = D.page("mawm-dept-graphic"); c.rows.images = c.rows.images.filter(x => x._id !== "smoke3"); D.savePart("mawm-dept-graphic", c) });
     console.log("OK: data model " + JSON.stringify(r.counts) + ", CEO page reads it back (" + rt.projects + " projects, " + rt.tasks + " tasks), decision recorded, department logs and saves through it, Design Studio links work to projects, old keys retired (never written; an older page's write is taken in), a submitted deliverable waits in the review queue, approving it starts the next tasks and hands it on, returning it sends it back with comments and logs an issue (repeats flagged), the Design Studio submits wireframes, page designs and QA reports");
