@@ -121,7 +121,29 @@ const ROUTES = ["#/home", "#/ceo/home",
       if (!/older version/.test(m.meta.log.map(l => l[1]).join(" "))) return "not logged"; if (!D.check().some(c => c[0] === "warn" && /older version of a page/.test(c[1]))) return "check doesn't warn"; return "ok"; });
     if (ad !== "ok") errors.push("data model: older page wrote an old key: " + ad);
     await ctxPage.close();
-    console.log("OK: data model " + JSON.stringify(r.counts) + ", CEO page reads it back (" + rt.projects + " projects, " + rt.tasks + " tasks), decision recorded, department logs and saves through it, Design Studio links work to projects, old keys retired (never written; an older page's write is taken in)");
+    // 2b-i: a department submits a deliverable from its Overview; its task waits in the Project Director's review queue with it
+    await page.goto(base + "index.html#/graphic/overview"); await page.waitForTimeout(1200);
+    const sb = await page.evaluate(async () => { const W = document.getElementById("frame").contentWindow, D = W.MAWM_DATA, k = "mawm-dept-graphic", before = D.page(k), hqBefore = D.readHq(), wait = ms => new Promise(r => setTimeout(r, ms));
+      try {
+        const o = JSON.parse(JSON.stringify(before || { rows: {}, checks: {} })); o.rows.images = (o.rows.images || []).concat([{ _id: "smoke3", project: "FL-PDP", set: "Smoke image set", status: "In progress" }]); D.saveDept(k, o);
+        W.location.reload(); await wait(900); const W2 = document.getElementById("frame").contentWindow, d = W2.document, D2 = W2.MAWM_DATA;
+        const btn = d.querySelector('[data-sub="smoke3"]'); if (!btn) return "no Submit button for the image set";
+        d.querySelector('[data-sn="smoke3"]').value = "Smoke note"; btn.click(); await wait(200);
+        const t = D2.readHq().projects.find(p => p.code === "FL-PDP").tasks.find(x => x.submission && x.submission.id === "graphic:images:smoke3");
+        if (!t) return "submission not on a task"; if (t.status !== "Waiting on approval" || !/image/i.test(t.name) || t.submission.note !== "Smoke note") return "wrong task or status: " + t.name + " " + t.status;
+        if (D2.page(k).rows.images.find(x => x._id === "smoke3").status !== "Waiting on approval") return "image set status not updated";
+        if (!d.querySelector("#submit") || !/With the Project Director/.test(d.querySelector(".sublist").textContent)) return "Overview doesn't show it with the Project Director";
+        if (!D2.submit({ dept: "Graphic Designer", project: "FL-PDP", deliv: { id: "graphic:images:smoke3", kind: "Image set" } }).error) return "a second submit of the same deliverable wasn't refused";
+        return "ok";
+      } catch (e) { return "error: " + e.message } });
+    if (sb !== "ok") errors.push("deliverables flow: submit: " + sb);
+    await page.goto(base + "index.html#/director/review"); await page.waitForTimeout(1200);
+    const rq = await page.evaluate(() => { const W = document.getElementById("frame").contentWindow, d = W.document, card = [...d.querySelectorAll("[data-tid]")].find(c => /Smoke image set/.test(c.textContent));
+      return !card ? "review queue doesn't show the submitted image set" : !/Smoke note/.test(card.textContent) || !card.querySelector(".subm a") ? "review card misses the note or link" : "ok"; });
+    if (rq !== "ok") errors.push("deliverables flow: review queue: " + rq);
+    if (!errors.some(e => /deliverables flow/.test(e))) await page.evaluate(() => { const D = document.getElementById("frame").contentWindow.MAWM_DATA, S = D.readHq(); S.projects.forEach(p => p.tasks.forEach(t => { if (t.submission && t.submission.id === "graphic:images:smoke3") { delete t.submission; t.history = []; t.status = "Waiting on a person" } })); D.writeHq(S);
+      const c = D.page("mawm-dept-graphic"); c.rows.images = c.rows.images.filter(x => x._id !== "smoke3"); D.savePart("mawm-dept-graphic", c) });
+    console.log("OK: data model " + JSON.stringify(r.counts) + ", CEO page reads it back (" + rt.projects + " projects, " + rt.tasks + " tasks), decision recorded, department logs and saves through it, Design Studio links work to projects, old keys retired (never written; an older page's write is taken in), a submitted deliverable waits in the review queue");
     await page.close();
   }
   await browser.close(); server.close();

@@ -15,6 +15,8 @@
    the old keys and they become read-only backups: kept, never written again. If an older version of a page (a tab left
    open from before) still writes an old key, the next load notices the change, takes that newer data into the model and logs it.
    A one-time backup copy of the old data is also kept under "mawm-data-backup-v0".
+   Step 2b-i: departments submit a deliverable for review (submit): it is attached to their task, which goes to
+   "Waiting on approval" in the Project Director's review queue.
    Used by hq.html, dept.html and studio.html as window.MAWM_DATA. No network, no accounts: everything stays on this device. */
 (function (g) {
   "use strict";
@@ -303,6 +305,35 @@
     const mine = list.filter(x => x.project === project), shared = list.filter(x => !x.project), other = list.filter(x => x.project && x.project !== project && keep && keep(x));
     return mine.concat(shared, other);
   }
+  /* 2b: a department submits a deliverable for the Project Director's review. It is attached to the project's timeline task
+     for that department's step (Booklet: Research, copy map: Product page copy, image set: Carousel and website images,
+     Shopify build: Build on duplicate theme, concept: Wireframe, Code Studio item: Page design), and that task becomes
+     "Waiting on approval", so it shows in the review queue with what was submitted. Saved through the model (writeHq).
+     Nothing is sent to anyone. */
+  const STEP_FOR = { "Marketer's Booklet": /^Research/i, "Research document": /^Research/i, "Copy map": /copy/i, "Image set": /image/i, "Shopify build": /^Build/i, "Design concept": /^Wireframe/i, "Code Studio item": /^Page design/i };
+  function stepOf(p, dept, kind) {
+    const ts = arr(p && p.tasks).filter(t => t && t.dept === dept); if (!ts.length) return null;
+    const rx = STEP_FOR[kind]; return (rx && ts.find(t => rx.test(t.name || ""))) || ts.find(t => t.status !== "Done") || ts[0];
+  }
+  /* the task a deliverable would go to: { id, name, status, submission } or null */
+  function reviewTask(project, dept, kind) {
+    const S = readHq(), p = S && arr(S.projects).find(x => x.code === project), t = stepOf(p, dept, kind);
+    return t ? { id: t.id, name: t.name, status: t.status, submission: t.submission || null, due: t.due } : null;
+  }
+  /* o = { dept, project, deliv: { id, kind, title, version, section, row }, note }. Returns { task, name } or { error }. */
+  function submit(o) {
+    if (!ls) return { error: "This device doesn't allow saving." };
+    const S = readHq(); if (!S) return { error: "Open the CEO page once on this device first, so the Project Director's timeline exists." };
+    const p = arr(S.projects).find(x => x.code === o.project); if (!p) return { error: "Pick a project first: a deliverable goes to review with its project." };
+    const d = o.deliv || {}, t = stepOf(p, o.dept, d.kind); if (!t) return { error: "There's no " + o.dept + " task on " + p.code + "'s timeline." };
+    if (t.status === "Done") return { error: t.id + " (" + t.name + ") is already approved. Ask the Project Director to reopen it before sending a new version." };
+    if (t.status === "Waiting on approval" && t.submission && t.submission.id === d.id) return { error: "Already with the Project Director for review." };
+    const sub = Object.assign({ at: today(), dept: o.dept, note: String(o.note || "").trim() }, pick(d, ["id", "kind", "title", "version", "section", "row"]));
+    t.history = arr(t.history).concat([{ date: sub.at, what: "Submitted", title: sub.title || "", version: sub.version || "", note: sub.note, by: o.dept }]).slice(-20);
+    t.submission = sub; t.status = "Waiting on approval";
+    const err = writeHq(S);
+    return err ? { error: "Couldn't save the submission on this device. " + err } : { task: t.id, name: t.name };
+  }
   /* saves go straight into the model now, so there is nothing waiting to be written (kept for pages that call them) */
   const touch = () => { }, flush = () => { };
   /* the old keys are never written again: a write to one from this window (code that still saves the old way) goes into the
@@ -311,6 +342,6 @@
     const set = Storage.prototype.setItem;
     if (!set.__mawm) { const w = function (k, v) { if (this === ls && SRC_KEYS.has(k)) { const d = parse(v); if (d) savePart(k, d); return } set.call(this, k, v) }; w.__mawm = true; Storage.prototype.setItem = w }
   } catch (e) { }
-  g.MAWM_DATA = { KEY, BACKUP, VERSION, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, projects, studio, saveStudio, studioFor, STUDIO, HQ, page, savePart, retired: () => { const m = load(); return m && m.meta.retired || null }, sig, raw, error: () => lastError, today };
+  g.MAWM_DATA = { KEY, BACKUP, VERSION, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, projects, studio, saveStudio, studioFor, STUDIO, submit, reviewTask, HQ, page, savePart, retired: () => { const m = load(); return m && m.meta.retired || null }, sig, raw, error: () => lastError, today };
   migrate("load");
 })(typeof window !== "undefined" ? window : globalThis);

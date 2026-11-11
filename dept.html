@@ -94,6 +94,13 @@ a.btn{text-decoration:none;display:inline-block;color:var(--ink);word-break:norm
 .pkfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid var(--line);background:var(--surface)}
 @media (max-width:900px){.split{grid-template-columns:1fr}.cols{grid-template-columns:1fr}.kpis,.kpis.k6{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:1fr 1fr}}
 @media (max-width:560px){.form{grid-template-columns:1fr}.qgrid,.qgrid.igrid{grid-template-columns:1fr}.pk{padding:0;place-items:end stretch}.pkbox{border-radius:14px 14px 0 0;max-height:92vh;width:100%}.pkadd .form.plain{grid-template-columns:1fr}.pkfoot .toolbar{width:100%}.pkfoot .btn{flex:1}}
+/* 2b-i: submit for review */
+.sublist{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 16px}
+.subrow{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.3fr);gap:8px 14px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.subrow:first-child{border-top:0}.subrow .sub{font-size:12.5px}
+.subact{display:flex;gap:6px;align-items:center}.subact input{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:7px 10px;color:var(--ink);font:inherit;font-size:13px}
+.submsg{font-size:12.5px;margin-top:8px}
+@media (max-width:760px){.subrow{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -175,6 +182,12 @@ const CFG={
 };
 const C=CFG[D]||CFG.research;document.title=C.name+" · My AI Work Mates";
 const KEY="mawm-dept-"+D;
+/* 2b-i: what this department submits to the Project Director for review, and where it goes */
+const SUBMIT={research:{sec:"documents",kind:"Marketer's Booklet",none:"No Marketer's Booklet yet. Set it up on the Marketer's Booklet page.",only:r=>r.doc===NINE[8],title:r=>"Marketer's Booklet v"+(r.version||"1"),via:r=>"#booklet/"+encodeURIComponent(r[P]||"")},
+ copy:{sec:"copymaps",kind:"Copy map",none:"No copy maps yet.",title:r=>(r.page||"Page")+" copy map"+(r.version?" v"+r.version:"")},
+ graphic:{sec:"images",kind:"Image set",none:"No image sets yet.",title:r=>r.set||"Image set"},
+ shopify:{sec:"builds",kind:"Shopify build",none:"No builds yet.",title:r=>r.theme||((r[P]||"")+" build "+(r.date||"")).trim()}}[D]||null;
+
 /* 2a-iii / 2a-iv-b: the department's records (its deliverables) live in the shared model (data.js), the only saved source;
    the old key is a read-only backup. Without the model (it failed to load) the page shows the old key's data but saves nothing. */
 const DM=window.MAWM_DATA||null;let saveErr="";
@@ -192,6 +205,12 @@ const loadDV=()=>{DV=null;if(DM)try{DV=DM.deptView(C.hq)}catch(e){DV=null}
 const pdLog=o=>DM?DM.report(Object.assign({dept:C.hq},o)):{error:"The shared data couldn't load on this device, so nothing was logged."};
 const pdIssue=id=>DM?DM.issue(id):null;
 const pdReady=()=>!!(DM&&DM.hqReady());
+/* 2b-i: submit one of this department's deliverables: its task goes to "Waiting on approval" in the review queue */
+const delivId=r=>D+":"+SUBMIT.sec+":"+r._id;
+const reviewTaskOf=r=>r&&r[P]&&DM&&DM.reviewTask?DM.reviewTask(r[P],C.hq,SUBMIT.kind):null;
+function submitDeliv(r,note){if(!SUBMIT)return {error:"Nothing to submit here."};if(!DM||!DM.submit)return {error:"The shared data couldn't load on this device, so nothing was submitted."};
+ const res=DM.submit({dept:C.hq,project:r[P],deliv:{id:delivId(r),kind:SUBMIT.kind,title:SUBMIT.title(r),version:r.version||"",section:SUBMIT.sec,row:r._id},note});
+ if(res.error)return res;r.status="Waiting on approval";r.submitted={at:today(),task:res.task,note:String(note||"").trim()};save();loadDV();return res}
 const pname=c=>{const p=projects.find(x=>x.code===c);return p?p.code+" · "+p.name:c||"—"};
 const pill=v=>{const m={"Done":"g","Clear":"g","Approved":"g","Pass":"g","In progress":"a","Waiting on approval":"w","Waiting on CEO":"w","Reword":"w","To do":"w","Blocked":"b","Do not use":"b","Rejected":"b","Yes, with wording":"g","No":"b","Needs compliance review":"w"};return `<span class="pill ${m[v]||""}">${esc(v)}</span>`};
 function route(){const [b,...a]=location.hash.slice(1).split("/");return {v:b==="overview"||C.secs[b]?b:"overview",a:a.length?decodeURIComponent(a.join("/")):""}}
@@ -207,9 +226,25 @@ function overview(){const tasks=projects.flatMap(p=>(p.tasks||[]).filter(t=>t.de
  <div class="kpis">${Object.entries(C.secs).map(([k,s])=>`<a class="kpi" href="#${k}"><div class="n">${s.count?s.count():s.checklist?Object.keys(S.checks).length:(S.rows[k]||[]).length}</div><div class="l">${esc(s.title)}</div></a>`).join("")}<a class="kpi" href="#overview" onclick="document.getElementById('tasks').scrollIntoView();return false"><div class="n">${tasks.filter(t=>t.status!=="Done").length}</div><div class="l">Open tasks</div></a></div>
  <div class="cols"><div class="card"><h2>Needs before starting</h2><ul>${C.inputs.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div><div class="card"><h2>Hands off</h2><ul>${C.outputs.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div><div class="card"><h2>Never</h2><ul>${C.never.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div></div>
  <h2 id="tasks" style="margin-top:18px">Tasks from the Project Director</h2>
- <div class="tablewrap">${tasks.length?`<table><thead><tr><th>Task</th><th>Project</th><th>Start</th><th>Due</th><th>Status</th></tr></thead><tbody>${tasks.map(t=>`<tr><td><span class="mono">${esc(t.id)}</span><br><b>${esc(t.name)}</b></td><td>${esc(pname(t.project))}</td><td>${esc(t.start)}</td><td>${esc(t.due)}</td><td>${pill(t.status)}</td></tr>`).join("")}</tbody></table>`:`<div class="empty">No tasks yet. Projects created on the CEO dashboard assign tasks here automatically.</div>`}</div>
+ <div class="tablewrap">${tasks.length?`<table><thead><tr><th>Task</th><th>Project</th><th>Start</th><th>Due</th><th>Status</th></tr></thead><tbody>${tasks.map(t=>`<tr><td><span class="mono">${esc(t.id)}</span><br><b>${esc(t.name)}</b></td><td>${esc(pname(t.project))}</td><td>${esc(t.start)}</td><td>${esc(t.due)}</td><td>${pill(t.status)}${t.submission?`<br><span class="sub" style="font-size:12px">Submitted: ${esc(t.submission.title||t.submission.kind||"")} · ${esc(t.submission.at)}</span>`:""}</td></tr>`).join("")}</tbody></table>`:`<div class="empty">No tasks yet. Projects created on the CEO dashboard assign tasks here automatically.</div>`}</div>
+ ${submitCard()}
  ${pdCard()}
- <p class="note">Task dates and status are changed by the Project Director on their timeline. Issues and CEO decisions are logged through the shared data, so the Project Director and the CEO see them at once. The full rules are in this department's rulebook (link in the menu above).${saveErr?` <b style="color:var(--bad)">${esc(saveErr)}</b>`:""}</p>`}
+ <p class="note">Task dates and status are changed by the Project Director on their timeline. Issues and CEO decisions are logged through the shared data, so the Project Director and the CEO see them at once. The full rules are in this department's rulebook (link in the menu above).${saveErr?` <b style="color:var(--bad)">${esc(saveErr)}</b>`:""}</p>`;
+ $$("[data-sub]").forEach(b=>b.onclick=()=>{const r=(S.rows[SUBMIT.sec]||[]).find(x=>x._id===b.dataset.sub);if(!r)return;const n=$(`[data-sn="${b.dataset.sub}"]`),res=submitDeliv(r,n?n.value:"");
+  if(res.error){const m=b.closest(".subrow").querySelector(".submsg")||b.closest(".subrow").appendChild(Object.assign(document.createElement("div"),{className:"submsg"}));m.style.color="var(--bad)";m.textContent=res.error;return}
+  overview();const m=$("#submsg");if(m){m.textContent="Submitted to "+res.task+" ("+res.name+"). It's now waiting in the Project Director's review queue.";m.hidden=false}})}
+/* 2b-i: this department's deliverables that can go to the Project Director, with the task each goes to */
+function submitCard(){if(!SUBMIT)return "";const rows=(S.rows[SUBMIT.sec]||[]).filter(r=>!SUBMIT.only||SUBMIT.only(r));
+ const item=r=>{const t=reviewTaskOf(r),mine=!!(t&&t.submission&&t.submission.id===delivId(r));let st="",act="";
+  if(!r[P])st=`<span class="pill w">No project</span><br><span class="sub">Pick its project in the editor first.</span>`;
+  else if(!t)st=`<span class="pill">No task</span><br><span class="sub">This project's timeline has no ${esc(C.name)} task.</span>`;
+  else if(t.status==="Done")st=mine?`<span class="pill g">Approved</span><br><span class="sub">${esc(t.id)} is done</span>`:`<span class="pill g">Done</span><br><span class="sub">${esc(t.id)} is already approved</span>`;
+  else if(t.status==="Waiting on approval"&&mine)st=`<span class="pill w">With the Project Director</span><br><span class="sub">Submitted ${esc(t.submission.at)}${t.submission.note?" · "+esc(t.submission.note):""}</span>`;
+  else{st=t.status==="Waiting on approval"?`<span class="pill w">Task waiting on another version</span><br><span class="sub">Submitting replaces it</span>`:`${pill(t.status)}<br><span class="sub">Task due ${esc(t.due||"—")}</span>`;
+   act=SUBMIT.via?`<a class="btn sm" href="${SUBMIT.via(r)}">Submit from the Booklet page</a><span class="sub">after its ready-for-handoff checklist</span>`:`<input data-sn="${esc(r._id)}" placeholder="Note for the Project Director (optional)" aria-label="Note for the Project Director"><button class="btn sm primary" data-sub="${esc(r._id)}">Submit</button>`}
+  return `<div class="subrow"><div><b>${esc(SUBMIT.title(r))}</b><br><span class="sub">${esc(pname(r[P]))}${t?` → <span class="mono">${esc(t.id)}</span> ${esc(t.name)}`:""}</span></div><div>${st}</div><div class="subact">${act}</div></div>`};
+ return `<h2 id="submit" style="margin-top:18px">Submit for review</h2><p class="sub" style="margin:-2px 0 10px">A submitted ${esc(SUBMIT.kind.toLowerCase())} is attached to its task on the project's timeline, which turns "Waiting on approval" in the Project Director's review queue. Nothing is sent to anyone.</p>
+ <div class="sublist">${rows.length?rows.map(item).join(""):`<div class="empty">${esc(SUBMIT.none)}</div>`}</div><p class="submsg" id="submsg" role="status" style="color:var(--good)" hidden></p>`}
 /* 2a-iii: this department's decisions with the CEO (waiting and decided) and its issues, read from the shared model */
 function pdCard(){if(!DV)return `<h2 style="margin-top:18px">With the Project Director and the CEO</h2><div class="tablewrap"><div class="empty">${DM?"Open the CEO page once on this device, so the Project Director's log exists.":"The shared data couldn't load on this device."}</div></div>`;
  const open=DV.issues.filter(i=>i.status!=="Resolved"),res=r=>/^Disallow/.test(r||"")?"b":/^Allow/.test(r||"")?"g":"",
@@ -477,7 +512,7 @@ function booklet(k,arg){S.handoff=S.handoff||{};let pc=arg||(projects[0]?project
   $("#copyB").onclick=()=>{const txt=`# Marketer's Booklet · ${pname(pc)}\nVersion ${bk.version} · ${bk.date}${bk.changes?`\nWhat changed: ${bk.changes}`:""}${bk.link?`\nFull research: ${bk.link}`:""}\n\n`+MUST[8].map(([t],i)=>{const m=bk.mc[t]||{};return `## ${i+1}. ${t}\n${(m.t||"").trim()||"(not written yet)"}${m.ev?`\nLedger: ${m.ev}`:""}`}).join("\n\n");const b=$("#copyB"),ok=()=>{b.textContent="Copied";setTimeout(()=>{if(b.isConnected)b.textContent="Copy Booklet as text"},2000)};
    (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(ok).catch(()=>{const ta=document.createElement("textarea");ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");ok()}catch(e){b.textContent="Copy failed"}ta.remove()})};
   $$("[data-hc]").forEach(cb=>cb.onchange=()=>{const s2=S.handoff[pc]||(S.handoff[pc]={});s2[cb.dataset.hc]=cb.checked;save();render()});
-  $("#toPD")&&($("#toPD").onclick=()=>{bk.status="Waiting on approval";save();render()})};
+  $("#toPD")&&($("#toPD").onclick=()=>{const res=submitDeliv(bk,"");if(res.error){const b=$("#toPD");b.insertAdjacentHTML("afterend",`<p class="submsg" style="color:var(--bad)">${esc(res.error)}</p>`);b.disabled=true;return}render()})};
  render()}
 /* Copy map editor (Copywriter rulebook v1.1): deliverable header, summary, one block per page section from the wireframe in page order, fields with character limits, ledger IDs, versions */
 const CM_F=[["badge","Badge",20],["heading","Heading",45],["desc","Description",220],["bullets","Bullets, one per line",60],["button","Button label",20]];
