@@ -583,7 +583,10 @@ function drawDirector(){
  $("#pd-proj").onchange=e=>{S.sel=e.target.value;save();drawDirector()};
  $$("[data-ti]").forEach(el=>el.onchange=()=>{const t=p.tasks[+el.dataset.ti];t[el.dataset.f]=el.value;if(el.dataset.f==="status")t.doneAt=el.value==="Done"?TODAY:undefined;if(el.dataset.f==="due"&&t.due<t.start)t.start=t.due;p.due=p.tasks.reduce((m,x)=>x.due>m?x.due:m,p.tasks[0].due);if(p.tasks.every(x=>x.status==="Done"))p.status="Launched";else if(p.status!=="Planning")p.status="Active";save();toast("Timeline updated");drawDirector()});
  $$("[data-rv]").forEach(b=>b.onclick=()=>{const card=b.closest("[data-tid]"),pr=proj(card.dataset.proj),t=pr.tasks.find(x=>x.id===card.dataset.tid);
-  if(b.dataset.rv==="ok"){t.status="Done";t.doneAt=TODAY;save();toast("Approved");drawDirector()}
+  if(b.dataset.rv==="ok"){/* 2b-ii: approve through the model: task Done, deliverable Approved, next task(s) start */
+   if(DM&&DM.approve){const res=DM.approve(pr.code,t.id);if(res.error){toast(res.error);return}const x=readS();if(x&&x.projects){S=x;if(!Array.isArray(S.decided))S.decided=[]}
+    toast("Approved"+(res.started.length?" · started "+res.started.map(n=>n.id+" ("+n.dept+")").join(", "):""));drawDirector();return}
+   t.status="Done";t.doneAt=TODAY;save();toast("Approved");drawDirector()}
   else if(b.dataset.rv==="ceo"){S.decisions.unshift({id:uid(),type:"Escalation",project:pr.code,title:"Review needed: "+t.name,detail:"Sent up by the Project Director from the review queue.",rec:"See the deliverable before deciding."});save();toast("Sent to the CEO");}
   else if(!card.querySelector(".inline-input")){card.insertAdjacentHTML("beforeend",`<div class="inline-input"><input placeholder="What must change, field by field" aria-label="Return comment"><button class="btn sm bad">Return</button></div>`);const box=card.querySelector(".inline-input");box.querySelector("input").focus();box.querySelector("button").onclick=()=>{t.status="In progress";S.issues.unshift({id:nextIssueId(),date:TODAY,project:pr.code,dept:t.dept,what:"Returned: "+t.name+" — "+(box.querySelector("input").value||"see comments"),type:"Error",sev:"Low",told:"—",decision:"—",status:"Open"});save();toast("Returned and logged");drawDirector()}}});
  $("#addIssue").onclick=()=>quickAdd("issue");$("#addLesson").onclick=()=>quickAdd("lesson");

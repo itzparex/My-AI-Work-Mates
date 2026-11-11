@@ -16,7 +16,8 @@
    open from before) still writes an old key, the next load notices the change, takes that newer data into the model and logs it.
    A one-time backup copy of the old data is also kept under "mawm-data-backup-v0".
    Step 2b-i: departments submit a deliverable for review (submit): it is attached to their task, which goes to
-   "Waiting on approval" in the Project Director's review queue.
+   "Waiting on approval" in the Project Director's review queue. Step 2b-ii: approving it (approve) marks the task Done and
+   the deliverable Approved, starts the next task(s), and the next department sees it as an input (inputsFor).
    Used by hq.html, dept.html and studio.html as window.MAWM_DATA. No network, no accounts: everything stays on this device. */
 (function (g) {
   "use strict";
@@ -334,6 +335,61 @@
     const err = writeHq(S);
     return err ? { error: "Couldn't save the submission on this device. " + err } : { task: t.id, name: t.name };
   }
+  /* 2b-ii: the Project Director approves a task from the review queue. The task becomes Done, its submitted deliverable is
+     marked Approved (on the task and in the department's own records), and the next task(s) on the timeline move to
+     "In progress": a "Not started" task starts once every earlier task that ends before it starts is Done (so the images
+     step, which runs alongside Page design, starts with it, and Design approval waits for both). Nothing is sent to anyone.
+     Returns { task, started: [{id,name,dept}], deliverable } or { error }. */
+  const LINK = { "Marketer's Booklet": "index.html#/research/booklet", "Research document": "index.html#/research/documents", "Copy map": "index.html#/copy/copymaps", "Image set": "index.html#/graphic/images", "Shopify build": "index.html#/shopify/builds", "Design concept": "index.html#/uiux/concepts", "Code Studio item": "index.html#/uiux/library" };
+  function nextReady(p) {
+    const ts = arr(p.tasks), out = [];
+    ts.forEach((t, j) => {
+      if (!t || t.status !== "Not started") return;
+      const before = ts.slice(0, j).filter(k => k && !(k.due >= t.start));
+      if (before.length && before.every(k => k.status === "Done") && ts.slice(0, j).some(k => k && k.status === "Done")) out.push(t);
+    });
+    return out;
+  }
+  function approve(project, taskId, note) {
+    if (!ls) return { error: "This device doesn't allow saving." };
+    const S = readHq(); if (!S) return { error: "Open the CEO page once on this device first." };
+    const p = arr(S.projects).find(x => x.code === project); if (!p) return { error: "That project no longer exists." };
+    const t = arr(p.tasks).find(x => x.id === taskId); if (!t) return { error: "That task is no longer on " + project + "'s timeline." };
+    if (t.status === "Done") return { error: t.id + " is already approved." };
+    const at = today(); t.status = "Done"; t.doneAt = at;
+    let deliv = null;
+    if (t.submission) {
+      t.submission.approved = at; t.submission.state = "Approved"; if (note) t.submission.pdNote = String(note).trim();
+      deliv = t.submission;
+    }
+    t.history = arr(t.history).concat([{ date: at, what: "Approved", title: deliv ? deliv.title || "" : "", version: deliv ? deliv.version || "" : "", note: String(note || "").trim(), by: "Project Director" }]).slice(-20);
+    const started = nextReady(p);
+    started.forEach(n => { n.status = "In progress"; n.history = arr(n.history).concat([{ date: at, what: "Started", note: "After " + t.id + " was approved", by: "Project Director" }]).slice(-20) });
+    if (arr(p.tasks).every(x => x.status === "Done")) p.status = "Launched"; else if (p.status !== "Planning") p.status = "Active";
+    let err = writeHq(S);
+    if (!err && deliv && deliv.section && deliv.row != null) {
+      const key = "mawm-dept-" + String(deliv.id || "").split(":")[0];
+      if (SRC_KEYS.has(key)) {
+        const d = page(key), r = d && d.rows && arr(d.rows[deliv.section]).find(x => x && x._id === deliv.row);
+        if (r) { r.status = "Approved"; r.approved = { at, task: t.id }; err = savePart(key, d) }
+      }
+    }
+    return err ? { error: "Couldn't save the approval on this device. " + err } : { task: t.id, name: t.name, started: started.map(n => ({ id: n.id, name: n.name, dept: n.dept })), deliverable: deliv };
+  }
+  /* 2b-ii: approved deliverables a department works from: for each project where it still has open work, what the other
+     departments delivered and the Project Director approved on earlier tasks, newest first */
+  function inputsFor(dept) {
+    const S = readHq(), out = []; if (!S) return out;
+    arr(S.projects).forEach(p => {
+      const ts = arr(p.tasks), mine = ts.map((t, i) => [t, i]).filter(([t]) => t && t.dept === dept && t.status !== "Done");
+      if (!mine.length) return; const last = mine[mine.length - 1][1], forT = mine[0][0];
+      ts.forEach((t, i) => {
+        const s = t && t.submission; if (i >= last || t.dept === dept || !s || !s.approved) return;
+        out.push({ project: p.code, projectName: p.name || "", task: t.id, taskName: t.name, from: s.dept || t.dept, title: s.title || s.kind || "Deliverable", kind: s.kind || "", version: s.version || "", approved: s.approved, note: s.note || "", link: LINK[s.kind] || "", forTask: forT.id, forName: forT.name });
+      });
+    });
+    return out.sort((a, b) => a.approved < b.approved ? 1 : a.approved > b.approved ? -1 : 0);
+  }
   /* saves go straight into the model now, so there is nothing waiting to be written (kept for pages that call them) */
   const touch = () => { }, flush = () => { };
   /* the old keys are never written again: a write to one from this window (code that still saves the old way) goes into the
@@ -342,6 +398,6 @@
     const set = Storage.prototype.setItem;
     if (!set.__mawm) { const w = function (k, v) { if (this === ls && SRC_KEYS.has(k)) { const d = parse(v); if (d) savePart(k, d); return } set.call(this, k, v) }; w.__mawm = true; Storage.prototype.setItem = w }
   } catch (e) { }
-  g.MAWM_DATA = { KEY, BACKUP, VERSION, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, projects, studio, saveStudio, studioFor, STUDIO, submit, reviewTask, HQ, page, savePart, retired: () => { const m = load(); return m && m.meta.retired || null }, sig, raw, error: () => lastError, today };
+  g.MAWM_DATA = { KEY, BACKUP, VERSION, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, projects, studio, saveStudio, studioFor, STUDIO, submit, reviewTask, approve, inputsFor, LINK, HQ, page, savePart, retired: () => { const m = load(); return m && m.meta.retired || null }, sig, raw, error: () => lastError, today };
   migrate("load");
 })(typeof window !== "undefined" ? window : globalThis);

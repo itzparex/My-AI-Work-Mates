@@ -132,7 +132,7 @@ const ROUTES = ["#/home", "#/ceo/home",
         const t = D2.readHq().projects.find(p => p.code === "FL-PDP").tasks.find(x => x.submission && x.submission.id === "graphic:images:smoke3");
         if (!t) return "submission not on a task"; if (t.status !== "Waiting on approval" || !/image/i.test(t.name) || t.submission.note !== "Smoke note") return "wrong task or status: " + t.name + " " + t.status;
         if (D2.page(k).rows.images.find(x => x._id === "smoke3").status !== "Waiting on approval") return "image set status not updated";
-        if (!d.querySelector("#submit") || !/With the Project Director/.test(d.querySelector(".sublist").textContent)) return "Overview doesn't show it with the Project Director";
+        if (!d.querySelector("#submit") || !/With the Project Director/.test(d.querySelector("#submit ~ .sublist").textContent)) return "Overview doesn't show it with the Project Director";
         if (!D2.submit({ dept: "Graphic Designer", project: "FL-PDP", deliv: { id: "graphic:images:smoke3", kind: "Image set" } }).error) return "a second submit of the same deliverable wasn't refused";
         return "ok";
       } catch (e) { return "error: " + e.message } });
@@ -141,9 +141,35 @@ const ROUTES = ["#/home", "#/ceo/home",
     const rq = await page.evaluate(() => { const W = document.getElementById("frame").contentWindow, d = W.document, card = [...d.querySelectorAll("[data-tid]")].find(c => /Smoke image set/.test(c.textContent));
       return !card ? "review queue doesn't show the submitted image set" : !/Smoke note/.test(card.textContent) || !card.querySelector(".subm a") ? "review card misses the note or link" : "ok"; });
     if (rq !== "ok") errors.push("deliverables flow: review queue: " + rq);
-    if (!errors.some(e => /deliverables flow/.test(e))) await page.evaluate(() => { const D = document.getElementById("frame").contentWindow.MAWM_DATA, S = D.readHq(); S.projects.forEach(p => p.tasks.forEach(t => { if (t.submission && t.submission.id === "graphic:images:smoke3") { delete t.submission; t.history = []; t.status = "Waiting on a person" } })); D.writeHq(S);
+    // 2b-ii: approve from the review queue: task Done, deliverable Approved; on a fresh timeline the next tasks start and the next department sees it
+    const ap = await page.evaluate(async () => { const W = document.getElementById("frame").contentWindow, d = W.document, D = W.MAWM_DATA, wait = ms => new Promise(r => setTimeout(r, ms));
+      try {
+        const card = [...d.querySelectorAll("[data-tid]")].find(c => /Smoke image set/.test(c.textContent)); card.querySelector('[data-rv="ok"]').click(); await wait(200);
+        const t = D.readHq().projects.find(p => p.code === "FL-PDP").tasks.find(x => x.submission && x.submission.id === "graphic:images:smoke3");
+        if (t.status !== "Done" || t.submission.state !== "Approved") return "task not Done or submission not Approved";
+        if (D.page("mawm-dept-graphic").rows.images.find(x => x._id === "smoke3").status !== "Approved") return "image set not marked Approved";
+        const S = D.readHq(), base = S.projects.find(p => p.code === "FL-COL"), tasks = JSON.parse(JSON.stringify(base.tasks)).map((x, i) => Object.assign(x, { id: "SM-2B-" + String(i + 1).padStart(2, "0"), status: i < 2 ? "Done" : "Not started", submission: undefined }));
+        tasks[2].status = "Waiting on approval"; tasks[2].submission = { id: "copy:copymaps:none", kind: "Copy map", title: "Smoke copy map", dept: "Copywriter", at: "2026-11-11" };
+        S.projects.push({ code: "SM-2B", name: "Smoke 2b", status: "Active", tasks }); D.writeHq(S);
+        const res = D.approve("SM-2B", "SM-2B-03"); if (res.error) return "approve failed: " + res.error;
+        const ids = res.started.map(x => x.id).join(","); if (ids !== "SM-2B-04,SM-2B-05") return "wrong next tasks started: " + ids;
+        const p2 = D.readHq().projects.find(p => p.code === "SM-2B"); if (p2.tasks[5].status !== "Not started") return "Design approval started too early";
+        if (!D.inputsFor("Graphic Designer").some(i => i.title === "Smoke copy map")) return "next department doesn't get the input";
+        if (!D.approve("SM-2B", "SM-2B-03").error) return "a second approve wasn't refused";
+        return "ok";
+      } catch (e) { return "error: " + e.message } });
+    if (ap !== "ok") errors.push("deliverables flow: approve: " + ap);
+    await page.goto(base + "index.html#/graphic/overview"); await page.waitForTimeout(1200);
+    const inp = await page.evaluate(() => { const d = document.getElementById("frame").contentWindow.document, el = d.querySelector("#inputs"); return el && /Smoke copy map/.test(el.nextElementSibling.nextElementSibling.textContent) ? "ok" : "Graphic Designer Overview doesn't show the approved copy map"; });
+    if (inp !== "ok") errors.push("deliverables flow: inputs: " + inp);
+    if (shots) await page.screenshot({ path: path.join(ROOT, "tests", "shots", "2b-inputs-desktop.png"), fullPage: true });
+    await page.goto(base + "index.html#/uiux/research"); await page.waitForTimeout(1200);
+    const sin = await page.evaluate(() => { const el = document.getElementById("frame").contentWindow.document.querySelector("#inputs"); return el && !el.hidden && /Smoke copy map/.test(el.textContent) ? "ok" : "Design Studio doesn't show the approved copy map"; });
+    if (sin !== "ok") errors.push("deliverables flow: studio inputs: " + sin);
+    await page.evaluate(() => { const D = document.getElementById("frame").contentWindow.MAWM_DATA, S = D.readHq(); S.projects = S.projects.filter(p => p.code !== "SM-2B"); D.writeHq(S) });
+    if (!errors.some(e => /deliverables flow/.test(e))) await page.evaluate(() => { const D = document.getElementById("frame").contentWindow.MAWM_DATA, S = D.readHq(); S.projects.forEach(p => p.tasks.forEach(t => { if (t.submission && t.submission.id === "graphic:images:smoke3") { delete t.submission; delete t.doneAt; t.history = []; t.status = "Waiting on a person" } })); D.writeHq(S);
       const c = D.page("mawm-dept-graphic"); c.rows.images = c.rows.images.filter(x => x._id !== "smoke3"); D.savePart("mawm-dept-graphic", c) });
-    console.log("OK: data model " + JSON.stringify(r.counts) + ", CEO page reads it back (" + rt.projects + " projects, " + rt.tasks + " tasks), decision recorded, department logs and saves through it, Design Studio links work to projects, old keys retired (never written; an older page's write is taken in), a submitted deliverable waits in the review queue");
+    console.log("OK: data model " + JSON.stringify(r.counts) + ", CEO page reads it back (" + rt.projects + " projects, " + rt.tasks + " tasks), decision recorded, department logs and saves through it, Design Studio links work to projects, old keys retired (never written; an older page's write is taken in), a submitted deliverable waits in the review queue, approving it starts the next tasks and hands it on");
     await page.close();
   }
   await browser.close(); server.close();

@@ -75,6 +75,9 @@ h2{font-family:var(--f-display);font-weight:700;font-size:18px;margin:0}
 .pill.reuse{background:var(--accent-soft);color:var(--accent)}
 .view[hidden]{display:none}
 /* pipeline strip */
+.inputs{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px;margin:-8px 0 22px}
+.inputs h4{margin:0 0 6px;font-size:13.5px}.inputs .in{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;padding:6px 0;border-top:1px solid var(--line);font-size:13px}
+.inputs .in:first-of-type{border-top:0}.inputs .in span{color:var(--muted);font-size:12.5px}.inputs .in a{margin-left:auto;font-weight:700;color:var(--accent);text-decoration:none;font-size:12.5px}
 .pipeline{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
 .stage{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:2px;transition:transform .15s,border-color .15s}
 .stage:hover{transform:translateY(-2px);border-color:var(--accent)}
@@ -276,6 +279,7 @@ pre.code{background:var(--code-bg);color:var(--code-ink);font-family:var(--f-mon
 
   <main>
     <div class="pipeline" id="pipeline"></div>
+    <div class="inputs" id="inputs" hidden></div>
 
     <!-- RESEARCH -->
     <section class="view" id="v-research">
@@ -654,8 +658,12 @@ function renderPipeline(){
  const appr=S.items.filter(i=>i.status==="Approved").length;
  const data=[["research",S.refs.length,"References","Sites studied"],["concepts",inProg,"Concepts in play",S.concepts.filter(c=>c.stage==="Review").length+" waiting on review"],["studio",S.items.filter(i=>i.status==="Draft").length,"Drafts in studio","Open and keep building"],["library",S.items.length,"Saved designs",appr+" approved · "+S.items.filter(i=>i.reusable).length+" reusable"]];
  $("#pipeline").innerHTML=data.map(d=>`<button class="stage ${d[0]===view?"on":""}" data-p="${d[0]}"><span class="n">${d[1]}</span><span class="l">${d[2]}</span><span class="d">${esc(d[3])}</span></button>`).join("");
- $("#c-research").textContent=S.refs.length;$("#c-concepts").textContent=inProg;$("#c-library").textContent=S.items.length;
+ renderInputs();$("#c-research").textContent=S.refs.length;$("#c-concepts").textContent=inProg;$("#c-library").textContent=S.items.length;
 }
+/* 2b-ii: deliverables other departments handed on and the Project Director approved, for the UI/UX Designer's open tasks */
+function renderInputs(){const el=$("#inputs");let l=[];try{l=window.MAWM_DATA&&MAWM_DATA.inputsFor?MAWM_DATA.inputsFor("UI/UX Designer"):[]}catch(e){l=[]}
+ el.hidden=!l.length;if(!l.length){el.innerHTML="";return}
+ el.innerHTML=`<h4>Approved inputs (${l.length})</h4>`+l.slice(0,5).map(i=>`<div class="in"><b>${esc(i.title)}</b><span>${esc(i.kind)}${i.version?" v"+esc(i.version):""} · from ${esc(i.from)} · approved ${esc(i.approved)} · ${esc(i.project)} → ${esc(i.forTask)} ${esc(i.forName)}</span>${i.link?`<a href="${esc(i.link)}" target="_top">Open →</a>`:""}</div>`).join("")}
 $("#pipeline").addEventListener("click",e=>{const b=e.target.closest(".stage");if(b)go(b.dataset.p)});
 
 /* ---------- research ---------- */
