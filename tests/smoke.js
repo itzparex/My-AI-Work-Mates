@@ -479,6 +479,43 @@ const ROUTES = ["#/home", "#/ceo/home",
     }
     if (!errors.some(e => /^sync/.test(e))) console.log("OK: GitHub sync refuses a wrong token and a public repo, keeps the token out of backups, saves, warns before overwriting another device's save, loads with a preview on another device, can replace on purpose (noted) and disconnects");
   }
+  { // W1b: Auto-work switch: main and per work mate on the CEO page, shown on department pages, header badge, history kept
+    const ctx = await browser.newContext(), page = await ctx.newPage(); page.on("pageerror", e => errors.push("autowork: " + e.message));
+    const fr = () => page.frames().find(f => /hq\.html.*#ceo/.test(f.url()));
+    await page.goto(base + "index.html#/ceo/departments"); await page.waitForTimeout(1500);
+    const hq = fr(); if (!hq) errors.push("autowork: CEO page didn't load");
+    else {
+      if (!(await page.$eval("#awBadge", e => e.hidden))) errors.push("autowork: badge shown while everything is on");
+      await hq.click('[data-aw="all"]'); await page.waitForTimeout(500);
+      const a = await hq.evaluate(() => MAWM_DATA.autowork());
+      if (a.main !== "Paused" || !a.log.length || !a.log[0].at) errors.push("autowork: main switch didn't save Paused with a time");
+      if (!(await hq.evaluate(() => MAWM_DATA.autoworkState("Copywriter").paused))) errors.push("autowork: main pause didn't pause a work mate");
+      await page.waitForTimeout(400);
+      const bt = await page.$eval("#awBadge", e => e.hidden ? "" : e.textContent);
+      if (!/Auto-work paused/.test(bt)) errors.push("autowork: header badge missing while paused (" + bt + ")");
+      if (shots) await page.screenshot({ path: path.join(ROOT, "tests", "shots", "desktop-autowork-paused.png") });
+      await hq.click('[data-aw="all"]'); await page.waitForTimeout(300);
+      await hq.click('[data-aw="Copywriter"]'); await page.waitForTimeout(400);
+      const st = await hq.evaluate(() => [MAWM_DATA.autoworkState("Copywriter").paused, MAWM_DATA.autoworkState("Research & Strategist").paused, MAWM_DATA.autowork().log.length]);
+      if (!st[0] || st[1] || st[2] !== 3) errors.push("autowork: per work mate switch wrong " + JSON.stringify(st));
+      await page.waitForTimeout(300);
+      if (!/1 paused/.test(await page.$eval("#awBadge", e => e.textContent))) errors.push("autowork: badge doesn't count one paused work mate");
+      await page.goto(base + "index.html#/copy/overview"); await page.waitForTimeout(1200);
+      const df = page.frames().find(f => /dept\.html/.test(f.url()));
+      const sw = df && await df.$('#awbar [data-aw="Copywriter"]');
+      if (!sw || (await sw.getAttribute("aria-checked")) !== "false") errors.push("autowork: Copywriter page doesn't show its paused switch");
+      else { if (shots) await page.screenshot({ path: path.join(ROOT, "tests", "shots", "desktop-autowork-dept.png") }); await sw.click(); await page.waitForTimeout(400);
+        if (await df.evaluate(() => MAWM_DATA.autoworkState("Copywriter").paused)) errors.push("autowork: switching on from the department page didn't save"); }
+      await page.goto(base + "index.html#/uiux/research"); await page.waitForTimeout(1800);
+      const sf = page.frames().find(f => /studio\.html/.test(f.url()));
+      if (!sf || !(await sf.$('#awbar [data-aw="UI/UX Designer"]'))) errors.push("autowork: Design Studio doesn't show the UI/UX Designer switch");
+      await page.setViewportSize({ width: 390, height: 800 }); if (sf) await sf.evaluate(() => MAWM_DATA.setAutowork("all", "Paused"));
+      await page.goto(base + "index.html#/ceo/departments"); await page.waitForTimeout(1500);
+      if (shots) await page.screenshot({ path: path.join(ROOT, "tests", "shots", "phone-autowork-paused.png") });
+    }
+    await ctx.close();
+    if (!errors.some(e => /^autowork/.test(e))) console.log("OK: Auto-work: main and per work mate switches save with date and time, show on department pages and the Design Studio, and the header shows a paused badge");
+  }
   try { console.log("OK: " + await require("./agent-data")(browser, base)); } catch (e) { errors.push("agent data: " + (e.stack || e)); }
   await browser.close(); server.close();
   try { console.log("OK: " + await require("./desktop")()); } catch (e) { errors.push("desktop: " + (e.stack || e)); }

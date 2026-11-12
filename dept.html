@@ -28,6 +28,15 @@ h2{font-family:var(--f-display);font-size:17px;margin:0 0 10px}
 .btn.danger:hover{border-color:var(--bad);color:var(--bad)}
 .btn:disabled{opacity:.5;cursor:not-allowed}.btn:disabled:hover{border-color:var(--line);color:inherit}.btn.primary:disabled:hover{border-color:var(--accent);color:var(--accent-ink);filter:none}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+/* W1b: Auto-work switch for this work mate (CEO only), same switch as the CEO page */
+.awbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;margin:0 0 16px;border-radius:12px;background:var(--good-soft);font-size:13px}
+.awbar[hidden]{display:none}.awbar.off{background:var(--warn-soft)}.awbar .awt{flex:1;min-width:200px;color:var(--ink)}.awbar .awt b{font-family:var(--f-display)}.awbar .awt small{display:block;color:var(--muted);font-size:12px}
+.aw{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:800;color:var(--good);border-radius:99px;padding:2px 0}
+.aw .tr{width:40px;height:24px;border-radius:99px;background:var(--good);position:relative;flex:none;transition:background .15s}
+.aw .tr::after{content:"";position:absolute;top:2px;left:18px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.aw[aria-checked="false"]{color:var(--warn)}.aw[aria-checked="false"] .tr{background:var(--muted)}.aw[aria-checked="false"] .tr::after{left:2px}
+.aw:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
 .cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:14px}
 .card ul{margin:0;padding-left:18px}.card li{margin:3px 0}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}.kpis.k6{grid-template-columns:repeat(6,1fr)}
@@ -222,8 +231,18 @@ addEventListener("hashchange",draw);
 addEventListener("storage",e=>{if(!DM||e.key!==DM.KEY)return;loadDV();const a=document.activeElement;if(view()==="overview"&&!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))overview()});
 /* this department's records changed in another tab (they live in the model): pick them up, unless typing */
 addEventListener("storage",e=>{if(!DM||e.key!==DM.KEY||!e.newValue)return;const x=readPage(KEY);if(!x||JSON.stringify(x)===JSON.stringify(S))return;S=x;S.rows=S.rows||{};S.checks=S.checks||{};S.qa=S.qa||{};const a=document.activeElement;if(!a||!/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))draw()});
+/* W1b: this work mate's Auto-work switch (CEO only). Saved in the shared data with the date and time; the CEO page has the main switch. */
+function awHTML(name){const DMx=window.MAWM_DATA;if(!DMx||!DMx.autoworkState||!DMx.readHq())return "";const st=DMx.autoworkState(name),last=(DMx.autowork().log||[]).find(x=>x.who===name||x.who==="All work mates");
+ const when=last?new Date(last.at).toLocaleString(undefined,{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}):"";
+ return `<span class="awt"><b>Auto-work</b> · ${st.why==="main"?"Paused for every work mate by the CEO's main switch (CEO → Work mates).":st.paused?"Paused by the CEO. Scheduled runs do nothing; a Run now you start still works.":"On. This work mate runs on its schedule."}${last?`<small>Last change: ${esc(last.who)} → ${esc(last.state)}, ${esc(when)}</small>`:""}<small class="awmsg" style="color:var(--bad)" hidden></small></span><button class="aw" role="switch" aria-checked="${st.own!=="Paused"}" data-aw="${esc(name)}" aria-label="Auto-work for ${esc(name)}: ${st.own==="Paused"?"Paused":"On"}"><span class="tr" aria-hidden="true"></span><span>${st.own==="Paused"?"Paused":"On"}</span></button>`}
+function paintAw(name){const el=document.getElementById("awbar");if(!el)return;const h=awHTML(name);el.hidden=!h;if(!h){el.innerHTML="";return}
+ const st=window.MAWM_DATA.autoworkState(name);el.className="awbar"+(st.paused?" off":"");el.innerHTML=h;
+ const b=el.querySelector("[data-aw]");b.onclick=()=>{const r=window.MAWM_DATA.setAutowork(name,b.getAttribute("aria-checked")==="true"?"Paused":"On");
+  if(r.error){const m=el.querySelector(".awmsg");m.textContent=r.error;m.hidden=false;return}paintAw(name);const f=el.querySelector("[data-aw]");f&&f.focus()}}
+addEventListener("storage",e=>{if(window.MAWM_DATA&&e.key===MAWM_DATA.KEY&&view()==="overview")paintAw(C.hq)});
 function overview(){const tasks=projects.flatMap(p=>(p.tasks||[]).filter(t=>t.dept===C.hq).map(t=>({...t,project:p.code})));
  $("#main").innerHTML=`<div class="head"><div><div class="eyebrow">${esc(C.name)} · Overview</div><h1>${esc(C.name)}</h1><p class="sub">${esc(C.role)}</p></div></div>
+ <div class="awbar" id="awbar" hidden></div>
  <div class="kpis">${Object.entries(C.secs).map(([k,s])=>`<a class="kpi" href="#${k}"><div class="n">${s.count?s.count():s.checklist?Object.keys(S.checks).length:(S.rows[k]||[]).length}</div><div class="l">${esc(s.title)}</div></a>`).join("")}<a class="kpi" href="#overview" onclick="document.getElementById('tasks').scrollIntoView();return false"><div class="n">${tasks.filter(t=>t.status!=="Done").length}</div><div class="l">Open tasks</div></a></div>
  <div class="cols"><div class="card"><h2>Needs before starting</h2><ul>${C.inputs.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div><div class="card"><h2>Hands off</h2><ul>${C.outputs.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div><div class="card"><h2>Never</h2><ul>${C.never.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div></div>
  ${returnedCard()}
@@ -233,6 +252,7 @@ function overview(){const tasks=projects.flatMap(p=>(p.tasks||[]).filter(t=>t.de
  ${submitCard()}
  ${pdCard()}
  <p class="note">Task dates and status are changed by the Project Director on their timeline. Issues and CEO decisions are logged through the shared data, so the Project Director and the CEO see them at once. The full rules are in this department's rulebook (link in the menu above).${saveErr?` <b style="color:var(--bad)">${esc(saveErr)}</b>`:""}</p>`;
+ paintAw(C.hq);
  $$("[data-sub]").forEach(b=>b.onclick=()=>{const r=(S.rows[SUBMIT.sec]||[]).find(x=>x._id===b.dataset.sub);if(!r)return;const n=$(`[data-sn="${b.dataset.sub}"]`),res=submitDeliv(r,n?n.value:"");
   if(res.error){const m=b.closest(".subrow").querySelector(".submsg")||b.closest(".subrow").appendChild(Object.assign(document.createElement("div"),{className:"submsg"}));m.style.color="var(--bad)";m.textContent=res.error;return}
   overview();const m=$("#submsg");if(m){m.textContent="Submitted to "+res.task+" ("+res.name+"). It's now waiting in the Project Director's review queue.";m.hidden=false}})}

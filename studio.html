@@ -76,6 +76,14 @@ h2{font-family:var(--f-display);font-weight:700;font-size:18px;margin:0}
 .pill.reuse{background:var(--accent-soft);color:var(--accent)}
 .view[hidden]{display:none}
 /* pipeline strip */
+/* W1b: Auto-work switch for this work mate (CEO only), same switch as the CEO page */
+.awbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;margin:0 0 16px;border-radius:12px;background:var(--good-soft);font-size:13px}
+.awbar[hidden]{display:none}.awbar.off{background:var(--warn-soft)}.awbar .awt{flex:1;min-width:200px;color:var(--ink)}.awbar .awt b{font-family:var(--f-display)}.awbar .awt small{display:block;color:var(--muted);font-size:12px}
+.aw{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:800;color:var(--good);border-radius:99px;padding:2px 0}
+.aw .tr{width:40px;height:24px;border-radius:99px;background:var(--good);position:relative;flex:none;transition:background .15s}
+.aw .tr::after{content:"";position:absolute;top:2px;left:18px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.aw[aria-checked="false"]{color:var(--warn)}.aw[aria-checked="false"] .tr{background:var(--muted)}.aw[aria-checked="false"] .tr::after{left:2px}
+.aw:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .inputs{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px;margin:-8px 0 22px}
 .inputs h4{margin:0 0 6px;font-size:13.5px}.inputs .in{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;padding:6px 0;border-top:1px solid var(--line);font-size:13px}
 .inputs .in:first-of-type{border-top:0}.inputs .in span{color:var(--muted);font-size:12.5px}.inputs .in a{margin-left:auto;font-weight:700;color:var(--accent);text-decoration:none;font-size:12.5px}
@@ -296,6 +304,7 @@ pre.code{background:var(--code-bg);color:var(--code-ink);font-family:var(--f-mon
   </aside>
 
   <main>
+    <div class="awbar" id="awbar" hidden></div>
     <div class="pipeline" id="pipeline"></div>
     <div class="inputs" id="inputs" hidden></div>
 
@@ -697,8 +706,17 @@ function renderPipeline(){
  const appr=S.items.filter(i=>i.status==="Approved").length;
  const data=[["research",S.refs.length,"References","Sites studied"],["concepts",inProg,"Concepts in play",S.concepts.filter(c=>c.stage==="Review").length+" waiting on review"],["studio",S.items.filter(i=>i.status==="Draft").length,"Drafts in studio","Open and keep building"],["library",S.items.length,"Saved designs",appr+" approved · "+S.items.filter(i=>i.reusable).length+" reusable"]];
  $("#pipeline").innerHTML=data.map(d=>`<button class="stage ${d[0]===view?"on":""}" data-p="${d[0]}"><span class="n">${d[1]}</span><span class="l">${d[2]}</span><span class="d">${esc(d[3])}</span></button>`).join("");
- renderInputs();try{const n=window.MAWM_DATA&&MAWM_DATA.returnedFor?MAWM_DATA.returnedFor("UI/UX Designer").length:0;$("#c-review").textContent=n||""}catch(e){}$("#c-research").textContent=S.refs.length;$("#c-concepts").textContent=inProg;$("#c-library").textContent=S.items.length;
+ renderInputs();paintAw("UI/UX Designer");try{const n=window.MAWM_DATA&&MAWM_DATA.returnedFor?MAWM_DATA.returnedFor("UI/UX Designer").length:0;$("#c-review").textContent=n||""}catch(e){}$("#c-research").textContent=S.refs.length;$("#c-concepts").textContent=inProg;$("#c-library").textContent=S.items.length;
 }
+/* W1b: this work mate's Auto-work switch (CEO only). Saved in the shared data with the date and time; the CEO page has the main switch. */
+function awHTML(name){const DMx=window.MAWM_DATA;if(!DMx||!DMx.autoworkState||!DMx.readHq())return "";const st=DMx.autoworkState(name),last=(DMx.autowork().log||[]).find(x=>x.who===name||x.who==="All work mates");
+ const when=last?new Date(last.at).toLocaleString(undefined,{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}):"";
+ return `<span class="awt"><b>Auto-work</b> · ${st.why==="main"?"Paused for every work mate by the CEO's main switch (CEO → Work mates).":st.paused?"Paused by the CEO. Scheduled runs do nothing; a Run now you start still works.":"On. This work mate runs on its schedule."}${last?`<small>Last change: ${esc(last.who)} → ${esc(last.state)}, ${esc(when)}</small>`:""}<small class="awmsg" style="color:var(--bad)" hidden></small></span><button class="aw" role="switch" aria-checked="${st.own!=="Paused"}" data-aw="${esc(name)}" aria-label="Auto-work for ${esc(name)}: ${st.own==="Paused"?"Paused":"On"}"><span class="tr" aria-hidden="true"></span><span>${st.own==="Paused"?"Paused":"On"}</span></button>`}
+function paintAw(name){const el=document.getElementById("awbar");if(!el)return;const h=awHTML(name);el.hidden=!h;if(!h){el.innerHTML="";return}
+ const st=window.MAWM_DATA.autoworkState(name);el.className="awbar"+(st.paused?" off":"");el.innerHTML=h;
+ const b=el.querySelector("[data-aw]");b.onclick=()=>{const r=window.MAWM_DATA.setAutowork(name,b.getAttribute("aria-checked")==="true"?"Paused":"On");
+  if(r.error){const m=el.querySelector(".awmsg");m.textContent=r.error;m.hidden=false;return}paintAw(name);const f=el.querySelector("[data-aw]");f&&f.focus()}}
+addEventListener("storage",e=>{if(window.MAWM_DATA&&e.key===MAWM_DATA.KEY)paintAw("UI/UX Designer")});
 /* 2b-ii: deliverables other departments handed on and the Project Director approved, for the UI/UX Designer's open tasks */
 function renderInputs(){const el=$("#inputs");let l=[];try{l=window.MAWM_DATA&&MAWM_DATA.inputsFor?MAWM_DATA.inputsFor("UI/UX Designer"):[]}catch(e){l=[]}
  el.hidden=!l.length;if(!l.length){el.innerHTML="";return}

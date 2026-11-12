@@ -146,6 +146,18 @@ a.stat:hover{border-color:var(--accent)}
 @keyframes pulse{50%{opacity:.35}}
 .mtask{min-height:36px;line-height:1.4}
 .mfoot{display:flex;flex-direction:column;gap:1px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);padding-top:7px;margin-top:auto}
+/* W1b: Auto-work switch (CEO only) */
+.mate .mlink{color:inherit;text-decoration:none;flex:1}.mate .mlink:hover{color:var(--accent)}.mate .mlink::after{content:" →";color:var(--muted);font-weight:600}
+.mate.paused{background:var(--sunk)}.mate.paused .mstate{opacity:.7}
+.aw{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:800;color:var(--good);border-radius:99px;padding:2px 0}
+.aw .tr{width:30px;height:18px;border-radius:99px;background:var(--good);position:relative;flex:none;transition:background .15s}
+.aw .tr::after{content:"";position:absolute;top:2px;left:14px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.aw[aria-checked="false"]{color:var(--warn)}.aw[aria-checked="false"] .tr{background:var(--muted)}.aw[aria-checked="false"] .tr::after{left:2px}
+.aw:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.aw.big{font-size:13.5px}.aw.big .tr{width:40px;height:24px}.aw.big .tr::after{width:20px;height:20px;left:18px}.aw.big[aria-checked="false"] .tr::after{left:2px}
+.awbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 12px;margin:-4px 0 12px;border-radius:12px;background:var(--good-soft)}
+.awbar.off{background:var(--warn-soft)}.awbar .awt{font-size:12.5px;color:var(--ink);flex:1;min-width:200px}.awbar .awt b{font-family:var(--f-display)}
+.awnote{font-size:10.5px;color:var(--warn);font-weight:700}
 .cols-b{grid-template-columns:minmax(0,1fr) minmax(0,1.35fr)}
 .claude{background:linear-gradient(160deg,var(--accent-soft),var(--surface) 60%)}
 .cmark{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--blush));color:#fff;font-size:14px}
@@ -446,6 +458,7 @@ function drawCEO(){
  const upcoming=allTasks.filter(t=>t.status!=="Done"&&t.due>=TODAY&&t.due<=we).sort((a,b)=>a.due<b.due?-1:1);
  const mates=["Project Director",...DEPTS.map(d=>d[0])];
  const mateUrl=n=>n==="Project Director"?"index.html#/director/timeline":(DEPTS.find(d=>d[0]===n)||[])[1];
+ const aw=DM&&DM.autoworkOf?DM.autoworkOf(S):{main:"On",mates:{},log:[]};
  $("#main").innerHTML=`
  <section class="hero">
   <div class="hero-top"><div>
@@ -475,12 +488,14 @@ function drawCEO(){
     ${risk?`<div class="riskline">${esc(risk)}</div>`:""}</button>`}).join("")||'<div class="empty">No projects yet. Create one to get started.</div>'}</div></section>
  </div>
  <section class="card" data-sec="departments" style="margin-top:16px"><h2>Work mates <a class="more" href="index.html#/director/workload" target="_top">Workload →</a></h2>
-  <div class="mates">${mates.map(n=>{const m=mateState(n);return `<a class="mate" href="${mateUrl(n)}" target="_top">
-   <div class="row"><span class="ico" aria-hidden="true">${ICO[n]||"•"}</span><b style="flex:1">${esc(n)}</b></div>
+  ${awBarHTML(aw)}
+  <div class="mates">${mates.map(n=>{const m=mateState(n),st=DM&&DM.autoworkState?DM.autoworkState(n,aw):{paused:false,own:"On"};return `<div class="mate${st.paused?" paused":""}">
+   <div class="row"><span class="ico" aria-hidden="true">${ICO[n]||"•"}</span><a class="mlink" href="${mateUrl(n)}" target="_top"><b>${esc(n)}</b></a></div>
    <span class="mstate m-${m.cls}"><i aria-hidden="true"></i>${m.label}</span>
    <div class="small mtask">${m.task?`<span class="mono">${esc(m.task.project)}</span> ${esc(m.task.name)}`:m.next?`Next: ${esc(m.next.name)} · ${fmt(m.next.start)}`:"No open tasks"}</div>
-   <div class="mfoot"><span data-mrun="${esc(n)}"></span><span>Auto-work: ${S.autowork?esc(S.autowork[n]||"On"):"not set up"}</span></div></a>`}).join("")}</div>
-  <p class="hint" style="margin:10px 0 0">Last run comes from the run records in the repo; each work mate starts recording when it becomes an agent. The Auto-work switch fills in later.</p></section>
+   <div class="mfoot"><span data-mrun="${esc(n)}"></span>${awSwitch(n,st.own,"")}${st.why==="main"?'<span class="awnote">Paused by the main switch</span>':""}</div></div>`}).join("")}</div>
+  ${awLogHTML(aw)}
+  <p class="hint" style="margin:10px 0 0">Last run comes from the run records in the repo; each work mate starts recording when it becomes an agent. Auto-work is saved in the shared data, so every device and every agent sees it. While paused, scheduled runs do nothing and only log "Skipped: paused by CEO"; a "Run now" you start still works. Turning it back on picks up each work mate's work where it stopped.</p></section>
  <div class="cols cols-b" style="margin-top:16px">
   <section class="card claude" data-sec="claude"><h2><span class="cmark" aria-hidden="true">✳</span>Claude <a class="more" href="https://claude.ai/settings/usage" target="_blank" rel="noopener">Usage page ↗</a></h2>
    <div id="usageBox">${usageHTML()}</div>
@@ -502,7 +517,7 @@ function drawCEO(){
  </section>`;
  $("#newProj").onclick=openCreate;
  $("#uEdit")&&($("#uEdit").onclick=usageForm);wireReader();
- paintRuns();
+ paintRuns();wireAutowork();
  $$("#main a[href^='#ceo:']").forEach(a=>a.onclick=e=>{e.preventDefault();const sub=a.getAttribute("href").split(":")[1];if(parent!==window)parent.location.hash="#/ceo/"+sub;else location.hash="ceo:"+sub});
  $$("[data-open]").forEach(b=>b.onclick=()=>{S.sel=b.dataset.open;save();if(parent!==window)parent.location.hash="#/director/timeline";else location.hash="director"});
  $$("#decisions [data-gsel]").forEach(l=>l.onclick=()=>{S.sel=l.dataset.gsel;save()});
@@ -510,6 +525,18 @@ function drawCEO(){
   if(b.dataset.dec==="note"&&!card.querySelector(".inline-input")){card.insertAdjacentHTML("beforeend",`<div class="inline-input"><input placeholder="Scope or condition, e.g. slide 1 only" aria-label="Note"><button class="btn sm good">Allow</button></div>`);const box=card.querySelector(".inline-input");box.querySelector("button").onclick=()=>decide(d,"Allowed: "+(box.querySelector("input").value||"no note"));box.querySelector("input").focus();return}
   if(b.dataset.dec!=="note")decide(d,b.dataset.dec==="allow"?"Allowed":"Disallowed")});
 }
+/* W1b: the Auto-work switch (CEO only): a main switch and one per work mate, saved in the shared data with date and time */
+const awSwitch=(who,state,cls)=>`<button class="aw ${cls}" role="switch" aria-checked="${state!=="Paused"}" data-aw="${esc(who)}" aria-label="Auto-work for ${esc(who==="all"?"all work mates":who)}: ${state==="Paused"?"Paused":"On"}"><span class="tr" aria-hidden="true"></span><span>${state==="Paused"?"Paused":"On"}</span></button>`;
+const awWhen=iso=>{const d=new Date(iso);return isNaN(d)?esc(iso):d.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})+" "+d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})};
+function awBarHTML(aw){const off=aw.main==="Paused",n=Object.values(aw.mates||{}).filter(v=>v==="Paused").length;
+ return `<div class="awbar${off||n?" off":""}"><span class="awt"><b>Auto-work</b> · ${off?"Paused for every work mate. Scheduled runs do nothing until you turn it back on.":n?plural(n,"work mate")+" paused; the others work on schedule.":"On. Work mates run on their schedules."}</span>${awSwitch("all",aw.main,"big")}</div>`}
+function awLogHTML(aw){const l=aw.log||[];if(!l.length)return "";
+ return `<details class="rhist" id="awlog"><summary>Auto-work changes (${l.length})</summary>${l.slice(0,15).map(x=>`<div class="rh"><span class="pill ${x.state==="Paused"?"p-wait":"p-done"}">${x.state==="Paused"?"❚❚":"▶"}</span><span class="small"><b>${esc(x.who)}</b> → ${esc(x.state)}${x.note?` <span class="muted">· ${esc(x.note)}</span>`:""}</span><span class="small muted">${awWhen(x.at)}</span></div>`).join("")}</details>`}
+function wireAutowork(){$$("#main [data-aw]").forEach(b=>b.onclick=()=>{if(!DM||!DM.setAutowork){toast("Not saved: the shared data couldn't load on this device");return}
+ const who=b.dataset.aw,to=b.getAttribute("aria-checked")==="true"?"Paused":"On",open=$("#awlog")&&$("#awlog").open;
+ const r=DM.setAutowork(who,to);if(r.error){toast(r.error);return}
+ const x=readS();if(x)S=x;drawCEO();if(open&&$("#awlog"))$("#awlog").open=true;
+ const f=$(`#main [data-aw="${CSS.escape(who)}"]`);f&&f.focus();toast((who==="all"?"Auto-work":who)+": "+to)})}
 /* Decided history (2a-ii): what the CEO decided, when, and where it was recorded */
 function decidedHTML(list){if(!list.length)return "";const res=r=>/^Disallow/.test(r||"")?"p-block":/^Allow/.test(r||"")?"p-done":"";
  return `<details class="rhist dhist"><summary>Decided (${list.length})</summary>${list.slice(0,12).map(d=>`<div class="rh"><span class="pill ${res(d.result)}">${/^Disallow/.test(d.result||"")?"✕":/^Allow/.test(d.result||"")?"✓":"•"}</span><span class="small"><b>${esc(d.title)}</b>${d.example?' <span class="example">Example</span>':""}<br><span class="muted">${esc(d.type||"Decision")} · <span class="mono">${esc(d.project||"")}</span>${d.result?" · "+esc(d.result):""}${d.issue?` · logged as <span class="mono">${esc(d.issue)}</span>`:""}</span></span><span class="small muted mono">${esc(fmt(d.date))}</span></div>`).join("")}${list.length>12?`<p class="small muted" style="margin:6px 0 0">Showing the 12 newest. Every decision stays in the shared data and the issues log.</p>`:""}</details>`}

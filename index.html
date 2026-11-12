@@ -70,6 +70,7 @@ a{color:inherit}
 .syncb[hidden]{display:none}.syncb::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
 .syncb.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}.syncb.bad{background:var(--blush-soft);color:var(--bad);border-color:transparent}
 .syncb .lg{display:inline}.syncb .sm{display:none}
+.syncb.awb{background:var(--warn-soft);color:var(--warn);border-color:transparent}.syncb.awb::before{content:"❚❚";width:auto;height:auto;border-radius:0;background:none;font-size:9px;letter-spacing:-1px}
 .stage{flex:1;min-height:0;position:relative}
 iframe{border:0;width:100%;height:100%;display:block;background:var(--bg)}
 /* mobile */
@@ -89,6 +90,7 @@ iframe{border:0;width:100%;height:100%;display:block;background:var(--bg)}
   <a class="nb quick" data-q="ceo" href="#/ceo/home">CEO</a>
   <a class="nb quick" data-q="director" href="#/director/timeline">Project Director</a>
   <span class="sp"></span>
+  <a class="syncb awb" id="awBadge" href="#/ceo/departments" hidden></a>
   <a class="syncb" id="syncBadge" href="#/ceo/data" hidden></a>
   <div class="seg themeseg" role="group" aria-label="Page background"><button data-t="light">Light</button><button data-t="dark">Dark</button><button data-t="system">Auto</button></div>
  </div>
@@ -192,6 +194,15 @@ if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostnam
   el.hidden=!cls;el.className="syncb "+cls;el.title=title?title+" (CEO → Data)":"";el.setAttribute("aria-label",(lg||"")+(title?": "+title:""));
   el.innerHTML=cls?`<span class="lg">${esc(lg)}</span><span class="sm">${esc(sm)}</span>`:""};
  draw();addEventListener("storage",e=>{if(!e.key||/^mawm-sync/.test(e.key))draw()});setInterval(draw,15000);
+})();
+/* W1b: "Auto-work paused" badge in the header while the CEO has paused the work mates (all, or some), from the shared data */
+(function(){const el=$("#awBadge");
+ const draw=()=>{let a=null;try{const m=JSON.parse(localStorage.getItem("mawm-data-v1")||"null");a=m&&m.settings&&m.settings.hq&&m.settings.hq.autowork}catch(e){}
+  const main=a&&a.main==="Paused",n=a&&a.mates?Object.values(a.mates).filter(v=>v==="Paused").length:0;
+  const lg=main?"Auto-work paused":n?"Auto-work: "+n+" paused":"",sm=main?"❚❚":n?"❚❚ "+n:"";
+  el.hidden=!lg;el.title=lg?(main?"Every work mate is paused. Scheduled runs do nothing until you turn Auto-work back on (CEO → Work mates).":n+" work mate"+(n===1?" is":"s are")+" paused (CEO → Work mates)."):"";
+  el.setAttribute("aria-label",el.title);el.innerHTML=lg?`<span class="lg">${esc(lg)}</span><span class="sm">${esc(sm)}</span>`:""};
+ draw();addEventListener("storage",e=>{if(!e.key||e.key==="mawm-data-v1")draw()});setInterval(draw,15000);
 })();
 /* first visit: let Agency HQ create its example data so every dashboard shares it */
 if(!readHQ()){const f=document.createElement("iframe");f.hidden=true;f.src="hq.html?embed=1";f.onload=()=>f.remove();document.body.appendChild(f)}

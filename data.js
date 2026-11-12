@@ -28,6 +28,7 @@
    hand once, every save goes to GitHub by itself and a newer copy there is loaded on opening a page (newest wins, warned).
    Step 3b-iii: open pages refresh themselves: GitHub is checked every few minutes and when the tab comes back into view,
    and a change saved in another tab of this device reaches a tab in the background when it's shown again.
+   Step W1b: the Auto-work switch (autowork, autoworkState, setAutowork): a main switch and one per work mate, CEO only.
    Used by hq.html, dept.html and studio.html as window.MAWM_DATA. No network unless the CEO connects GitHub sync. */
 (function (g) {
   "use strict";
@@ -774,11 +775,47 @@
   }
 
 
+  /* W1b: the Auto-work switch (CEO only). One main switch plus one per work mate, saved in the CEO's settings in the model
+     (settings.hq.autowork), so it travels in backups and GitHub sync and every device and agent sees it. Every change is kept
+     with its date and time. A paused work mate's scheduled runs do nothing but log "Skipped: paused by CEO"; a "Run now" the
+     CEO starts still works. Turning it back on changes nothing else: each agent picks up its work where it stopped. */
+  const MATES = ["Project Director", "Research & Strategist", "Copywriter", "UI/UX Designer", "Graphic Designer", "Shopify Developer"];
+  const isState = v => v === "On" || v === "Paused";
+  function autoworkOf(S) {
+    const a = S && S.autowork && typeof S.autowork === "object" ? S.autowork : {};
+    const mates = {}; MATES.forEach(n => { const v = a.mates && a.mates[n] != null ? a.mates[n] : a[n]; mates[n] = isState(v) ? v : "On" });
+    return { main: isState(a.main) ? a.main : "On", mates, log: arr(a.log).filter(x => x && x.at).slice(0, 100), setUp: !!(a.main || a.mates) };
+  }
+  /* the switch as saved: { main, mates: {name: "On"|"Paused"}, log: [{at, who, state, note}] newest first } */
+  const autowork = () => autoworkOf(readHq());
+  /* whether one work mate may do scheduled work now: { paused, why ("main" | "own" | ""), text } */
+  function autoworkState(name, aw) {
+    aw = aw || autowork(); const own = aw.mates[name] === "Paused", main = aw.main === "Paused";
+    const why = main ? "main" : own ? "own" : "";
+    return { paused: !!why, why, main: aw.main, own: aw.mates[name] || "On", text: why === "main" ? "Paused by CEO (all work mates)" : why === "own" ? "Paused by CEO" : "On" };
+  }
+  /* the CEO flips a switch: who = "all" (the main switch) or a work mate's name; state = "On" | "Paused".
+     Saved through the model (writeHq) with the date and time. Returns { aw } or { error }. */
+  function setAutowork(who, state, note) {
+    if (!ls) return { error: "This device doesn't allow saving." };
+    if (!isState(state)) return { error: "The switch is On or Paused." };
+    if (who !== "all" && !MATES.includes(who)) return { error: "Not a work mate: " + who };
+    flush();
+    const S = readHq(); if (!S) return { error: "Open the CEO page once on this device first." };
+    const aw = autoworkOf(S);
+    if ((who === "all" ? aw.main : aw.mates[who]) === state) return { aw };
+    if (who === "all") aw.main = state; else aw.mates[who] = state;
+    aw.log.unshift(Object.assign({ at: stamp(), who: who === "all" ? "All work mates" : who, state, by: "CEO" }, note ? { note: String(note).slice(0, 200) } : {}));
+    S.autowork = { main: aw.main, mates: aw.mates, log: aw.log.slice(0, 100) };
+    const err = writeHq(S);
+    return err ? { error: err } : { aw: autoworkOf(S) };
+  }
+
   try {
     const set = Storage.prototype.setItem;
     if (!set.__mawm) { const w = function (k, v) { if (this === ls && SRC_KEYS.has(k)) { const d = parse(v); if (d) savePart(k, d); return } set.call(this, k, v) }; w.__mawm = true; Storage.prototype.setItem = w }
   } catch (e) { }
-  g.MAWM_DATA = { KEY, connectSync, disconnectSync, syncPeek, syncSave, syncApply, syncStatus, setAutoSync, dismissSyncWarning, syncNow: () => autoTick("save"), syncCheck: () => autoTick("open"), SYNC_PATH, BACKUP, VERSION, exportAll, readBackup, importAll, undoImport, beforeImport, summaryNow, fileName, EXTRA, BEFORE, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, projects, studio, saveStudio, studioFor, STUDIO, submit, reviewTask, approve, returnTask, gateView, gates, passGate, askOverride, returnedFor, inputsFor, LINK, HQ, page, savePart, retired: () => { const m = load(); return m && m.meta.retired || null }, sig, raw, error: () => lastError, today };
+  g.MAWM_DATA = { KEY, connectSync, disconnectSync, syncPeek, syncSave, syncApply, syncStatus, setAutoSync, dismissSyncWarning, syncNow: () => autoTick("save"), syncCheck: () => autoTick("open"), SYNC_PATH, BACKUP, VERSION, exportAll, readBackup, importAll, undoImport, beforeImport, summaryNow, fileName, EXTRA, BEFORE, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, projects, studio, saveStudio, studioFor, STUDIO, submit, reviewTask, approve, returnTask, gateView, gates, passGate, askOverride, returnedFor, inputsFor, LINK, HQ, page, savePart, retired: () => { const m = load(); return m && m.meta.retired || null }, sig, raw, error: () => lastError, today, MATES, autowork, autoworkOf, autoworkState, setAutowork };
   migrate("load");
   /* 3b-ii: on opening a page, load a newer copy from GitHub (or send changes still waiting); go again when back online */
   if (g.document && syncConfig()) {
