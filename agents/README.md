@@ -8,8 +8,8 @@ Each work mate is Claude, run on the CEO's own Claude subscription (no paid API 
 | Project Director (reviewer) | `agents/project-director.md` | ready |
 | Copywriter | `agents/copywriter.md` | ready |
 | Graphic Designer | `agents/graphic-designer.md` | ready |
-| UI/UX Designer | `agents/uiux-designer.md` | coming (W1-v) |
-| Shopify Developer | `agents/shopify-developer.md` | coming (W1-v) |
+| UI/UX Designer | `agents/uiux-designer.md` | ready |
+| Shopify Developer | `agents/shopify-developer.md` | ready |
 | Usage reader (optional) | `agents/usage-reader.md` | ready |
 
 This file is the part every playbook shares. A playbook only adds its department's steps.

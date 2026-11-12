@@ -72,7 +72,7 @@ Plan usage on the Claude panel can be noted by the CEO in one tap, or read autom
 
 ## AI work mates
 
-Each work mate will run as Claude on the CEO's own subscription, following a playbook in `agents/`. `agents/README.md` explains what every run does (read the work, follow the rulebook, write back, submit to the Project Director, log issues, record the run), the rules and when an agent must stop and ask. Agents read and change the app's synced data file only through `node tools/agent-data.js` (see `node tools/agent-data.js help`), which uses the app's own data model, so what they write appears in the app like any other saved change and they can't do what the rules forbid. The CEO sets the private data repo in `agents/config.json`.
+Each work mate will run as Claude on the CEO's own subscription, following a playbook in `agents/`. `agents/README.md` explains what every run does (read the work, follow the rulebook, write back, submit to the Project Director, log issues, record the run), the rules and when an agent must stop and ask. Agents read and change the app's synced data file only through `node tools/agent-data.js` (see `node tools/agent-data.js help`), which uses the app's own data model, so what they write appears in the app like any other saved change and they can't do what the rules forbid. The CEO sets the private data repo in `agents/config.json`. Every work mate has its playbook: Research & Strategist, Project Director, Copywriter, Graphic Designer, UI/UX Designer and Shopify Developer. Work mates have no Shopify admin access, so the Shopify Developer prepares each build and the CEO does the store steps (backup, duplicate theme, upload) from an exact step list.
 
 ## Rulebooks
 
