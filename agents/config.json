@@ -1,0 +1,5 @@
+{
+  "about": "Where the AI work mates find the app's shared data. The CEO sets dataRepo (owner/repo of the private repo connected in CEO → Data → Sync with GitHub) and dataFile (the file name used there). Until dataRepo is set, agents stop and ask.",
+  "dataRepo": "",
+  "dataFile": "my-ai-work-mates-data.json"
+}

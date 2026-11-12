@@ -70,6 +70,10 @@ Every scheduled run (the build loop now, each work mate later) records itself in
 
 Plan usage on the Claude panel can be noted by the CEO in one tap, or read automatically by an optional "Usage reader" scheduled task that runs on the CEO's computer when the Claude desktop app is on. It reads the CEO's own usage page (read only) and saves the number with the time it was read in `runs/usage.json` (`node tools/record-usage.js`). The panel shows the newest reading and labels it "read automatically" or "noted by CEO". Setup and steps: `agents/usage-reader.md`.
 
+## AI work mates
+
+Each work mate will run as Claude on the CEO's own subscription, following a playbook in `agents/`. `agents/README.md` explains what every run does (read the work, follow the rulebook, write back, submit to the Project Director, log issues, record the run), the rules and when an agent must stop and ask. Agents read and change the app's synced data file only through `node tools/agent-data.js` (see `node tools/agent-data.js help`), which uses the app's own data model, so what they write appears in the app like any other saved change and they can't do what the rules forbid. The CEO sets the private data repo in `agents/config.json`.
+
 ## Rulebooks
 
 The rulebooks and product brief live in Claude Docs and open from the menu ("Rulebook ↗").

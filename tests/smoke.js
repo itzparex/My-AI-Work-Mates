@@ -479,6 +479,7 @@ const ROUTES = ["#/home", "#/ceo/home",
     }
     if (!errors.some(e => /^sync/.test(e))) console.log("OK: GitHub sync refuses a wrong token and a public repo, keeps the token out of backups, saves, warns before overwriting another device's save, loads with a preview on another device, can replace on purpose (noted) and disconnects");
   }
+  try { console.log("OK: " + await require("./agent-data")(browser, base)); } catch (e) { errors.push("agent data: " + (e.stack || e)); }
   await browser.close(); server.close();
   try { console.log("OK: " + await require("./desktop")()); } catch (e) { errors.push("desktop: " + (e.stack || e)); }
   try { console.log("OK: " + await require("./updater")()); } catch (e) { errors.push("updater: " + (e.stack || e)); }
