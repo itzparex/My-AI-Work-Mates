@@ -23,7 +23,9 @@
    in one view; the Project Director passes a clean gate, and guardrail hits become an Override decision only the CEO can allow.
    Step 2b-iv: the Design Studio submits too: a wireframe (concept), a page design (Code Studio item) and a QA report go to the
    project's Wireframe, Page design and QA tasks the same way; its own records keep only the rulebook checks and QA notes.
-   Used by hq.html, dept.html and studio.html as window.MAWM_DATA. No network, no accounts: everything stays on this device. */
+   Step 3a: export and import everything as one backup file. Step 3b-i: optional GitHub sync to the CEO's own private repo
+   (connectSync, syncSave, syncPeek, syncApply), only when the CEO asks; the token stays on this device.
+   Used by hq.html, dept.html and studio.html as window.MAWM_DATA. No network unless the CEO connects GitHub sync. */
 (function (g) {
   "use strict";
   const KEY = "mawm-data-v1", BACKUP = "mawm-data-backup-v0", VERSION = 1;
@@ -567,10 +569,97 @@
     return "";
   }
 
+  /* 3b-i: GitHub sync (optional). The CEO connects a private repo of their own with a fine-grained token; the token and
+     settings are kept only on this device (never in backup files). "Save to GitHub" writes the same file as a backup
+     (exportAll) to one path in that repo; "Load from GitHub" reads it back and imports it the same way as a backup file
+     (with the safety copy and undo). If the copy on GitHub changed since this device last synced (another device saved),
+     saving stops with a warning and the CEO chooses. Only api.github.com is contacted, and only when the CEO asks. */
+  const SYNC = "mawm-sync-github", SYNC_STATE = "mawm-sync-state", GH = "https://api.github.com", SYNC_PATH = "my-ai-work-mates-data.json";
+  const syncConfig = () => { const v = parse(raw(SYNC)); return v && v.repo && v.token ? v : null };
+  const syncState = () => parse(raw(SYNC_STATE)) || {};
+  const setSyncState = o => { try { ls.setItem(SYNC_STATE, JSON.stringify(Object.assign(syncState(), o))) } catch (e) { } };
+  const b64enc = s => { const b = new TextEncoder().encode(s); let out = ""; for (let i = 0; i < b.length; i += 32768) out += String.fromCharCode.apply(null, b.subarray(i, i + 32768)); return btoa(out) };
+  const b64dec = s => { const bin = atob(String(s || "").replace(/\s/g, "")), b = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i); return new TextDecoder().decode(b) };
+  const encPath = p => String(p).split("/").map(encodeURIComponent).join("/");
+  function ghErr(status, body, what) {
+    if (status === 0) return "Couldn't reach GitHub. Check the internet connection and try again.";
+    if (status === 401) return "GitHub didn't accept the token (it may be wrong, expired or revoked). Make a new one and connect again.";
+    if (status === 403 && /rate limit/i.test(body || "")) return "GitHub's hourly limit was reached. Try again in a while.";
+    if (status === 403) return "The token isn't allowed to do this. Give it access to this repo with Contents: Read and write.";
+    if (status === 404) return what === "repo" ? "Repo not found, or the token can't see it. Check the name (owner/repo) and that the token has access to it." : "Not found on GitHub.";
+    if (status === 409) return "GitHub reported a conflict (the copy there changed at the same moment). Try again.";
+    if (status === 422) return "GitHub refused the file (" + ((parse(body) || {}).message || "invalid request") + ").";
+    return "GitHub answered with an error (" + status + ").";
+  }
+  async function gh(cfg, path, init) {
+    init = init || {}; let res;
+    try { res = await g.fetch(GH + path, Object.assign({}, init, { cache: "no-store", headers: Object.assign({ Accept: "application/vnd.github+json", Authorization: "Bearer " + cfg.token, "X-GitHub-Api-Version": "2022-11-28" }, init.headers || {}) })) }
+    catch (e) { return { status: 0, body: "" } }
+    return { status: res.status, body: await res.text().catch(() => "") };
+  }
+  /* connect: check the repo exists, the token can see it, and it is private. Saves the settings on this device only. */
+  async function connectSync(o) {
+    if (!ls) return { error: "This device doesn't allow saving." };
+    const repo = String(o.repo || "").trim().replace(/^https?:\/\/github\.com\//i, "").replace(/\.git$|\/$/g, ""), token = String(o.token || "").trim(), path = String(o.path || "").trim().replace(/^\/+/, "") || SYNC_PATH;
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) return { error: "Write the repo as owner/name, for example itzparex/my-agency-data." };
+    if (!token) return { error: "Paste the fine-grained token." };
+    if (!/\.json$/i.test(path)) return { error: "The file name should end in .json." };
+    const cfg = { repo, token, path }, r = await gh(cfg, "/repos/" + repo);
+    if (r.status !== 200) return { error: ghErr(r.status, r.body, "repo") };
+    const info = parse(r.body) || {};
+    if (!info.private) return { error: "That repo is public, so anyone could read your agency's data. Use a private repo." };
+    try { ls.setItem(SYNC, JSON.stringify({ repo: info.full_name || repo, token, path, branch: info.default_branch || "", connected: stamp() })); ls.removeItem(SYNC_STATE) } catch (e) { return { error: "Not enough storage on this device to keep the settings." } }
+    return { ok: true, repo: info.full_name || repo };
+  }
+  function disconnectSync() { try { ls.removeItem(SYNC); ls.removeItem(SYNC_STATE) } catch (e) { } }
+  /* the copy on GitHub: { missing } or { sha, text, size } or { error } */
+  async function remoteGet(cfg) {
+    const p = "/repos/" + cfg.repo + "/contents/" + encPath(cfg.path);
+    const r = await gh(cfg, p); if (r.status === 404) return { missing: true }; if (r.status !== 200) return { error: ghErr(r.status, r.body) };
+    const j = parse(r.body) || {}; if (j.type && j.type !== "file") return { error: cfg.path + " in the repo is a folder, not a file. Pick another file name." };
+    let text = j.content ? b64dec(j.content) : "";
+    if (!text && j.size) { const rr = await gh(cfg, p, { headers: { Accept: "application/vnd.github.raw+json" } }); if (rr.status !== 200) return { error: ghErr(rr.status, rr.body) }; text = rr.body }
+    return { sha: j.sha, text, size: j.size || text.length };
+  }
+  /* what is on GitHub, read like a backup file: { missing } or { ok, summary, file, sha } or { error } */
+  async function syncPeek() {
+    const cfg = syncConfig(); if (!cfg) return { error: "GitHub sync isn't connected on this device." };
+    const r = await remoteGet(cfg); if (r.error || r.missing) return r;
+    const b = readBackup(r.text); if (!b.ok) return { error: "The file on GitHub can't be used: " + b.error };
+    return Object.assign(b, { sha: r.sha });
+  }
+  /* save this device's data to GitHub. Stops with { conflict, remote } when the copy there changed since this device last
+     synced (or this device never synced and a copy exists), unless o.force. Returns { ok, bytes } or { error }. */
+  async function syncSave(o) {
+    o = o || {}; const cfg = syncConfig(); if (!cfg) return { error: "GitHub sync isn't connected on this device." };
+    const st = syncState(), r = await remoteGet(cfg); if (r.error) return r;
+    if (!r.missing && r.sha !== st.sha && !o.force) { const b = readBackup(r.text); return { conflict: true, never: !st.sha, remote: b.ok ? b.summary : null } }
+    let f; try { f = exportAll() } catch (e) { return { error: "Couldn't gather the data on this device." } }
+    const text = JSON.stringify(f, null, 1), body = { message: "Saved from " + f.device + (f.counts ? " (" + Object.entries(f.counts).map(([k, n]) => n + " " + k).join(", ") + ")" : ""), content: b64enc(text) };
+    if (!r.missing) body.sha = r.sha; if (cfg.branch) body.branch = cfg.branch;
+    const w = await gh(cfg, "/repos/" + cfg.repo + "/contents/" + encPath(cfg.path), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (w.status !== 200 && w.status !== 201) return { error: ghErr(w.status, w.body) };
+    const j = parse(w.body) || {}, at = stamp();
+    setSyncState({ sha: j.content && j.content.sha, lastSave: at, lastSync: at, remoteExported: f.exported, remoteDevice: f.device, warning: o.force && !r.missing ? "Replaced a newer copy on GitHub " + (st.sha ? "saved from another device" : "that was there before this device connected") : "" });
+    const m = load(); if (m) { m.meta.log = [[at, "Saved to GitHub (" + cfg.repo + ")" + (o.force && !r.missing ? ", replacing the copy that was there" : "")]].concat(arr(m.meta.log)).slice(0, 20); try { ls.setItem(KEY, JSON.stringify(m)) } catch (e) { } }
+    return { ok: true, bytes: text.length };
+  }
+  /* load what syncPeek read: replaces this device's data like a backup import (safety copy kept, undo works) */
+  function syncApply(peek) {
+    if (!peek || !peek.ok) return "Nothing to load.";
+    const err = importAll(peek.file); if (err) return err;
+    const at = stamp(), cfg = syncConfig() || {};
+    setSyncState({ sha: peek.sha, lastLoad: at, lastSync: at, remoteExported: peek.file.exported, remoteDevice: peek.file.device || "", warning: "" });
+    const m = load(); if (m) { m.meta.log = [[at, "Loaded from GitHub (" + (cfg.repo || "repo") + "), saved there " + (peek.file.exported ? peek.file.exported.slice(0, 10) : "earlier") + (peek.file.device ? " from " + peek.file.device : "")]].concat(arr(m.meta.log)).slice(0, 20); try { ls.setItem(KEY, JSON.stringify(m)) } catch (e) { } }
+    return "";
+  }
+  /* what the page shows: connected repo and file (never the token), last save and load */
+  function syncStatus() { const c = syncConfig(); if (!c) return null; const s = syncState(); return { repo: c.repo, path: c.path, connected: c.connected, lastSave: s.lastSave || "", lastLoad: s.lastLoad || "", lastSync: s.lastSync || "", remoteDevice: s.remoteDevice || "", warning: s.warning || "", tokenEnd: c.token.slice(-4) } }
+
   try {
     const set = Storage.prototype.setItem;
     if (!set.__mawm) { const w = function (k, v) { if (this === ls && SRC_KEYS.has(k)) { const d = parse(v); if (d) savePart(k, d); return } set.call(this, k, v) }; w.__mawm = true; Storage.prototype.setItem = w }
   } catch (e) { }
-  g.MAWM_DATA = { KEY, BACKUP, VERSION, exportAll, readBackup, importAll, undoImport, beforeImport, summaryNow, fileName, EXTRA, BEFORE, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, projects, studio, saveStudio, studioFor, STUDIO, submit, reviewTask, approve, returnTask, gateView, gates, passGate, askOverride, returnedFor, inputsFor, LINK, HQ, page, savePart, retired: () => { const m = load(); return m && m.meta.retired || null }, sig, raw, error: () => lastError, today };
+  g.MAWM_DATA = { KEY, connectSync, disconnectSync, syncPeek, syncSave, syncApply, syncStatus, SYNC_PATH, BACKUP, VERSION, exportAll, readBackup, importAll, undoImport, beforeImport, summaryNow, fileName, EXTRA, BEFORE, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, projects, studio, saveStudio, studioFor, STUDIO, submit, reviewTask, approve, returnTask, gateView, gates, passGate, askOverride, returnedFor, inputsFor, LINK, HQ, page, savePart, retired: () => { const m = load(); return m && m.meta.retired || null }, sig, raw, error: () => lastError, today };
   migrate("load");
 })(typeof window !== "undefined" ? window : globalThis);

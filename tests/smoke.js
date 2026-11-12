@@ -347,6 +347,58 @@ const ROUTES = ["#/home", "#/ceo/home",
     await B.close();
     if (!errors.some(e => /^backup/.test(e))) console.log("OK: backup file downloads, a wrong file is refused, import shows a preview, replaces the data (projects, department records, theme library) with a safety copy, survives a reload, and undo puts it back");
   }
+  { // 3b-i: GitHub sync to a private repo (GitHub mocked here): connect, save, load on another device, conflict warning
+    const store = { files: {}, n: 0, puts: 0 }, REPOS = { "ceo/agency-data": true, "ceo/public-data": false };
+    const mock = async route => { const req = route.request(), u = new URL(req.url()), auth = req.headers()["authorization"] || "";
+      const json = (status, o) => route.fulfill({ status, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify(o) });
+      if (req.method() === "OPTIONS") return route.fulfill({ status: 204, headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,PUT" } });
+      if (auth !== "Bearer good-token") return json(401, { message: "Bad credentials" });
+      const m = u.pathname.match(/^\/repos\/([^/]+\/[^/]+)(?:\/contents\/(.+))?$/); if (!m || !(m[1] in REPOS)) return json(404, { message: "Not Found" });
+      if (!m[2]) return json(200, { full_name: m[1], private: REPOS[m[1]], default_branch: "main" });
+      const key = m[1] + "/" + decodeURIComponent(m[2]), f = store.files[key];
+      if (req.method() === "GET") return f ? json(200, { type: "file", sha: f.sha, size: f.content.length, content: f.content }) : json(404, { message: "Not Found" });
+      if (req.method() === "PUT") { const b = JSON.parse(req.postData()); if (f && b.sha !== f.sha) return json(409, { message: "sha mismatch" }); if (!f && b.sha) return json(422, { message: "sha given" });
+        store.files[key] = { sha: "sha" + (++store.n), content: b.content }; store.puts++; return json(f ? 200 : 201, { content: { sha: "sha" + store.n } }) }
+      return json(405, {}) };
+    const dev = async (vp, label) => { const C = await browser.newContext({ viewport: vp }), p = await C.newPage(); await C.route("https://api.github.com/**", mock);
+      p.on("pageerror", e => errors.push("sync (" + label + "): " + e.message)); p.on("dialog", d => d.accept());
+      await p.goto(base + "index.html#/ceo/data"); await p.waitForTimeout(1200); return { C, p, fr: () => p.frames().find(f => /hq\.html/.test(f.url())) } };
+    const connect = async (fr, repo, token) => { await fr().fill("#ghRepo", repo); await fr().fill("#ghToken", token); await fr().click("#ghConnect"); await fr().waitForTimeout(500) };
+    const A = await dev({ width: 1280, height: 860 }, "device A");
+    if (shots) { await A.fr().evaluate(() => document.getElementById("ghsync").scrollIntoView()); await A.p.screenshot({ path: path.join(ROOT, "tests", "shots", "desktop-sync-connect.png") }) }
+    await connect(A.fr, "ceo/agency-data", "bad-token"); if (!/didn't accept the token/.test(await A.fr().textContent("#ghMsg"))) errors.push("sync: a wrong token wasn't explained");
+    await connect(A.fr, "ceo/public-data", "good-token"); if (!/public/.test(await A.fr().textContent("#ghMsg"))) errors.push("sync: a public repo wasn't refused");
+    await connect(A.fr, "https://github.com/ceo/agency-data", "good-token");
+    if (!(await A.fr().$("#ghSave"))) errors.push("sync: connecting to a private repo didn't work");
+    const tokenSafe = await A.fr().evaluate(() => !JSON.stringify(MAWM_DATA.exportAll()).includes("good-token"));
+    if (!tokenSafe) errors.push("sync: the token ended up in the backup file");
+    await A.fr().evaluate(() => { const D = MAWM_DATA, S = D.readHq(); S.projects[0].name = "Synced from A"; D.writeHq(S) });
+    await A.fr().click("#ghSave"); await A.p.waitForTimeout(800);
+    if (store.puts !== 1 || !/Saved\./.test(await A.fr().textContent("#ghResult"))) errors.push("sync: Save to GitHub didn't save");
+    if (shots) { await A.fr().evaluate(() => document.getElementById("ghsync").scrollIntoView()); await A.p.screenshot({ path: path.join(ROOT, "tests", "shots", "desktop-sync-connected.png") }) }
+    const B = await dev({ width: 390, height: 844 }, "device B");
+    await connect(B.fr, "ceo/agency-data", "good-token");
+    await B.fr().click("#ghSave"); await B.p.waitForTimeout(800); /* B never synced and a copy exists: it must warn, not overwrite */
+    if (store.puts !== 1 || !/already data on GitHub/.test(await B.fr().textContent("#ghResult"))) errors.push("sync: saving over a copy from another device didn't warn");
+    if (shots) { await B.fr().evaluate(() => document.getElementById("ghResult").scrollIntoView()); await B.p.screenshot({ path: path.join(ROOT, "tests", "shots", "phone-sync-conflict.png") }) }
+    await B.fr().click("#ghPeek"); await B.p.waitForTimeout(600);
+    if (!/On GitHub/.test(await B.fr().textContent("#ghResult"))) errors.push("sync: no preview before loading");
+    await B.fr().click("#ghGo"); await B.p.waitForTimeout(2200);
+    const bl = await B.fr().evaluate(() => ({ name: MAWM_DATA.readHq().projects[0].name, before: !!MAWM_DATA.beforeImport(), st: MAWM_DATA.syncStatus() }));
+    if (bl.name !== "Synced from A" || !bl.before || !bl.st.lastLoad) errors.push("sync: loading on device B didn't bring A's data (" + bl.name + ")");
+    await B.fr().evaluate(() => { const D = MAWM_DATA, S = D.readHq(); S.projects[0].name = "Changed on B"; D.writeHq(S) });
+    await B.fr().click("#ghSave"); await B.p.waitForTimeout(800);
+    if (store.puts !== 2) errors.push("sync: device B couldn't save after loading");
+    await A.fr().click("#ghSave"); await A.p.waitForTimeout(800); /* A is now behind: warn */
+    if (store.puts !== 2 || !/Another device saved/.test(await A.fr().textContent("#ghResult"))) errors.push("sync: device A overwrote B's newer save without a warning");
+    await A.fr().click("#ghForce"); await A.p.waitForTimeout(800);
+    const fa = await A.fr().evaluate(() => MAWM_DATA.syncStatus().warning);
+    if (store.puts !== 3 || !/Replaced a newer copy/.test(fa)) errors.push("sync: replacing on purpose didn't work or wasn't noted");
+    await A.fr().click("#ghOff"); await A.p.waitForTimeout(400);
+    if (!(await A.fr().$("#ghRepo")) || await A.fr().evaluate(() => !!localStorage.getItem("mawm-sync-github"))) errors.push("sync: disconnect didn't remove the token");
+    await A.C.close(); await B.C.close();
+    if (!errors.some(e => /^sync/.test(e))) console.log("OK: GitHub sync refuses a wrong token and a public repo, keeps the token out of backups, saves, warns before overwriting another device's save, loads with a preview on another device, can replace on purpose (noted) and disconnects");
+  }
   await browser.close(); server.close();
   try { console.log("OK: " + await require("./desktop")()); } catch (e) { errors.push("desktop: " + (e.stack || e)); }
   try { console.log("OK: " + await require("./updater")()); } catch (e) { errors.push("updater: " + (e.stack || e)); }

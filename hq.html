@@ -196,7 +196,11 @@ a.btn{text-decoration:none;color:inherit}
 @media (max-width:640px){.hero{padding:18px 16px 14px;border-radius:16px}.hero-top .btn{width:100%;justify-content:center}.stats,.wk{grid-template-columns:repeat(2,1fr)}.mates{grid-template-columns:repeat(2,minmax(0,1fr))}.wkcols{grid-template-columns:1fr}.pfacts{grid-template-columns:1fr 1fr}.iss{grid-template-columns:auto minmax(0,1fr)}.iss>.pill:last-child{grid-column:2;justify-self:start}}
 .bk{display:grid;grid-template-columns:1fr 1fr;gap:12px}.bkc{background:var(--sunk);border-radius:12px;padding:14px 16px;min-width:0}
 .bkp{margin-top:12px;border:1px solid var(--line);border-radius:12px;padding:14px 16px}.bkp h3{margin:0 0 6px;font-size:15px}.bkp.bad{border-color:var(--bad)}.bkp.good{border-color:var(--good)}.bkt{min-width:0!important;width:100%}.bkt td,.bkt th{text-align:left;white-space:normal}
-@media (max-width:720px){.bk{grid-template-columns:1fr}}
+.bkp.warn{border-color:var(--warn)}
+.ghsteps{margin:0 0 12px;padding-left:20px;line-height:1.6;max-width:760px}.ghsteps li{margin:2px 0}
+.ghf{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px 12px;align-items:end;background:var(--sunk);border-radius:12px;padding:14px 16px}.ghf .row{grid-column:1/-1}.ghf .field{display:flex;flex-direction:column;gap:4px;min-width:0}.ghf input{width:100%;box-sizing:border-box}
+.ghs{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 16px;background:var(--sunk);border-radius:12px;padding:12px 16px}.ghs>div{display:flex;flex-direction:column;gap:2px;min-width:0;overflow-wrap:anywhere}
+@media (max-width:720px){.bk{grid-template-columns:1fr}.ghf{grid-template-columns:1fr}}
 .dm{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:4px 0 6px}
 .dmc{background:var(--sunk);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
 .dmc .n{font-family:var(--f-display);font-weight:800;font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums}.dmc .l{font-size:12px;font-weight:700;color:var(--muted)}
@@ -538,6 +542,7 @@ function drawData(){const DM=window.MAWM_DATA;
   </div>
   <div id="bkPreview"></div>
  </section>
+ <section class="card" id="ghsync" style="margin-top:16px"><h2>Sync with GitHub <span class="pill">Optional</span></h2><div id="ghBody"></div></section>
  <section class="card" style="margin-top:16px"><h2>What's in it</h2>
   <div class="dm">${cols.map(c=>`<div class="dmc"><span class="n">${m?m[c].length:0}</span><span class="l">${esc(DM.SCHEMA[c].label)}</span></div>`).join("")}</div>
   ${byKind.length?`<div class="row small" style="flex-wrap:wrap;gap:6px;margin-top:8px"><span class="k" style="margin-right:4px">Deliverables</span>${byKind.map(([k,n])=>`<span class="pill">${n} ${esc(k)}</span>`).join("")}</div>`:""}
@@ -557,6 +562,62 @@ function drawData(){const DM=window.MAWM_DATA;
  </section>`;
  $("#dmRebuild").onclick=()=>{DM.migrate("manual");toast("Shared model rebuilt");drawData()};
  wireBackup(DM,ago);
+ drawSync(DM,ago);
+}
+/* 3b-i: optional GitHub sync. The CEO connects a private repo of their own with a fine-grained token kept only on this
+   device; Save to GitHub and Load from GitHub move all the data, with a warning when another device saved in between. */
+function drawSync(DM,ago){const box=$("#ghBody");if(!box||!DM.syncStatus)return;
+ const st=DM.syncStatus();
+ const refreshAll=()=>{try{if(window.top!==window&&window.top.location.origin===location.origin){window.top.location.reload();return}}catch(e){}location.reload()};
+ if(!st){box.innerHTML=`<p class="hint">Keep the same projects on your laptop, phone and desktop app by saving all the data to a private GitHub repo of your own. Free, and nothing is sent anywhere until you press Save or Load.</p>
+  <ol class="ghsteps small">
+   <li>Make a new <b>private</b> repo for the data (for example <span class="mono">my-agency-data</span>): <a href="https://github.com/new" target="_blank" rel="noopener">github.com/new</a>.</li>
+   <li>Make a <b>fine-grained token</b>: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Settings → Developer settings → Fine-grained tokens</a>. Repository access: <b>Only select repositories</b> → that repo. Permissions: <b>Contents: Read and write</b>. Nothing else.</li>
+   <li>Paste it below on each device you use. The token is kept only on this device: never in backup files and never sent anywhere but GitHub.</li></ol>
+  <form id="ghForm" class="ghf" autocomplete="off">
+   <div class="field"><label for="ghRepo">Private repo</label><input id="ghRepo" placeholder="owner/repo" spellcheck="false" required></div>
+   <div class="field"><label for="ghToken">Fine-grained token</label><input id="ghToken" type="password" placeholder="github_pat_…" spellcheck="false" required></div>
+   <div class="field"><label for="ghPath">File in the repo</label><input id="ghPath" value="${esc(DM.SYNC_PATH)}" spellcheck="false"></div>
+   <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap"><button class="btn primary" id="ghConnect" type="submit">Connect</button><span class="small muted" id="ghMsg"></span></div>
+  </form>`;
+  $("#ghForm").onsubmit=async e=>{e.preventDefault();const b=$("#ghConnect"),msg=$("#ghMsg");b.disabled=true;msg.className="small muted";msg.textContent="Checking with GitHub…";
+   const r=await DM.connectSync({repo:$("#ghRepo").value,token:$("#ghToken").value,path:$("#ghPath").value});b.disabled=false;
+   if(r.error){msg.className="small t-bad";msg.textContent=r.error;return}
+   toast("Connected to "+r.repo);drawSync(DM,ago)};
+  return}
+ box.innerHTML=`<p class="status" style="margin:0 0 6px">${st.lastSync?`<span class="st st-good">Last synced ${esc(ago(st.lastSync))}</span>`:`<span class="st st-warn">Not synced yet on this device</span>`}</p>
+  <div class="ghs small"><div><span class="k">Repo</span><span class="mono">${esc(st.repo)}</span></div><div><span class="k">File</span><span class="mono">${esc(st.path)}</span></div>
+   <div><span class="k">Last saved from here</span>${st.lastSave?esc(ago(st.lastSave)):"Never"}</div><div><span class="k">Last loaded here</span>${st.lastLoad?esc(ago(st.lastLoad))+(st.remoteDevice&&st.lastLoad===st.lastSync?" · saved from "+esc(st.remoteDevice):""):"Never"}</div>
+   <div><span class="k">Token</span>Kept on this device only · ends in <span class="mono">${esc(st.tokenEnd)}</span></div></div>
+  ${st.warning?`<p class="small" style="color:var(--warn);margin:8px 0 0">! ${esc(st.warning)} (${esc(ago(st.lastSave))}).</p>`:""}
+  <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn primary" id="ghSave" type="button">Save to GitHub</button><button class="btn" id="ghLoad" type="button">Load from GitHub</button><button class="btn" id="ghOff" type="button">Disconnect</button></div>
+  <p class="hint" style="margin:8px 0 0">Save sends everything on this device to the repo; Load replaces this device's data with what's there (a safety copy is kept, so Undo last import works). Automatic sync comes next.</p>
+  <div id="ghResult"></div>`;
+ const out=$("#ghResult"),busy=(on,t)=>{["#ghSave","#ghLoad","#ghOff"].forEach(s=>$(s).disabled=on);if(on)out.innerHTML=`<div class="bkp"><span class="small muted">${esc(t)}</span></div>`};
+ const cols=Object.keys(DM.SCHEMA),table=s=>{const now=DM.summaryNow();return `<div class="tablewrap"><table class="dsrc bkt"><thead><tr><th></th><th>On GitHub</th><th>On this device now</th></tr></thead><tbody>${cols.map(c=>`<tr><td><b>${esc(DM.SCHEMA[c].label)}</b></td><td>${s.counts[c]||0}</td><td>${now.counts[c]||0}</td></tr>`).join("")}</tbody></table></div>`};
+ const save=async force=>{busy(true,"Saving to GitHub…");const r=await DM.syncSave({force});busy(false);
+  if(r.error){out.innerHTML=`<div class="bkp bad"><b>Not saved.</b> ${esc(r.error)}</div>`;return}
+  if(r.conflict){const s=r.remote;out.innerHTML=`<div class="bkp warn"><h3>${r.never?"There's already data on GitHub":"Another device saved to GitHub since this one last synced"}</h3>
+    <p class="small" style="margin:0 0 10px">${s?`Saved there ${esc(ago(s.exported))}${s.device?" from "+esc(s.device):""}.`:"The file there couldn't be read as a backup."} Saving now would replace it with this device's data, and its changes would be lost. Usually you want to load it first.</p>
+    ${s&&!s.empty?table(s):""}
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px">${s?`<button class="btn primary" id="ghPeek" type="button">Load it instead</button>`:""}<button class="btn" id="ghForce" type="button">Replace it with this device's data</button><button class="btn" id="ghNo" type="button">Cancel</button></div></div>`;
+   const pk=$("#ghPeek");if(pk)pk.onclick=load;$("#ghNo").onclick=()=>{out.innerHTML=""};$("#ghForce").onclick=()=>{if(confirm("Replace the copy on GitHub with this device's data? The changes saved there from the other device will be lost (GitHub keeps the old version in the repo's history)."))save(true)};return}
+  toast("Saved to GitHub");drawSync(DM,ago);$("#ghResult").innerHTML=`<div class="bkp good"><b>Saved.</b> <span class="small">${Math.max(1,Math.round(r.bytes/1024))} KB in ${esc(st.repo)} · ${esc(st.path)}</span></div>`};
+ const load=async()=>{busy(true,"Reading from GitHub…");const r=await DM.syncPeek();busy(false);
+  if(r.missing){out.innerHTML=`<div class="bkp"><b>Nothing on GitHub yet.</b> <span class="small">Press Save to GitHub to put this device's data there first.</span></div>`;return}
+  if(r.error){out.innerHTML=`<div class="bkp bad"><b>Not loaded.</b> ${esc(r.error)} Nothing was changed.</div>`;return}
+  const s=r.summary;out.innerHTML=`<div class="bkp"><h3>Load the data from GitHub?</h3>
+   <p class="small" style="margin:0 0 10px">Saved there ${esc(ago(s.exported))}${s.device?" from "+esc(s.device):""}.</p>
+   ${s.empty?`<p class="small t-bad">The copy on GitHub has nothing saved. Loading it clears the data on this device.</p>`:table(s)}
+   ${s.bad.length?`<p class="small" style="color:var(--warn)">It has ${s.bad.length} problem${s.bad.length>1?"s":""} the checks will show after loading: ${esc(s.bad.join("; "))}.</p>`:""}
+   <p class="small" style="margin:10px 0">Everything on this device is replaced. A safety copy is kept first, so Undo last import puts it back.</p>
+   <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn primary" id="ghGo" type="button">Replace this device's data</button><button class="btn" id="ghNo2" type="button">Cancel</button></div></div>`;
+  $("#ghNo2").onclick=()=>{out.innerHTML=""};
+  $("#ghGo").onclick=()=>{const err=DM.syncApply(r);if(err){out.innerHTML=`<div class="bkp bad"><b>Not loaded.</b> ${esc(err)}</div>`;return}
+   out.innerHTML=`<div class="bkp good"><b>Loaded from GitHub.</b> Refreshing the app…</div>`;toast("Loaded from GitHub");setTimeout(refreshAll,700)};
+  out.scrollIntoView({block:"nearest",behavior:"smooth"})};
+ $("#ghSave").onclick=()=>save(false);$("#ghLoad").onclick=load;
+ $("#ghOff").onclick=()=>{if(!confirm("Disconnect GitHub sync on this device? The token is removed from this device. Your data here and the copy on GitHub stay as they are."))return;DM.disconnectSync();toast("GitHub sync disconnected on this device");drawSync(DM,ago)};
 }
 /* 3a: export all data as one file, and import a backup file (after a preview and a confirm; undo puts back what was here) */
 function wireBackup(DM,ago){
