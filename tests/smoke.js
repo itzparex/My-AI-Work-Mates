@@ -397,6 +397,58 @@ const ROUTES = ["#/home", "#/ceo/home",
     await A.fr().click("#ghOff"); await A.p.waitForTimeout(400);
     if (!(await A.fr().$("#ghRepo")) || await A.fr().evaluate(() => !!localStorage.getItem("mawm-sync-github"))) errors.push("sync: disconnect didn't remove the token");
     await A.C.close(); await B.C.close();
+    { // 3b-ii: automatic sync between two devices: saves go by themselves, newer copies load on open, newest wins (warned), offline saves wait
+      const until = async (fn, ms) => { const end = Date.now() + (ms || 9000); while (Date.now() < end) { try { if (await fn()) return true } catch (e) { } await new Promise(r => setTimeout(r, 250)) } return false };
+      const file = () => { const f = store.files["ceo/agency-data/auto.json"]; return f ? JSON.parse(Buffer.from(f.content, "base64").toString("utf8")) : null };
+      const nameOn = f => f && f.model && f.model.projects[0].name;
+      const hqf = X => X.p.frames().find(f => /hq\.html/.test(f.url()));
+      const edit = (X, name) => hqf(X).evaluate(n => { const D = MAWM_DATA, S = D.readHq(); S.projects[0].name = n; D.writeHq(S) }, name);
+      const badge = X => X.p.evaluate(() => { const b = document.getElementById("syncBadge"); return b.hidden ? "" : b.textContent });
+      const A2 = await dev({ width: 1280, height: 860 }, "auto A"); A2.fr = () => hqf(A2);
+      await A2.fr().fill("#ghPath", "auto.json"); await connect(A2.fr, "ceo/agency-data", "good-token");
+      await edit(A2, "Before first save"); await A2.p.waitForTimeout(3800);
+      if (file()) errors.push("sync auto: a device synced by itself before its first Save or Load");
+      await A2.fr().click("#ghSave"); await until(() => file());
+      await edit(A2, "Auto from A");
+      if (!(await until(() => nameOn(file()) === "Auto from A"))) errors.push("sync auto: a save on device A didn't go to GitHub by itself");
+      if (await hqf(A2).evaluate(() => MAWM_DATA.syncStatus().dirty)) errors.push("sync auto: device A still shows changes waiting after syncing");
+      const B2 = await dev({ width: 390, height: 844 }, "auto B"); B2.fr = () => hqf(B2);
+      await B2.fr().fill("#ghPath", "auto.json"); await connect(B2.fr, "ceo/agency-data", "good-token");
+      await B2.fr().click("#ghLoad"); await B2.p.waitForTimeout(600); await B2.fr().click("#ghGo"); await B2.p.waitForTimeout(2500);
+      await edit(A2, "A again"); await until(() => nameOn(file()) === "A again");
+      /* B opens another page a while later: the newer copy is loaded by itself */
+      await B2.p.evaluate(() => { const s = JSON.parse(localStorage.getItem("mawm-sync-state")); s.lastCheck = ""; localStorage.setItem("mawm-sync-state", JSON.stringify(s)) });
+      await B2.p.goto(base + "index.html#/research/overview");
+      const deptB = () => B2.p.frames().find(f => /dept\.html/.test(f.url()));
+      if (!(await until(async () => (await deptB().evaluate(() => MAWM_DATA.readHq().projects[0].name)) === "A again"))) errors.push("sync auto: opening a page on device B didn't load A's newer copy");
+      await B2.p.goto(base + "index.html#/ceo/data"); await B2.p.waitForTimeout(1200);
+      /* B goes offline and changes something: it waits (header says so); then A saves a newer change; when B is back, the newest (A's) wins, with a warning */
+      await B2.C.setOffline(true); await edit(B2, "B offline edit"); await B2.p.waitForTimeout(3800);
+      if (!/Offline/.test(await badge(B2)) && !/Offline/.test(await B2.p.getAttribute("#syncBadge", "aria-label"))) errors.push("sync auto: the header didn't say offline changes are waiting (" + await badge(B2) + ")");
+      if (shots) await B2.p.screenshot({ path: path.join(ROOT, "tests", "shots", "phone-sync-offline.png") });
+      await A2.p.waitForTimeout(300); await edit(A2, "A newest"); await until(() => nameOn(file()) === "A newest");
+      await B2.C.setOffline(false); await B2.p.evaluate(() => { const f = document.getElementById("frame").contentWindow; f.dispatchEvent(new Event("online")) });
+      const bw = await until(async () => (await B2.fr().evaluate(() => MAWM_DATA.readHq().projects[0].name)) === "A newest", 12000);
+      const bst = await B2.fr().evaluate(() => ({ st: MAWM_DATA.syncStatus(), before: !!MAWM_DATA.beforeImport() }));
+      if (!bw || !/newer copy on GitHub/.test(bst.st.warning) || !bst.before) errors.push("sync auto: when both changed, the newer copy from A didn't win with a warning and a safety copy (" + JSON.stringify(bst.st.warning) + ")");
+      if (!/newest copy kept/.test(await B2.p.getAttribute("#syncBadge", "aria-label"))) errors.push("sync auto: the header didn't warn that the newest copy was kept");
+      if (shots) { await B2.p.waitForTimeout(400); await B2.fr().evaluate(() => document.getElementById("ghsync").scrollIntoView()); await B2.p.screenshot({ path: path.join(ROOT, "tests", "shots", "phone-sync-newest.png") }) }
+      /* now B's change is the newer one: A changes offline first, B saves later; when A is back, B's newer copy stays… and the reverse: B newer than GitHub wins */
+      await B2.C.setOffline(true); await A2.p.waitForTimeout(300); await edit(A2, "A older"); await until(() => nameOn(file()) === "A older");
+      await B2.p.waitForTimeout(300); await edit(B2, "B newest"); await B2.p.waitForTimeout(500);
+      await B2.C.setOffline(false); await B2.p.evaluate(() => document.getElementById("frame").contentWindow.dispatchEvent(new Event("online")));
+      if (!(await until(() => nameOn(file()) === "B newest", 12000))) errors.push("sync auto: B's newer offline change didn't replace the older copy on GitHub");
+      const bw2 = await B2.fr().evaluate(() => MAWM_DATA.syncStatus().warning);
+      if (!/this device's newer changes/.test(bw2)) errors.push("sync auto: replacing an older copy on GitHub wasn't warned (" + bw2 + ")");
+      if (shots) { await A2.p.goto(base + "index.html#/ceo/data"); await A2.p.waitForTimeout(1500); await A2.fr().evaluate(() => document.getElementById("ghsync").scrollIntoView()); await A2.p.screenshot({ path: path.join(ROOT, "tests", "shots", "desktop-sync-auto.png") }) }
+      /* dismissing the warning clears the header; pausing stops automatic saves */
+      await B2.p.waitForTimeout(500); const dis = await B2.fr().$("#ghDismiss"); if (dis) await dis.click(); await B2.p.waitForTimeout(400);
+      if (await until(async () => !(await badge(B2)), 16000) !== true) errors.push("sync auto: dismissing the warning didn't clear the header");
+      await A2.fr().uncheck("#ghAuto"); const puts = store.puts; await edit(A2, "Paused edit"); await A2.p.waitForTimeout(3800);
+      if (store.puts !== puts) errors.push("sync auto: pausing automatic sync didn't stop it");
+      await A2.C.close(); await B2.C.close();
+      if (!errors.some(e => /^sync auto/.test(e))) console.log("OK: automatic sync waits for the first Save or Load, sends saves by itself, loads a newer copy on opening a page, keeps offline saves until back online (header says so), lets the newest copy win either way with a warning on the card and the header, and can be paused");
+    }
     if (!errors.some(e => /^sync/.test(e))) console.log("OK: GitHub sync refuses a wrong token and a public repo, keeps the token out of backups, saves, warns before overwriting another device's save, loads with a preview on another device, can replace on purpose (noted) and disconnects");
   }
   await browser.close(); server.close();

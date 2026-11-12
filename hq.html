@@ -199,6 +199,8 @@ a.btn{text-decoration:none;color:inherit}
 .bkp.warn{border-color:var(--warn)}
 .ghsteps{margin:0 0 12px;padding-left:20px;line-height:1.6;max-width:760px}.ghsteps li{margin:2px 0}
 .ghf{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px 12px;align-items:end;background:var(--sunk);border-radius:12px;padding:14px 16px}.ghf .row{grid-column:1/-1}.ghf .field{display:flex;flex-direction:column;gap:4px;min-width:0}.ghf input{width:100%;box-sizing:border-box}
+.ghauto{display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;cursor:pointer}.ghauto input{margin:3px 0 0;accent-color:var(--accent);width:16px;height:16px;flex:none}.ghauto b{display:block}
+.ghwarn{margin:10px 0 0;padding:10px 12px;border:1px solid var(--warn);background:var(--warn-soft);border-radius:12px;display:flex;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}.ghwarn.bad{border-color:var(--bad)}
 .ghs{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 16px;background:var(--sunk);border-radius:12px;padding:12px 16px}.ghs>div{display:flex;flex-direction:column;gap:2px;min-width:0;overflow-wrap:anywhere}
 @media (max-width:720px){.bk{grid-template-columns:1fr}.ghf{grid-template-columns:1fr}}
 .dm{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:4px 0 6px}
@@ -566,10 +568,13 @@ function drawData(){const DM=window.MAWM_DATA;
 }
 /* 3b-i: optional GitHub sync. The CEO connects a private repo of their own with a fine-grained token kept only on this
    device; Save to GitHub and Load from GitHub move all the data, with a warning when another device saved in between. */
-function drawSync(DM,ago){const box=$("#ghBody");if(!box||!DM.syncStatus)return;
+let syncAgo=null;
+/* 3b-ii: automatic sync changes the status by itself: redraw the card (unless a Save/Load panel is open) */
+addEventListener("mawm-sync",()=>{const r=$("#ghResult");if(syncAgo&&window.MAWM_DATA&&$("#ghBody")&&!(r&&r.querySelector("button")))drawSync(MAWM_DATA,syncAgo)});
+function drawSync(DM,ago){const box=$("#ghBody");if(!box||!DM.syncStatus)return;syncAgo=ago;
  const st=DM.syncStatus();
  const refreshAll=()=>{try{if(window.top!==window&&window.top.location.origin===location.origin){window.top.location.reload();return}}catch(e){}location.reload()};
- if(!st){box.innerHTML=`<p class="hint">Keep the same projects on your laptop, phone and desktop app by saving all the data to a private GitHub repo of your own. Free, and nothing is sent anywhere until you press Save or Load.</p>
+ if(!st){box.innerHTML=`<p class="hint">Keep the same projects on your laptop, phone and desktop app by saving all the data to a private GitHub repo of your own. Free, and nothing is sent anywhere until you connect and press Save or Load once; after that, changes sync by themselves.</p>
   <ol class="ghsteps small">
    <li>Make a new <b>private</b> repo for the data (for example <span class="mono">my-agency-data</span>): <a href="https://github.com/new" target="_blank" rel="noopener">github.com/new</a>.</li>
    <li>Make a <b>fine-grained token</b>: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Settings → Developer settings → Fine-grained tokens</a>. Repository access: <b>Only select repositories</b> → that repo. Permissions: <b>Contents: Read and write</b>. Nothing else.</li>
@@ -585,13 +590,16 @@ function drawSync(DM,ago){const box=$("#ghBody");if(!box||!DM.syncStatus)return;
    if(r.error){msg.className="small t-bad";msg.textContent=r.error;return}
    toast("Connected to "+r.repo);drawSync(DM,ago)};
   return}
- box.innerHTML=`<p class="status" style="margin:0 0 6px">${st.lastSync?`<span class="st st-good">Last synced ${esc(ago(st.lastSync))}</span>`:`<span class="st st-warn">Not synced yet on this device</span>`}</p>
+ const line=st.error?`<span class="st st-bad">Sync problem</span>`:st.offline&&st.dirty?`<span class="st st-warn">Offline: changes wait and sync when you're back online</span>`:st.busy?`<span class="st st-good">Syncing…</span>`:st.dirty&&st.auto&&!st.first?`<span class="st st-warn">Changes waiting to sync</span>`:st.lastSync?`<span class="st st-good">Last synced ${esc(ago(st.lastSync))}</span>`:`<span class="st st-warn">Not synced yet on this device</span>`;
+ box.innerHTML=`<p class="status" style="margin:0 0 6px">${line}</p>
   <div class="ghs small"><div><span class="k">Repo</span><span class="mono">${esc(st.repo)}</span></div><div><span class="k">File</span><span class="mono">${esc(st.path)}</span></div>
    <div><span class="k">Last saved from here</span>${st.lastSave?esc(ago(st.lastSave)):"Never"}</div><div><span class="k">Last loaded here</span>${st.lastLoad?esc(ago(st.lastLoad))+(st.remoteDevice&&st.lastLoad===st.lastSync?" · saved from "+esc(st.remoteDevice):""):"Never"}</div>
    <div><span class="k">Token</span>Kept on this device only · ends in <span class="mono">${esc(st.tokenEnd)}</span></div></div>
-  ${st.warning?`<p class="small" style="color:var(--warn);margin:8px 0 0">! ${esc(st.warning)} (${esc(ago(st.lastSave))}).</p>`:""}
+  ${st.warning?`<div class="ghwarn small" role="alert"><span><b style="color:var(--warn)">! Newest copy kept</b> · ${esc(ago(st.warningAt||st.lastSync))}<br>${esc(st.warning)}</span><button class="btn sm" id="ghDismiss" type="button">OK</button></div>`:""}
+  ${st.error?`<div class="ghwarn bad small" role="alert"><span><b class="t-bad">Automatic sync stopped</b><br>${esc(st.error)} Changes stay on this device until it works again; press Save to GitHub to retry.</span></div>`:""}
+  <label class="ghauto small"><input type="checkbox" id="ghAuto" ${st.auto?"checked":""}><span><b>Sync automatically</b>${st.first?"Starts after this device's first Save or Load below, so a new device never replaces anything by itself.":"Every change is sent to GitHub a few seconds after it's saved, and a newer copy there is loaded when you open a page. If both changed, the newest wins and you're warned here and in the header. Offline changes wait and go when you're back online."}</span></label>
   <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn primary" id="ghSave" type="button">Save to GitHub</button><button class="btn" id="ghLoad" type="button">Load from GitHub</button><button class="btn" id="ghOff" type="button">Disconnect</button></div>
-  <p class="hint" style="margin:8px 0 0">Save sends everything on this device to the repo; Load replaces this device's data with what's there (a safety copy is kept, so Undo last import works). Automatic sync comes next.</p>
+  <p class="hint" style="margin:8px 0 0">Save sends everything on this device to the repo now; Load replaces this device's data with what's there (a safety copy is kept, so Undo last import works). Both still warn before overwriting another device's newer save.</p>
   <div id="ghResult"></div>`;
  const out=$("#ghResult"),busy=(on,t)=>{["#ghSave","#ghLoad","#ghOff"].forEach(s=>$(s).disabled=on);if(on)out.innerHTML=`<div class="bkp"><span class="small muted">${esc(t)}</span></div>`};
  const cols=Object.keys(DM.SCHEMA),table=s=>{const now=DM.summaryNow();return `<div class="tablewrap"><table class="dsrc bkt"><thead><tr><th></th><th>On GitHub</th><th>On this device now</th></tr></thead><tbody>${cols.map(c=>`<tr><td><b>${esc(DM.SCHEMA[c].label)}</b></td><td>${s.counts[c]||0}</td><td>${now.counts[c]||0}</td></tr>`).join("")}</tbody></table></div>`};
@@ -617,6 +625,8 @@ function drawSync(DM,ago){const box=$("#ghBody");if(!box||!DM.syncStatus)return;
    out.innerHTML=`<div class="bkp good"><b>Loaded from GitHub.</b> Refreshing the app…</div>`;toast("Loaded from GitHub");setTimeout(refreshAll,700)};
   out.scrollIntoView({block:"nearest",behavior:"smooth"})};
  $("#ghSave").onclick=()=>save(false);$("#ghLoad").onclick=load;
+ $("#ghAuto").onchange=e=>{DM.setAutoSync(e.target.checked);toast(e.target.checked?"Automatic sync on for this device":"Automatic sync paused on this device: use Save and Load");drawSync(DM,ago)};
+ const dis=$("#ghDismiss");if(dis)dis.onclick=()=>{DM.dismissSyncWarning();drawSync(DM,ago)};
  $("#ghOff").onclick=()=>{if(!confirm("Disconnect GitHub sync on this device? The token is removed from this device. Your data here and the copy on GitHub stay as they are."))return;DM.disconnectSync();toast("GitHub sync disconnected on this device");drawSync(DM,ago)};
 }
 /* 3a: export all data as one file, and import a backup file (after a preview and a confirm; undo puts back what was here) */
