@@ -828,7 +828,27 @@
         "total": null
       },
       "source": "run"
+    },
+    {
+      "id": "build-loop-20261112T2103",
+      "agent": "Build loop",
+      "task": "My AI Work Mates build loop",
+      "started": "2026-11-12T20:56:00.000Z",
+      "finished": "2026-11-12T21:03:49.535Z",
+      "result": "success",
+      "summary": "W1b-ii: agents obey the Auto-work switch (paused scheduled runs skip and are recorded, Run now goes ahead)",
+      "produced": [
+        "W1b-ii"
+      ],
+      "project": null,
+      "commit": "eed0500",
+      "tokens": {
+        "input": null,
+        "output": null,
+        "total": null
+      },
+      "source": "run"
     }
   ],
-  "updated": "2026-11-12T19:26:17.218Z"
+  "updated": "2026-11-12T21:03:49.539Z"
 }
