@@ -306,6 +306,47 @@ const ROUTES = ["#/home", "#/ceo/home",
     console.log("OK: data model " + JSON.stringify(r.counts) + ", CEO page reads it back (" + rt.projects + " projects, " + rt.tasks + " tasks), decision recorded, department logs and saves through it, Design Studio links work to projects, old keys retired (never written; an older page's write is taken in), a submitted deliverable waits in the review queue, approving it starts the next tasks and hands it on, returning it sends it back with comments and logs an issue (repeats flagged), the Design Studio submits wireframes, page designs and QA reports");
     await page.close();
   }
+  { // 3a: export all data as one file, import it on another device (fresh browser), undo the import
+    const A = await browser.newContext(), pa = await A.newPage(); pa.on("pageerror", e => errors.push("backup (device A): " + e.message));
+    await pa.goto(base + "index.html#/ceo/data"); await pa.waitForTimeout(1200);
+    const fr = () => pa.frames().find(f => /hq\.html/.test(f.url()));
+    const out = await fr().evaluate(() => { const D = MAWM_DATA, S = D.readHq(); S.projects[0].name = "Backup smoke project"; D.writeHq(S);
+      const g = D.page("mawm-dept-copy") || { rows: {} }; g.rows = g.rows || {}; g.rows.copymaps = (g.rows.copymaps || []).concat([{ _id: "bk1", project: S.projects[0].code, page: "Backup page", version: "1", status: "Draft" }]); D.savePart("mawm-dept-copy", g);
+      localStorage.setItem("facelove-studio-v2-theme", JSON.stringify({ files: { "a.liquid": "x" }, meta: { name: "Smoke theme" }, name: "Smoke theme" }));
+      return D.exportAll() });
+    const [dl] = await Promise.all([pa.waitForEvent("download", { timeout: 5000 }).catch(() => null), fr().click("#bkExport")]);
+    if (!dl || !/^my-ai-work-mates-backup-\d{4}-\d\d-\d\d\.json$/.test(dl.suggestedFilename())) errors.push("backup: Download backup file didn't download a backup file");
+    if (shots) { await pa.screenshot({ path: path.join(ROOT, "tests", "shots", "desktop-backup-card.png") }) }
+    await A.close();
+    const B = await browser.newContext({ viewport: { width: 390, height: 844 } }), pb = await B.newPage(); pb.on("pageerror", e => errors.push("backup (device B): " + e.message));
+    pb.on("dialog", d => d.accept());
+    await pb.goto(base + "index.html#/ceo/data"); await pb.waitForTimeout(1200);
+    const frb = () => pb.frames().find(f => /hq\.html/.test(f.url()));
+    const beforeName = await frb().evaluate(() => MAWM_DATA.readHq().projects[0].name);
+    /* a broken file is refused and changes nothing */
+    await frb().setInputFiles("#bkFile", { name: "notes.json", mimeType: "application/json", buffer: Buffer.from('{"hello":1}') }); await pb.waitForTimeout(300);
+    if (!/isn't a My AI Work Mates backup/.test(await frb().textContent("#bkPreview"))) errors.push("backup: a file that isn't a backup wasn't refused");
+    await frb().setInputFiles("#bkFile", { name: "backup.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(out)) }); await pb.waitForTimeout(300);
+    const pv = await frb().textContent("#bkPreview"); if (!/Replace this device's data/.test(pv) || !/In the file/.test(pv)) errors.push("backup: no preview before importing");
+    if (shots) { await frb().evaluate(() => document.getElementById("bkPreview").scrollIntoView()); await pb.screenshot({ path: path.join(ROOT, "tests", "shots", "phone-backup-preview.png") }) }
+    await frb().click("#bkGo"); await pb.waitForTimeout(2200);
+    const imp = await frb().evaluate(() => { const D = MAWM_DATA, S = D.readHq(), c = D.page("mawm-dept-copy"), th = JSON.parse(localStorage.getItem("facelove-studio-v2-theme") || "null");
+      return { name: S.projects[0].name, copy: !!(c && c.rows.copymaps.find(x => x._id === "bk1")), theme: th && th.name, before: !!D.beforeImport(), bad: D.check().filter(x => x[0] === "bad").map(x => x[1]), log: (D.load().meta.log[0] || [])[1] || "" } });
+    if (imp.name !== "Backup smoke project") errors.push("backup: imported projects didn't arrive (" + imp.name + ")");
+    if (!imp.copy) errors.push("backup: a department's records didn't arrive");
+    if (imp.theme !== "Smoke theme") errors.push("backup: the theme library didn't arrive");
+    if (!imp.before) errors.push("backup: no safety copy kept before importing");
+    if (imp.bad.length) errors.push("backup: checks fail after importing: " + imp.bad.join("; "));
+    if (!/^Imported from a backup file/.test(imp.log)) errors.push("backup: the import wasn't logged");
+    /* the model survives a reload (this device's old keys aren't taken in over it) */
+    await pb.reload(); await pb.waitForTimeout(1200);
+    if (await frb().evaluate(() => MAWM_DATA.readHq().projects[0].name) !== "Backup smoke project") errors.push("backup: imported data lost after a reload");
+    await frb().click("#bkUndo"); await pb.waitForTimeout(2200);
+    const undone = await frb().evaluate(() => ({ name: MAWM_DATA.readHq().projects[0].name, before: !!MAWM_DATA.beforeImport() }));
+    if (undone.name !== beforeName || undone.before) errors.push("backup: Undo last import didn't put the old data back");
+    await B.close();
+    if (!errors.some(e => /^backup/.test(e))) console.log("OK: backup file downloads, a wrong file is refused, import shows a preview, replaces the data (projects, department records, theme library) with a safety copy, survives a reload, and undo puts it back");
+  }
   await browser.close(); server.close();
   try { console.log("OK: " + await require("./desktop")()); } catch (e) { errors.push("desktop: " + (e.stack || e)); }
   try { console.log("OK: " + await require("./updater")()); } catch (e) { errors.push("updater: " + (e.stack || e)); }

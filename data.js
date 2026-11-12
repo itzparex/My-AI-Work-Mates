@@ -493,10 +493,84 @@
   const touch = () => { }, flush = () => { };
   /* the old keys are never written again: a write to one from this window (code that still saves the old way) goes into the
      model instead, and the old key stays as it was */
+  /* 3a: export and import all data as one file (a backup, and a manual way to move data between devices).
+     The file holds the shared model plus the few things saved beside it; caches that come from GitHub (run records,
+     plan usage) and the old read-only backup keys are left out. Importing replaces this device's data, after keeping
+     a safety copy of what was here so the CEO can undo it. Nothing is uploaded: the file only goes where the CEO saves it. */
+  const FILE_FORMAT = "my-ai-work-mates-backup", FILE_VERSION = 1, BEFORE = "mawm-data-before-import";
+  const EXTRA = [
+    ["facelove-studio-v2-theme", "Design Studio theme library"],
+    ["facelove-hq-v1-ui", "CEO page settings"],
+    ["mawm-theme", "Light or dark choice"]
+  ];
+  const deviceName = () => { try { const u = g.navigator.userAgent || ""; return (/Electron/.test(u) ? "Desktop app" : /iPhone|iPad/.test(u) ? "iPhone or iPad" : /Android/.test(u) ? "Android" : "Browser") + (/Windows/.test(u) ? " on Windows" : /Mac OS X/.test(u) && !/iPhone|iPad/.test(u) ? " on Mac" : /Linux/.test(u) && !/Android/.test(u) ? " on Linux" : "") } catch (e) { return "Unknown device" } };
+  /* everything worth keeping, as one object ready to save as a .json file */
+  function exportAll() {
+    flush(); migrate("load");
+    const model = load(), extra = {};
+    EXTRA.forEach(([k]) => { const s = raw(k); if (s != null) extra[k] = s });
+    return { format: FILE_FORMAT, fileVersion: FILE_VERSION, modelVersion: VERSION, exported: stamp(), device: deviceName(), counts: model ? model.meta.counts : null, model, extra };
+  }
+  const fileName = d => "my-ai-work-mates-backup-" + (d || today()) + ".json";
+  /* read a backup file's text: { ok, file, summary } or { ok: false, error } */
+  function readBackup(text) {
+    let f; try { f = JSON.parse(text) } catch (e) { return { ok: false, error: "This file isn't a My AI Work Mates backup (it couldn't be read as JSON)." } }
+    if (!f || f.format !== FILE_FORMAT) return { ok: false, error: "This file isn't a My AI Work Mates backup." };
+    if (f.fileVersion > FILE_VERSION || f.modelVersion !== VERSION) return { ok: false, error: "This backup was made by a different version of the app (data version " + f.modelVersion + "). Refresh the app and try again." };
+    const m = f.model;
+    if (m != null) {
+      if (!m.meta || m.meta.version !== VERSION) return { ok: false, error: "The data inside this backup isn't in the expected shape." };
+      const missing = Object.keys(SCHEMA).filter(c => !Array.isArray(m[c]));
+      if (missing.length) return { ok: false, error: "The backup is missing parts of the data (" + missing.join(", ") + "). Nothing was changed." };
+    }
+    const counts = m ? Object.fromEntries(Object.keys(SCHEMA).map(c => [c, m[c].length])) : {};
+    const extras = EXTRA.filter(([k]) => f.extra && typeof f.extra[k] === "string").map(e => e[1]);
+    const bad = m ? check(m).filter(c => c[0] === "bad").map(c => c[1]) : [];
+    return { ok: true, file: f, summary: { exported: f.exported, device: f.device || "", counts, extras, pages: m && m.pages ? Object.keys(m.pages).map(labelOf) : [], bad, empty: !m } };
+  }
+  /* what's on this device now, in the same terms as a backup summary */
+  function summaryNow() { const m = load(); return { counts: m ? Object.fromEntries(Object.keys(SCHEMA).map(c => [c, m[c].length])) : {}, built: m && m.meta.built } }
+  /* replace this device's data with a backup file (from readBackup). Returns "" or an error message. */
+  function importAll(f) {
+    if (!ls) return "This device doesn't allow saving.";
+    flush();
+    /* safety copy of what's here now, so the import can be undone */
+    const before = { at: stamp(), note: "This device's data just before a backup file was imported.", model: raw(KEY), extra: {} };
+    EXTRA.forEach(([k]) => { const s = raw(k); if (s != null) before.extra[k] = s });
+    try { ls.setItem(BEFORE, JSON.stringify(before)) } catch (e) { return "Not enough storage on this device to keep a safety copy, so nothing was imported." }
+    const m = f.model ? clone(f.model) : null;
+    if (m) {
+      /* this device's own old keys stay read-only backups: note them as they are now, so they are never taken in over the imported data */
+      const found = SOURCES.filter(([k]) => raw(k) != null).map(s => s[0]);
+      m.meta.retired = { at: (m.meta.retired && m.meta.retired.at) || stamp(), keys: found, sigs: Object.fromEntries(SOURCES.map(([k]) => [k, sig(raw(k))])), adopted: [] };
+      m.meta.imported = { at: stamp(), exported: f.exported || "", device: f.device || "" };
+      m.meta.log = [[stamp(), "Imported from a backup file made " + (f.exported ? f.exported.slice(0, 10) : "earlier") + (f.device ? " on " + f.device : "") + " (" + countsText(m) + "); the data that was here before is kept as a safety copy"]].concat(arr(m.meta.log)).slice(0, 20);
+    }
+    try {
+      if (m) ls.setItem(KEY, JSON.stringify(m)); else ls.removeItem(KEY);
+      EXTRA.forEach(([k]) => { const v = f.extra && f.extra[k]; if (typeof v === "string") ls.setItem(k, v) });
+    } catch (e) { restoreBefore(before); return "Not enough storage on this device for this backup. Your data was left as it was." }
+    lastError = ""; return "";
+  }
+  function restoreBefore(b) {
+    try { if (b.model != null) ls.setItem(KEY, b.model); else ls.removeItem(KEY); EXTRA.forEach(([k]) => { if (b.extra && b.extra[k] != null) ls.setItem(k, b.extra[k]) }) } catch (e) { return "Couldn't restore the safety copy on this device." }
+    return "";
+  }
+  /* the safety copy kept by the last import, or null */
+  function beforeImport() { const v = parse(raw(BEFORE)); return v && v.at ? { at: v.at, bytes: (raw(BEFORE) || "").length, empty: v.model == null } : null }
+  /* undo the last import: put back the data that was here before it. Returns "" or an error message. */
+  function undoImport() {
+    const b = parse(raw(BEFORE)); if (!b || !b.at) return "There's no import to undo on this device.";
+    const err = restoreBefore(b); if (err) return err;
+    const m = load(); if (m) { m.meta.log = [[stamp(), "Import undone: the data from before it was put back"]].concat(arr(m.meta.log)).slice(0, 20); try { ls.setItem(KEY, JSON.stringify(m)) } catch (e) { } }
+    try { ls.removeItem(BEFORE) } catch (e) { }
+    return "";
+  }
+
   try {
     const set = Storage.prototype.setItem;
     if (!set.__mawm) { const w = function (k, v) { if (this === ls && SRC_KEYS.has(k)) { const d = parse(v); if (d) savePart(k, d); return } set.call(this, k, v) }; w.__mawm = true; Storage.prototype.setItem = w }
   } catch (e) { }
-  g.MAWM_DATA = { KEY, BACKUP, VERSION, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, projects, studio, saveStudio, studioFor, STUDIO, submit, reviewTask, approve, returnTask, gateView, gates, passGate, askOverride, returnedFor, inputsFor, LINK, HQ, page, savePart, retired: () => { const m = load(); return m && m.meta.retired || null }, sig, raw, error: () => lastError, today };
+  g.MAWM_DATA = { KEY, BACKUP, VERSION, exportAll, readBackup, importAll, undoImport, beforeImport, summaryNow, fileName, EXTRA, BEFORE, SOURCES, SCHEMA, TASK_STATUSES, build, check, load, migrate, backupInfo, touch, flush, readHq, writeHq, decided, deptView, report, issue, hqReady, saveDept, projects, studio, saveStudio, studioFor, STUDIO, submit, reviewTask, approve, returnTask, gateView, gates, passGate, askOverride, returnedFor, inputsFor, LINK, HQ, page, savePart, retired: () => { const m = load(); return m && m.meta.retired || null }, sig, raw, error: () => lastError, today };
   migrate("load");
 })(typeof window !== "undefined" ? window : globalThis);

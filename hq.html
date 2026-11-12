@@ -194,6 +194,9 @@ a.btn{text-decoration:none;color:inherit}
 @media (max-width:1180px){.mates{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:980px){.cols-b{grid-template-columns:1fr}}
 @media (max-width:640px){.hero{padding:18px 16px 14px;border-radius:16px}.hero-top .btn{width:100%;justify-content:center}.stats,.wk{grid-template-columns:repeat(2,1fr)}.mates{grid-template-columns:repeat(2,minmax(0,1fr))}.wkcols{grid-template-columns:1fr}.pfacts{grid-template-columns:1fr 1fr}.iss{grid-template-columns:auto minmax(0,1fr)}.iss>.pill:last-child{grid-column:2;justify-self:start}}
+.bk{display:grid;grid-template-columns:1fr 1fr;gap:12px}.bkc{background:var(--sunk);border-radius:12px;padding:14px 16px;min-width:0}
+.bkp{margin-top:12px;border:1px solid var(--line);border-radius:12px;padding:14px 16px}.bkp h3{margin:0 0 6px;font-size:15px}.bkp.bad{border-color:var(--bad)}.bkp.good{border-color:var(--good)}.bkt{min-width:0!important;width:100%}.bkt td,.bkt th{text-align:left;white-space:normal}
+@media (max-width:720px){.bk{grid-template-columns:1fr}}
 .dm{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:4px 0 6px}
 .dmc{background:var(--sunk);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
 .dmc .n{font-family:var(--f-display);font-weight:800;font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums}.dmc .l{font-size:12px;font-weight:700;color:var(--muted)}
@@ -523,6 +526,18 @@ function drawData(){const DM=window.MAWM_DATA;
   <p class="small muted" style="margin:10px 0 0;max-width:760px">Every page's projects, tasks, deliverables, decisions, issues and lessons sit in one model on this device, and it is now the only place any page saves: the CEO and Project Director pages, the four department pages and the Design Studio all read from it and save into it${fromModel?"":" (this time this page couldn't read it and showed the old saved data instead)"}. The old saved keys were kept as read-only backups and are never written again; a separate backup copy was also kept before the first build.</p>
   ${err?`<p class="small t-bad" style="margin:8px 0 0">${esc(err)}</p>`:""}
  </section>
+ <section class="card" id="backup" style="margin-top:16px"><h2>Back up or move your data</h2>
+  <p class="hint">Save everything on this device as one file: a backup, and the way to move your work to another device (open the app there, come to CEO → Data and import the file). The file stays wherever you save it; nothing is uploaded.</p>
+  <div class="bk">
+   <div class="bkc"><span class="k">Export</span><p class="small" style="margin:4px 0 10px">Projects, tasks, deliverables, decisions, issues and lessons, every department's and the Design Studio's records, the theme library and your page settings.</p>
+    <button class="btn primary" id="bkExport" type="button">Download backup file</button>
+    <p class="small muted" style="margin:8px 0 0" id="bkLast">${(()=>{let t="";try{t=localStorage.getItem("mawm-last-export")||""}catch(e){}return t?"Last downloaded on this device: "+esc(ago(t)):"Not downloaded on this device yet."})()}</p></div>
+   <div class="bkc"><span class="k">Import</span><p class="small" style="margin:4px 0 10px">Replaces the data on this device with the data in a backup file. What's here now is kept as a safety copy first, so you can undo it.</p>
+    <label class="btn" for="bkFile">Choose a backup file…</label><input type="file" id="bkFile" accept=".json,application/json" hidden>
+    ${(()=>{const b=DM.beforeImport();return b?`<p class="small" style="margin:8px 0 0">Last import: ${esc(ago(b.at))} · <button class="btn sm" id="bkUndo" type="button">Undo last import</button></p>`:""})()}</div>
+  </div>
+  <div id="bkPreview"></div>
+ </section>
  <section class="card" style="margin-top:16px"><h2>What's in it</h2>
   <div class="dm">${cols.map(c=>`<div class="dmc"><span class="n">${m?m[c].length:0}</span><span class="l">${esc(DM.SCHEMA[c].label)}</span></div>`).join("")}</div>
   ${byKind.length?`<div class="row small" style="flex-wrap:wrap;gap:6px;margin-top:8px"><span class="k" style="margin-right:4px">Deliverables</span>${byKind.map(([k,n])=>`<span class="pill">${n} ${esc(k)}</span>`).join("")}</div>`:""}
@@ -541,6 +556,35 @@ function drawData(){const DM=window.MAWM_DATA;
   <div class="dschema">${cols.map(c=>{const d=DM.SCHEMA[c];return `<details><summary>${esc(d.label)}</summary><p>${esc(d.what)}</p><ul>${d.fields.map(([f,w])=>`<li><span class="mono">${esc(f)}</span> · ${esc(w)}</li>`).join("")}</ul></details>`}).join("")}</div>
  </section>`;
  $("#dmRebuild").onclick=()=>{DM.migrate("manual");toast("Shared model rebuilt");drawData()};
+ wireBackup(DM,ago);
+}
+/* 3a: export all data as one file, and import a backup file (after a preview and a confirm; undo puts back what was here) */
+function wireBackup(DM,ago){
+ const refreshAll=()=>{try{if(window.top!==window&&window.top.location.origin===location.origin){window.top.location.reload();return}}catch(e){}location.reload()};
+ $("#bkExport").onclick=()=>{let f;try{f=DM.exportAll()}catch(e){toast("Couldn't make the backup file on this device");return}
+  const blob=new Blob([JSON.stringify(f,null,1)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download=DM.fileName();document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
+  try{localStorage.setItem("mawm-last-export",f.exported)}catch(e){}
+  $("#bkLast").textContent="Downloaded just now: "+DM.fileName()+" ("+(blob.size>=1048576?(blob.size/1048576).toFixed(1)+" MB":Math.max(1,Math.round(blob.size/1024))+" KB")+")";toast("Backup file downloaded")};
+ const u=$("#bkUndo");if(u)u.onclick=()=>{if(!confirm("Put back the data that was on this device before the last import? The imported data will be replaced."))return;const err=DM.undoImport();if(err){toast(err);return}toast("Import undone");setTimeout(refreshAll,600)};
+ $("#bkFile").onchange=e=>{const file=e.target.files&&e.target.files[0];e.target.value="";if(!file)return;
+  const box=$("#bkPreview");
+  if(file.size>40*1048576){box.innerHTML=`<div class="bkp bad"><b>That file is too big to be a backup.</b> Nothing was changed.</div>`;return}
+  const rd=new FileReader();rd.onerror=()=>{box.innerHTML=`<div class="bkp bad"><b>The file couldn't be read.</b> Nothing was changed.</div>`};
+  rd.onload=()=>{const r=DM.readBackup(String(rd.result||""));
+   if(!r.ok){box.innerHTML=`<div class="bkp bad"><b>Can't import ${esc(file.name)}.</b> ${esc(r.error)} Nothing was changed.</div>`;return}
+   const s=r.summary,now=DM.summaryNow(),cols=Object.keys(DM.SCHEMA);
+   box.innerHTML=`<div class="bkp"><h3>Import ${esc(file.name)}?</h3>
+    <p class="small" style="margin:0 0 10px">Made ${esc(ago(s.exported))}${s.device?" on "+esc(s.device):""}.${s.pages.length?" Holds the records of: "+esc(s.pages.join(", "))+".":""}${s.extras.length?" Also: "+esc(s.extras.join(", "))+".":""}</p>
+    ${s.empty?`<p class="small t-bad">This backup was made on a device with nothing saved yet. Importing it clears the data on this device.</p>`:`<div class="tablewrap"><table class="dsrc bkt"><thead><tr><th></th><th>In the file</th><th>On this device now</th></tr></thead><tbody>${cols.map(c=>`<tr><td><b>${esc(DM.SCHEMA[c].label)}</b></td><td>${s.counts[c]||0}</td><td>${now.counts[c]||0}</td></tr>`).join("")}</tbody></table></div>`}
+    ${s.bad.length?`<p class="small" style="color:var(--warn)">The file has ${s.bad.length} problem${s.bad.length>1?"s":""} the checks will show after importing: ${esc(s.bad.join("; "))}.</p>`:""}
+    <p class="small" style="margin:10px 0">Everything on this device is replaced by the file. Pages open in other tabs or windows should be refreshed afterwards.</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn primary" id="bkGo" type="button">Replace this device's data</button><button class="btn" id="bkNo" type="button">Cancel</button></div></div>`;
+   $("#bkNo").onclick=()=>{box.innerHTML=""};
+   $("#bkGo").onclick=()=>{const err=DM.importAll(r.file);if(err){box.innerHTML=`<div class="bkp bad"><b>Not imported.</b> ${esc(err)}</div>`;return}
+    box.innerHTML=`<div class="bkp good"><b>Imported.</b> Refreshing the app…</div>`;toast("Backup imported");setTimeout(refreshAll,700)};
+   box.scrollIntoView({block:"nearest",behavior:"smooth"})};
+  rd.readAsText(file)};
 }
 function decide(d,result){S.decisions=S.decisions.filter(x=>x!==d);
  const open=d.issue?S.issues.find(i=>i.id===d.issue):S.issues.find(i=>i.project===d.project&&i.status==="Waiting on CEO");
