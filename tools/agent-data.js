@@ -16,6 +16,11 @@
 //                                   work, guardrail hits, notes, what is being approved)
 //   get      --page <p> [--section <s>] [--project <code>] [--id <row _id>]   a department's records as JSON
 //   check                           the app's data checks
+//   autowork --agent <work mate> [--run-now] [--record --started <UTC time>]
+//            the Auto-work switch, checked first on every run: prints { ok, go, ... }. When the CEO paused Auto-work
+//            or this work mate, a scheduled run gets go: false and exit code 3 ("Skipped: paused by CEO"); with
+//            --record it also records that skipped run in runs/runs.json. --run-now (a run the CEO started by hand)
+//            always gets go: true.
 // Write (saves the file only when the change worked; add --dry-run to try without saving):
 //   put-row  --page <p> --section <s> (--json '<object>' | --json-file <path>)
 //            adds a record, or updates the one with the same _id (fields given replace those fields only)
@@ -40,6 +45,10 @@
 //   ask-override --project <code> --task <id> --rec <text>          Project Director only: the CEO decides
 //   lesson   --project <code> --dept <department> --what <text> --type Mistake|Win|"Process gap" --change <text>
 //            [--cause <text>] [--fix <text>] [--rulebook <text>]       Project Director only
+//
+// Auto-work: every write also checks the switch for the work mate doing it (the department for submit, report and
+// put-row, the task's department for task-status, the Project Director for its commands). While that work mate is
+// paused, a write without --run-now is refused with "Skipped: paused by CEO" and exit code 3, and nothing is saved.
 //
 // Pages: research, copy, graphic, shopify (department records, "rows.<section>") and studio (Design Studio:
 // concepts, items, qa). Departments: "Research & Strategist", "Copywriter", "UI/UX Designer", "Graphic Designer",
@@ -103,6 +112,20 @@ const rowsOf = (p, sec) => {
 };
 const savePage = (p, data) => p === "studio" ? D.saveStudio(data) : D.saveDept(PAGES[p], data);
 
+/* W1b-ii: the Auto-work switch. A scheduled run of a paused work mate does nothing; a "Run now" by the CEO goes ahead. */
+const runNow = args["run-now"] === "true";
+function switchFor(name) {
+  const aw = D.autowork(), st = D.autoworkState(name, aw);
+  const last = aw.log.find(x => x.who === name || x.who === "All work mates") || null;
+  return { st, last: last ? { at: last.at, who: last.who, state: last.state, note: last.note || "" } : null };
+}
+function obey(name) {
+  if (runNow) return;
+  const { st, last } = switchFor(name); if (!st.paused) return;
+  out({ ok: false, skipped: true, agent: name, error: "Skipped: paused by CEO (" + (st.why === "main" ? "Auto-work is paused for all work mates" : name + " is paused") + "). Nothing was saved. A run the CEO starts by hand uses --run-now.", since: last && last.at || "" });
+  process.exit(3);
+}
+
 /* save the whole file back in the app's format: the app on every device loads it as a newer copy */
 function write(result) {
   if (result && (result.error || result.err)) fail(result.error || result.err);
@@ -119,6 +142,8 @@ function write(result) {
 /* where a submitted deliverable lives, so the Project Director can open it with "get --page <p> --section <s> --id <row>" */
 const where = s => { const pre = String(s && s.id || "").split(":")[0], p = pre === "uiux" ? "studio" : pre; return PAGES[p] && s.section && s.row != null ? { page: p, section: s.section, row: s.row } : null };
 const brief = t => ({ id: t.id, name: t.name, dept: t.dept, kind: t.gate ? "gate" : "step", start: t.start || "", due: t.due || "", status: t.status, submission: t.submission ? Object.assign({ title: t.submission.title, kind: t.submission.kind, version: t.submission.version, at: t.submission.at, dept: t.submission.dept || "", state: t.submission.state || "Submitted", note: t.submission.note || "", comments: t.submission.comments || "" }, where(t.submission) || {}) : null, returns: t.returns || 0 });
+
+if (["approve", "return", "pass-gate", "ask-override", "lesson"].includes(cmd)) obey("Project Director");
 
 switch (cmd) {
   case "summary": {
@@ -146,12 +171,26 @@ switch (cmd) {
     break;
   }
   case "check": out(D.check(D.load()).map(([level, text]) => ({ level, text }))); break;
+  case "autowork": {
+    const name = args.agent && args.agent !== "true" ? String(args.agent).trim() : deptArg();
+    if (!D.MATES.includes(name)) fail("Unknown work mate \"" + name + "\". Use one of: " + D.MATES.join(", "));
+    const { st, last } = switchFor(name), go = runNow || !st.paused;
+    const res = { ok: true, agent: name, go, run: runNow ? "run-now" : "scheduled", switch: st.paused ? "Paused" : "On", main: st.main, own: st.own, text: go ? (st.paused ? "Paused by CEO, but the CEO started this run by hand: go ahead." : "On: go ahead.") : "Skipped: paused by CEO", lastChange: last };
+    if (!go && args.record === "true") {
+      const started = args.started && args.started !== "true" ? args.started : new Date().toISOString();
+      const r = require("child_process").spawnSync(process.execPath, [path.resolve(__dirname, "record-run.js"), "--agent", name, "--result", "skipped", "--started", started, "--summary", "Skipped: paused by CEO" + (st.why === "main" ? " (all work mates)" : "")], { encoding: "utf8" });
+      res.recorded = r.status === 0; if (!res.recorded) res.recordError = (r.stderr || r.stdout || "").trim();
+    }
+    out(res); if (!go) process.exit(3);
+    break;
+  }
 
   case "put-row": {
     const p = pageArg(), sec = need("section");
     let o; try { o = JSON.parse(args["json-file"] ? fs.readFileSync(args["json-file"], "utf8") : need("json")) } catch (e) { fail("--json must be one JSON object (" + e.message + ")") }
     if (!o || typeof o !== "object" || Array.isArray(o)) fail("--json must be one JSON object");
     if (o.project) proj(o.project);
+    obey(PAGE_DEPT[p]);
     const { data, list, idKey } = rowsOf(p, sec), id = o[idKey], old = id != null ? list.find(r => r && r[idKey] === id) : null;
     if (old && !args.force) { /* submitted or approved work stays as the Project Director saw it: make a new version instead */
       const did = (p === "studio" ? "uiux" : p) + ":" + sec + ":" + id;
@@ -166,6 +205,7 @@ switch (cmd) {
   }
   case "answer": {
     const project = need("project"), d = parseInt(need("doc"), 10), q = parseInt(need("q"), 10); proj(project);
+    obey("Research & Strategist");
     if (!QB_COUNT[d]) fail("--doc is 1 to 7 (the documents with a question bank)");
     if (!(q >= 1 && q <= QB_COUNT[d])) fail("Document " + d + " has questions 1 to " + QB_COUNT[d]);
     const data = D.page(PAGES.research) || {}; data.rows = data.rows || {}; data.qa = data.qa || {};
@@ -186,7 +226,7 @@ switch (cmd) {
     const dept = deptArg(), project = need("project"), p = pageArg(), sec = need("section"), row = need("row"), k = KINDS[p + ":" + sec];
     if (!k) fail("Only these can be submitted: " + Object.keys(KINDS).join(", "));
     if (PAGE_DEPT[p] !== dept) fail(dept + " can't submit the " + PAGE_DEPT[p] + "'s work.");
-    proj(project);
+    proj(project); obey(dept);
     const { list, idKey } = rowsOf(p, sec), r = list.find(x => x && x[idKey] === row); if (!r) fail("No record " + row + " in " + p + " " + sec + ".");
     if (r.project && r.project !== project) fail("That record belongs to " + r.project + ".");
     const deliv = { id: (p === "studio" ? "uiux" : p) + ":" + sec + ":" + row, kind: k[0](r), title: k[1](r), version: String(r.version || ""), section: sec, row };
@@ -195,7 +235,7 @@ switch (cmd) {
     break;
   }
   case "report": {
-    const dept = deptArg(), project = need("project"); proj(project);
+    const dept = deptArg(), project = need("project"); proj(project); obey(dept);
     const sev = args.sev || "Medium"; if (!["Low", "Medium", "High"].includes(sev)) fail("--sev is Low, Medium or High");
     const o = { dept, project, issue: { what: need("what"), type: args.type || "Rule hit", sev, told: args.told || "—", decision: args["decision-type"] ? "Waiting on CEO" : "—", status: args["decision-type"] ? "Waiting on CEO" : "Open" } };
     if (args["decision-type"]) {
@@ -207,7 +247,7 @@ switch (cmd) {
     break;
   }
   case "ask-ai-image": {
-    const project = need("project"), setId = need("set"), slideId = need("slide"); proj(project);
+    const project = need("project"), setId = need("set"), slideId = need("slide"); proj(project); obey("Graphic Designer");
     const data = D.page(PAGES.graphic) || {}; data.rows = data.rows || {};
     const set = (data.rows.images || []).find(x => x && x._id === setId); if (!set) fail("No image set " + setId + ".");
     if (set.project !== project) fail("That image set belongs to " + (set.project || "no project") + ".");
@@ -236,6 +276,7 @@ switch (cmd) {
   case "task-status": {
     const project = need("project"), id = need("task"), st = need("status"); if (!SETTABLE.includes(st)) fail("--status can be " + SETTABLE.join(", ") + ". Use submit to send work for approval; only the Project Director approves.");
     const S = D.readHq(), p = (S.projects || []).find(x => x.code === project) || proj(project), t = taskOf(p, id);
+    obey(t.dept);
     if (t.status === "Done") fail(t.id + " is already approved.");
     if (t.status === "Waiting on approval") fail(t.id + " is with the Project Director for review.");
     t.status = st; t.history = (t.history || []).concat([{ date: D.today(), what: st, note: args.note || "", by: args.agent || t.dept }]).slice(-20);

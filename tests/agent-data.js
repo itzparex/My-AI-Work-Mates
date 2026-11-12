@@ -80,6 +80,31 @@ module.exports = async function run(browser, base) {
   assert.ok(!back.error && !back.e, "app reads the agent's file: " + (back.error || back.e));
   assert.ok(/AI work mate/.test(back.device), "the file says an AI work mate saved it");
   assert.ok(back.issues.some(w => /lab test/.test(w)) && back.decisions.includes("Use an AI-made product image on slide 3?") && back.decisions.includes("AI product image: ag-test-carousel-01-hero.jpg") && back.lessons.includes("Lab tests take a week"), "app shows the agent's issues, decisions and lessons");
+  // W1b-ii: the Auto-work switch. On: go. Copywriter paused by the CEO in the app: its scheduled run is skipped (and
+  // recorded), its writes are refused, others carry on, and "Run now" goes ahead. Main switch paused: everyone skips.
+  const sw = cli("autowork", "--agent", "Copywriter"); assert.ok(sw.code === 0 && sw.j.ok && sw.j.go && sw.j.switch === "On", "switch on: " + JSON.stringify(sw.j));
+  const pausedFile = state => page.evaluate(([w, st]) => { const D = window.MAWM_DATA || document.getElementById("frame").contentWindow.MAWM_DATA; const r = D.setAutowork(w, st, "test"); return r.error ? { error: r.error } : JSON.stringify(D.exportAll()) }, state);
+  let pf = await pausedFile(["Copywriter", "Paused"]); assert.ok(typeof pf === "string", "paused in the app: " + JSON.stringify(pf));
+  fs.writeFileSync(file, pf);
+  const runs = path.join(path.dirname(file), "runs.json");
+  const rec = (...a) => { const r = spawnSync(process.execPath, [TOOL, ...a, "--file", file], { encoding: "utf8", env: Object.assign({}, process.env, { MAWM_RUNS_FILE: runs }) }); return { code: r.status, j: JSON.parse(r.stdout) } };
+  const sk = rec("autowork", "--agent", "Copywriter", "--record", "--started", "2026-11-12T10:00:00Z");
+  assert.ok(sk.code === 3 && sk.j.go === false && sk.j.text === "Skipped: paused by CEO" && sk.j.recorded && sk.j.lastChange && sk.j.lastChange.state === "Paused", "paused: skipped: " + JSON.stringify(sk.j));
+  const rr = JSON.parse(fs.readFileSync(runs, "utf8")).runs; assert.ok(rr.length === 1 && rr[0].agent === "Copywriter" && rr[0].result === "skipped" && /paused by CEO/.test(rr[0].summary), "skipped run recorded");
+  const before = fs.readFileSync(file, "utf8");
+  const wr = cli("report", "--dept", "Copywriter", "--project", code, "--what", "should not save");
+  assert.ok(wr.code === 3 && wr.j.skipped && /paused by CEO/.test(wr.j.error) && fs.readFileSync(file, "utf8") === before, "a paused work mate's write is refused and nothing saved");
+  assert.strictEqual(cli("put-row", "--page", "copy", "--section", "copymaps", "--json", JSON.stringify({ project: code, page: "PDP" })).code, 3, "put-row on the paused department refused");
+  assert.strictEqual(cli("autowork", "--agent", "Research & Strategist").j.go, true, "other work mates carry on");
+  assert.strictEqual(cli("report", "--dept", "Research & Strategist", "--project", code, "--what", "Still working while Copywriter is paused").j.ok, true);
+  const now = cli("autowork", "--agent", "Copywriter", "--run-now"); assert.ok(now.code === 0 && now.j.go && now.j.run === "run-now", "Run now goes ahead: " + JSON.stringify(now.j));
+  assert.strictEqual(cli("report", "--dept", "Copywriter", "--project", code, "--what", "Run now by the CEO", "--run-now").j.ok, true, "Run now writes");
+  pf = await pausedFile(["all", "Paused"]); fs.writeFileSync(file, pf);
+  const all = cli("autowork", "--agent", "Project Director"); assert.ok(all.code === 3 && all.j.main === "Paused", "main switch pauses everyone");
+  assert.strictEqual(cli("lesson", "--project", code, "--dept", "Copywriter", "--what", "x", "--type", "Win", "--change", "y").code, 3, "Project Director commands obey the main switch");
+  assert.strictEqual(cli("autowork", "--agent", "Nobody").j.ok, false, "unknown work mate refused");
+  await pausedFile(["all", "On"]); pf = await pausedFile(["Copywriter", "On"]); fs.writeFileSync(file, pf);
+  assert.strictEqual(cli("autowork", "--agent", "Copywriter").j.go, true, "back on: go");
   await ctx.close(); fs.rmSync(path.dirname(file), { recursive: true, force: true });
-  return "agent data helper reads the synced data file, writes records, submissions, reviews, issues, CEO decisions and lessons the app loads back, and refuses what agents may not do";
+  return "agent data helper reads the synced data file, writes records, submissions, reviews, issues, CEO decisions and lessons the app loads back, obeys the Auto-work switch (paused scheduled runs skip, Run now goes ahead), and refuses what agents may not do";
 };

@@ -29,6 +29,7 @@ node tools/agent-data.js help          # every command and option
 
 | To | Command |
 | --- | --- |
+| Check the Auto-work switch before anything else (exit code 3 = paused, stop) | `autowork --agent "<work mate>" [--run-now] [--record --started <time>]` |
 | See projects, timelines, decisions waiting and open issues | `summary` |
 | See this department's open tasks, approved inputs, returned work, CEO decisions (waiting and decided) and issues | `work --dept "<department>"` |
 | Read the department's records | `get --page <research\|copy\|graphic\|shopify\|studio> --section <s> [--project <code>]` |
@@ -40,13 +41,17 @@ node tools/agent-data.js help          # every command and option
 | Say a task is underway, waiting on a person or blocked | `task-status --project <code> --task <id> --status "In progress"\|"Waiting on a person"\|"Blocked"` |
 | Project Director only: review queue (with where each deliverable lives) and gates in progress, approve, return, gates, lessons | `review`, `approve`, `return`, `pass-gate`, `ask-override`, `lesson` |
 
-Every write prints one line of JSON (`{"ok":true,…}` or `{"ok":false,"error":"…"}`) and saves only when the change worked. `--dry-run` tries a change without saving. The helper refuses what an agent may not do: marking its own task Done, changing work that is waiting on approval or approved (make a new version instead), submitting another department's work, making the CEO's decisions.
+Every write prints one line of JSON (`{"ok":true,…}` or `{"ok":false,"error":"…"}`) and saves only when the change worked. `--dry-run` tries a change without saving. While the CEO has paused a work mate, its writes are refused with "Skipped: paused by CEO" (exit code 3) unless the CEO started the run by hand (`--run-now`). The helper refuses what an agent may not do: marking its own task Done, changing work that is waiting on approval or approved (make a new version instead), submitting another department's work, making the CEO's decisions.
 
 ## Every run, in order
 
 1. **Note the start time** (UTC).
 2. **Get the latest.** Clone or pull this repo and the data repo. If the data repo can't be reached, record a skipped run with the reason (step 9) and stop.
-3. **Check the Auto-work switch** (from W1b): if the CEO paused Auto-work, or paused this work mate, a scheduled run does nothing except record "Skipped: paused by CEO". A run the CEO started by hand ("Run now") goes ahead.
+3. **Check the Auto-work switch** (the CEO's switch on CEO → Work mates and each department page):
+   ```
+   node tools/agent-data.js autowork --agent "<work mate>" --file <data file> --record --started <start time>
+   ```
+   If it prints `"go": true`, carry on. If the CEO paused Auto-work, or paused this work mate, it prints `"go": false` ("Skipped: paused by CEO"), exits with code 3 and records the skipped run in `runs/runs.json`: commit and push `runs/runs.json` and stop, changing nothing else. A run the CEO started by hand ("Run now") adds `--run-now` here and to every write, and goes ahead. The helper checks the switch again on every write, so a paused work mate's change is refused and nothing is saved. When the CEO turns the switch back on, the next run simply continues from step 4: the work is where the agent left it.
 4. **Read the work:** `work --dept "<department>"`. Do returned work first (the Project Director's comments say what must change), then tasks that are In progress, oldest due date first. If there's nothing to do, record a skipped run ("Nothing to do") and stop.
 5. **Do the rulebook steps** in the playbook, using only the approved inputs listed for the task and free sources and tools.
 6. **Write the work back** with the helper: the department's records first, then `submit` the deliverable with a short note (what's in it, what's still open, anything the Project Director should check first).

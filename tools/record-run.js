@@ -12,7 +12,7 @@
 // --schedule-cron "55 */2 * * *" --schedule-tz Asia/Manila --schedule-label "Every 2 hours at :55"
 // saves or updates the agent's schedule, which the page uses to work out the next run.
 const fs = require("fs"), path = require("path");
-const FILE = path.resolve(__dirname, "..", "runs", "runs.json");
+const FILE = process.env.MAWM_RUNS_FILE ? path.resolve(process.env.MAWM_RUNS_FILE) : path.resolve(__dirname, "..", "runs", "runs.json");
 const KEEP = 500;
 const AGENTS = ["Build loop", "Usage reader", "Project Director", "Research & Strategist", "Copywriter", "UI/UX Designer", "Graphic Designer", "Shopify Developer"];
 
