@@ -9,13 +9,17 @@
 //
 // Read (never changes the file):
 //   summary                         projects, their timeline tasks, decisions waiting on the CEO, open issues
-//   work     --dept <department>    that department's open tasks, approved inputs, returned work and its issues
+//   work     --dept <department>    that department's open tasks, approved inputs, returned work, its CEO decisions
+//                                   (waiting and decided, with the CEO's answer) and its issues
 //   review                          tasks "Waiting on approval" (the Project Director's review queue), with gates
 //   get      --page <p> [--section <s>] [--project <code>] [--id <row _id>]   a department's records as JSON
 //   check                           the app's data checks
 // Write (saves the file only when the change worked; add --dry-run to try without saving):
 //   put-row  --page <p> --section <s> (--json '<object>' | --json-file <path>)
 //            adds a record, or updates the one with the same _id (fields given replace those fields only)
+//   answer   --project <code> --doc <1-7> --q <n> (--answer <text> --ev <EV-001,EV-004> | --unknown --need <text>)
+//            Research & Strategist: answers question n (1 = first) of a document's question bank, as on the
+//            Question bank page; every ledger ID must already be in the evidence ledger
 //   submit   --dept <department> --project <code> --page <p> --section <s> --row <_id> [--note <text>]
 //            sends a deliverable to the Project Director's review queue (its task turns "Waiting on approval")
 //   report   --dept <department> --project <code> --what <text> [--type <t>] [--sev Low|Medium|High] [--told <text>]
@@ -50,6 +54,8 @@ const KINDS = {
   "studio:items": [() => "Code Studio item", r => r.name || "Item"],
   "studio:qa": [() => "QA report", r => "QA report v" + (r.version || 1)]
 };
+/* questions per document in the Research & Strategist question bank (rulebook v1.1, the same order as the app) */
+const QB_COUNT = { 1: 8, 2: 8, 3: 6, 4: 5, 5: 4, 6: 6, 7: 5 };
 const SETTABLE = ["In progress", "Waiting on a person", "Blocked"];
 
 /* ---- arguments ---- */
@@ -112,7 +118,7 @@ switch (cmd) {
   }
   case "work": {
     const dept = deptArg(), S = hq(), v = D.deptView(dept) || { waiting: [], issues: [] };
-    out({ dept, tasks: (S.projects || []).flatMap(p => (p.tasks || []).filter(t => t.dept === dept && t.status !== "Done").map(t => Object.assign({ project: p.code, projectName: p.name }, brief(t)))), inputs: D.inputsFor(dept), returned: D.returnedFor(dept), decisionsWaiting: v.waiting.map(d => ({ id: d.id, project: d.project, type: d.type, title: d.title })), openIssues: v.issues.filter(i => i.status !== "Resolved") });
+    out({ dept, tasks: (S.projects || []).flatMap(p => (p.tasks || []).filter(t => t.dept === dept && t.status !== "Done").map(t => Object.assign({ project: p.code, projectName: p.name }, brief(t)))), inputs: D.inputsFor(dept), returned: D.returnedFor(dept), decisionsWaiting: v.waiting.map(d => ({ id: d.id, project: d.project, type: d.type, title: d.title })), decided: (v.decided || []).map(d => ({ id: d.id, project: d.project, type: d.type, title: d.title, result: d.result || "", date: d.date || "" })), openIssues: v.issues.filter(i => i.status !== "Resolved") });
     break;
   }
   case "review": {
@@ -145,6 +151,24 @@ switch (cmd) {
     if (old) Object.assign(old, o, { updated: D.today() });
     else { if (id == null) o[idKey] = Math.random().toString(36).slice(2, 9); o.updated = D.today(); list.unshift(o) }
     write({ page: p, section: sec, id: o[idKey], added: !old, err: savePage(p, data) || undefined });
+    break;
+  }
+  case "answer": {
+    const project = need("project"), d = parseInt(need("doc"), 10), q = parseInt(need("q"), 10); proj(project);
+    if (!QB_COUNT[d]) fail("--doc is 1 to 7 (the documents with a question bank)");
+    if (!(q >= 1 && q <= QB_COUNT[d])) fail("Document " + d + " has questions 1 to " + QB_COUNT[d]);
+    const data = D.page(PAGES.research) || {}; data.rows = data.rows || {}; data.qa = data.qa || {};
+    const key = d + "-" + (q - 1), qa = data.qa[project] || (data.qa[project] = {});
+    let o;
+    if (args.unknown === "true") o = { a: "", ev: "", unk: true, need: need("need") };
+    else {
+      const ev = need("ev").split(/[\s,]+/).filter(Boolean).map(x => x.toUpperCase());
+      const have = new Set((data.rows.evidence || []).map(e => String(e && e.id || "").toUpperCase()));
+      const miss = ev.filter(x => !have.has(x)); if (miss.length) fail("Not in the evidence ledger: " + miss.join(", ") + ". Add the entries with put-row --section evidence first.");
+      o = { a: need("answer"), ev: ev.join(", "), unk: false, need: "" };
+    }
+    qa[key] = Object.assign(qa[key] || {}, o, { by: "Research & Strategist (agent)", updated: D.today() });
+    write({ project, question: key, status: o.unk ? "Unknown" : "Answered", err: D.saveDept(PAGES.research, data) || undefined });
     break;
   }
   case "submit": {

@@ -17,7 +17,7 @@ module.exports = async function run(browser, base) {
   const P = sum.projects.find(p => p.tasks.some(t => t.dept === "Research & Strategist" && t.status !== "Done")) || sum.projects[0], code = P.code;
   const rTask = P.tasks.find(t => t.dept === "Research & Strategist" && /^Research/i.test(t.name));
   assert.ok(rTask, "project has a Research task");
-  const work = cli("work", "--dept", "Research & Strategist").j; assert.ok(Array.isArray(work.tasks) && Array.isArray(work.inputs), "work lists tasks and inputs");
+  const work = cli("work", "--dept", "Research & Strategist").j; assert.ok(Array.isArray(work.tasks) && Array.isArray(work.inputs) && Array.isArray(work.decided), "work lists tasks, inputs and decided CEO decisions");
 
   // a department writes its own records, then submits the Booklet
   const add = cli("put-row", "--page", "research", "--section", "documents", "--json", JSON.stringify({ project: code, doc: "8. Marketer's Booklet", status: "Draft", version: "1", notes: "Written by the agent test" }), "--agent", "Research & Strategist");
@@ -38,6 +38,16 @@ module.exports = async function run(browser, base) {
     assert.strictEqual(cli("submit", "--dept", "Research & Strategist", "--project", code, "--page", "research", "--section", "documents", "--row", add.j.id).j.ok, true);
     const ok = cli("approve", "--project", code, "--task", rTask.id, "--note", "Good"); assert.strictEqual(ok.j.ok, true, "approve: " + JSON.stringify(ok.j));
   }
+  // question bank answers (Research & Strategist playbook): a ledger entry first, then the answer citing it
+  const ev = cli("get", "--page", "research", "--section", "evidence").j, evId = "EV-" + String(ev.reduce((m, e) => Math.max(m, parseInt(String(e.id || "").replace(/^\D+/, ""), 10) || 0), 0) + 1).padStart(3, "0");
+  assert.strictEqual(cli("put-row", "--page", "research", "--section", "evidence", "--json", JSON.stringify({ id: evId, project: code, claim: "Agent test finding", stype: "Competitor page", source: "https://example.com", found: "2026-11-12", grade: "D · unverified", recheck: "2027-02-10", ads: "No", use: "Do not use" })).j.ok, true, "ledger entry added");
+  assert.strictEqual(cli("answer", "--project", code, "--doc", "1", "--q", "1", "--answer", "x", "--ev", "EV-999").j.ok, false, "answer refuses an ID that isn't in the ledger");
+  assert.strictEqual(cli("answer", "--project", code, "--doc", "4", "--q", "6", "--answer", "x", "--ev", evId).j.ok, false, "answer refuses a question that doesn't exist");
+  const ans = cli("answer", "--project", code, "--doc", "1", "--q", "1", "--answer", "Agent test answer", "--ev", evId.toLowerCase());
+  assert.strictEqual(ans.j.ok, true, "answer: " + JSON.stringify(ans.j)); assert.strictEqual(ans.j.status, "Answered");
+  assert.strictEqual(cli("answer", "--project", code, "--doc", "3", "--q", "3", "--unknown", "--need", "Person task: Meta Ad Library screenshots").j.status, "Unknown");
+  const qa = (cli("get", "--page", "research").j.qa || {})[code] || {};
+  assert.ok(qa["1-0"].a === "Agent test answer" && qa["1-0"].ev === evId && qa["2-2"] === undefined && qa["3-2"].unk, "answers saved where the Question bank page reads them");
   // issues, CEO decisions, task status and lessons
   const rep = cli("report", "--dept", "Research & Strategist", "--project", code, "--what", "Supplier lab test needs a person to request it", "--type", "Needs a person", "--sev", "Medium");
   assert.strictEqual(rep.j.ok, true, "report: " + JSON.stringify(rep.j));

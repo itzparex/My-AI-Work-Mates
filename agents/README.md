@@ -4,7 +4,7 @@ Each work mate is Claude, run on the CEO's own Claude subscription (no paid API 
 
 | Work mate | Playbook | Status |
 | --- | --- | --- |
-| Research & Strategist | `agents/research.md` | coming (W1-ii) |
+| Research & Strategist | `agents/research.md` | ready |
 | Project Director (reviewer) | `agents/project-director.md` | coming (W1-iii) |
 | Copywriter | `agents/copywriter.md` | coming (W1-iv) |
 | Graphic Designer | `agents/graphic-designer.md` | coming (W1-iv) |
@@ -30,9 +30,10 @@ node tools/agent-data.js help          # every command and option
 | To | Command |
 | --- | --- |
 | See projects, timelines, decisions waiting and open issues | `summary` |
-| See this department's open tasks, approved inputs, returned work and issues | `work --dept "<department>"` |
+| See this department's open tasks, approved inputs, returned work, CEO decisions (waiting and decided) and issues | `work --dept "<department>"` |
 | Read the department's records | `get --page <research\|copy\|graphic\|shopify\|studio> --section <s> [--project <code>]` |
 | Add or update a record (a document, copy map, image set, build…) | `put-row --page <p> --section <s> --json '<object>'` |
+| Research only: answer a question bank question (or mark it Unknown) | `answer --project <code> --doc <1-7> --q <n> --answer "<text>" --ev "<EV-…>"` |
 | Send a deliverable to the Project Director | `submit --dept "<department>" --project <code> --page <p> --section <s> --row <id> --note "<note>"` |
 | Log an issue (and, if the CEO must decide, a decision) | `report --dept "<department>" --project <code> --what "<what happened>" --sev Low\|Medium\|High [--decision-type Approval\|Override\|Escalation --decision-title "<question>" --rec "<recommendation>"]` |
 | Say a task is underway, waiting on a person or blocked | `task-status --project <code> --task <id> --status "In progress"\|"Waiting on a person"\|"Blocked"` |
