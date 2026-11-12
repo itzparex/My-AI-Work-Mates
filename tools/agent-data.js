@@ -37,6 +37,13 @@
 //            slide must be marked an AI product image with what it shows and all four spec lines (color, size,
 //            packaging, contents); the request appears on AI image approvals and the CEO's Allow or Disallow comes
 //            back onto the slide with the date
+//   handoff  --project <code>       Research & Strategist: the Marketer's Booklet's 15-point ready-for-handoff checklist,
+//                                   worked out exactly as the Booklet page does (checked by the app, ticked by hand, or
+//                                   failing, each with its hint). The Booklet can only be submitted when all 15 pass.
+//   tick-handoff --project <code> --item <1-15> --why <text> [--untick]
+//            Research & Strategist: ticks one of the checklist items the app can't check by itself (4, 7, 9, 10, 12, 14)
+//            once it is really true, with the reason; the Booklet page shows who ticked it, when and why. Item 11 (the
+//            offer) passes only when the CEO allows the offer decision; nobody else can tick it.
 //   task-status --project <code> --task <id> --status <status> [--note <text>]
 //            "In progress", "Waiting on a person" or "Blocked" only (approval goes through submit/approve)
 //   approve  --project <code> --task <id> [--note <text>]           Project Director only
@@ -74,6 +81,15 @@ const KINDS = {
 /* questions per document in the Research & Strategist question bank (rulebook v1.1, the same order as the app) */
 const QB_COUNT = { 1: 8, 2: 8, 3: 6, 4: 5, 5: 4, 6: 6, 7: 5 };
 const SETTABLE = ["In progress", "Waiting on a person", "Blocked"];
+/* W2-i: the research page's own lists (nine documents, kickoff questions, question bank, Must contain headings), read from
+   dept.html so the helper's handoff checklist can never drift from the Booklet page's */
+function researchLists() {
+  const src = fs.readFileSync(path.resolve(__dirname, "..", "dept.html"), "utf8"), grab = name => {
+    const m = src.match(new RegExp("\\nconst " + name + "=([\\s\\S]*?);\\n(?=const |/\\*|function |let )")); if (!m) fail("Couldn't read " + name + " from dept.html");
+    return Function('"use strict";return (' + m[1] + ")")();
+  };
+  return { NINE: grab("NINE"), KICK: grab("KICK"), QB: grab("QB"), MUST: grab("MUST"), SHORT: grab("SHORT") };
+}
 
 /* ---- arguments ---- */
 const argv = process.argv.slice(2), cmd = argv[0] && !argv[0].startsWith("--") ? argv[0] : "", args = {};
@@ -142,6 +158,49 @@ function write(result) {
 /* where a submitted deliverable lives, so the Project Director can open it with "get --page <p> --section <s> --id <row>" */
 const where = s => { const pre = String(s && s.id || "").split(":")[0], p = pre === "uiux" ? "studio" : pre; return PAGES[p] && s.section && s.row != null ? { page: p, section: s.section, row: s.row } : null };
 const brief = t => ({ id: t.id, name: t.name, dept: t.dept, kind: t.gate ? "gate" : "step", start: t.start || "", due: t.due || "", status: t.status, submission: t.submission ? Object.assign({ title: t.submission.title, kind: t.submission.kind, version: t.submission.version, at: t.submission.at, dept: t.submission.dept || "", state: t.submission.state || "Submitted", note: t.submission.note || "", comments: t.submission.comments || "" }, where(t.submission) || {}) : null, returns: t.returns || 0 });
+
+/* the Booklet's ready-for-handoff checklist, the same 15 items and rules as handoff() on the Booklet page (dept.html).
+   Returns { booklet, items: [{ n, text, state: "pass"|"fail"|"tick", byApp, ticked, hint }], passed, ready } */
+const MANUAL_OK = [4, 7, 9, 10, 12, 14];
+function handoff(c) {
+  const L = researchLists(), S = D.page(PAGES.research) || {}, rows = S.rows || {}, qaAll = S.qa || {}, today = D.today();
+  const evList = v => String(v || "").split(/[\s,]+/).filter(Boolean).map(x => x.toUpperCase());
+  const ledger = rows.evidence || [], ids = new Set(ledger.map(r => String(r && r.id || "").toUpperCase()).filter(Boolean));
+  const evById = id => ledger.find(e => String(e && e.id || "").toUpperCase() === id), overdue = e => !!(e.recheck && e.recheck < today);
+  const b = (rows.briefs || []).find(x => x && x.project === c && c), docOf = d => (rows.documents || []).find(r => r && r.project === c && r.doc === L.NINE[d]);
+  const docs = L.NINE.map((_, d) => docOf(d)), bk = docs[8], mc = (d, t) => String(((((docs[d] || {}).mc || {})[t]) || {}).t || ""), quick = b && b.depth === "Quick";
+  const qaStat = (d, i) => { const x = (qaAll[c] || {})[d + "-" + i]; if (!x) return "Open"; if (x.unk) return "Unknown"; const l = evList(x.ev); return x.a && l.length && l.every(v => ids.has(v)) ? "Answered" : x.a ? "Needs ledger ID" : "Open" };
+  const kickN = r => L.KICK.filter((_, i) => String((r.kick || [])[i] || "").trim()).length;
+  const header = r => { const d = Math.max(0, L.NINE.indexOf(r.doc)), bb = (rows.briefs || []).find(x => x && x.project === r.project && r.project); return !!(r.project && bb && (r.product || bb.product) && r.date && r.version) };
+  const qAll = Object.entries(L.QB).flatMap(([d, qs]) => qs.map((_, i) => qaStat(d, i))), qOpen = qAll.filter(x => !["Answered", "Unknown"].includes(x)).length;
+  const pt = (rows.persontasks || []).filter(x => x && x.project === c && x.status !== "Done").length;
+  const projEv = (() => { const s = new Set(); Object.values(qaAll[c] || {}).forEach(x => { if (x && !x.unk) evList(x.ev).forEach(i => s.add(i)) }); (rows.documents || []).filter(r => r && r.project === c).forEach(r => { (r.summary || []).forEach(t => (String(t || "").match(/EV-\d+/gi) || []).forEach(i => s.add(i.toUpperCase()))); Object.values(r.mc || {}).forEach(v => evList(v && v.ev).forEach(i => s.add(i))) }); return [...s] })();
+  const bkEv = r => [...new Set(L.MUST[8].flatMap(([t]) => { const m = (r.mc || {})[t] || {}; return [...evList(m.ev), ...(String(m.t || "").match(/EV-\d+/gi) || []).map(x => x.toUpperCase())] }))];
+  const bkWords = r => L.MUST[8].reduce((n, [t]) => n + String(((r.mc || {})[t] || {}).t || "").split(/\s+/).filter(Boolean).length, 0);
+  const ents = projEv.map(evById), miss = projEv.filter((_, i) => !ents[i]), noVerdict = bkEv(bk || {}).map(evById).filter(e => e && !e.use).length, od = ents.filter(e => e && overdue(e)).length;
+  const pages = bk ? Math.max(1, Math.ceil(bkWords(bk) / 450)) : 0, maxP = quick ? 4 : 10;
+  const v = D.deptView("Research & Strategist"), dec = ((v && v.decided) || []).find(d => d.project === c && d.type === "Approval" && /offer/i.test(d.title || "")) || null;
+  const list = [
+    ["Kickoff questionnaire answered; path, markets and depth written at the top of every document.", () => { const k = b ? kickN(b) : 0, h = docs.filter(r => r && header(r)).length; return [!!b && k === L.KICK.length && h === 9, b ? `Kickoff ${k} of ${L.KICK.length} · header complete on ${h} of 9 documents` : "No research brief for this project"] }],
+    ["Every question bank question answered with a ledger ID or marked Unknown.", () => [qOpen === 0, `${qAll.length - qOpen} of ${qAll.length} done`]],
+    ["Every document ends with open questions and a confidence rating.", () => { const n = docs.filter(r => r && r.conf && String(r.confWhy || "").trim()).length; return [n === 9, `Confidence with a reason on ${n} of 9 documents`] }],
+    ["All person tasks closed, or listed as open with who owns them.", () => pt ? [null, `${pt} open person task${pt > 1 ? "s" : ""}: tick once each one names who owns it`] : [true, "No open person tasks"]],
+    ["Claims check done: every Booklet claim marked Clear, Reword or Do not use.", () => { const n = bkEv(bk || {}).length; return [n > 0 && noVerdict === 0, n ? `${n} ledger entr${n > 1 ? "ies" : "y"} cited in the Booklet${noVerdict ? `, ${noVerdict} without a verdict` : ""}` : "No ledger IDs in the Booklet yet"] }],
+    ["No ledger entry used past its recheck date.", () => [projEv.length > 0 && od === 0, projEv.length ? (od ? `${od} cited entr${od > 1 ? "ies are" : "y is"} past the recheck date` : `${projEv.length} cited entries, none overdue`) : "No ledger IDs cited yet"]],
+    ["Ledger has an entry for every claim, quote and statistic used.", () => miss.length ? [false, `Cited but not in the ledger: ${miss.join(", ")}`] : [null, "Every cited ID exists. Tick once every quote and number in the documents carries one"]],
+    ["Product Deep Dive includes the claim rules (allowed, careful, forbidden).", () => [!!mc(1, "Claim rules").trim(), mc(1, "Claim rules").trim() ? "Claim rules written" : "Claim rules section is empty"]],
+    [`Customer Deep Dive has at least ${quick ? "about 20" : "50"} tagged verbatim quotes and an awareness level.`, () => mc(2, "Awareness level").trim() ? [null, "Awareness level written. Tick once the quote count is reached"] : [false, "Awareness level is empty"]],
+    [`Competitor table covers at least ${quick ? "3" : "5"} competitors with their offers and ads.`, () => mc(3, "Competitor table").trim() && mc(3, "Their ads").trim() ? [null, "Table and ads written. Tick once the count is reached"] : [false, "Competitor table or Their ads is empty"]],
+    ["Offer approved by the CEO, checked against margin, guarantee matching the policy page.", () => { const t = mc(4, "CEO approval").trim(), on = dec && dec.date ? " on " + dec.date : ""; if (dec && /^Disallow/.test(dec.result || "")) return [false, `The CEO disallowed the offer${on} (${dec.id}): revise it and ask again`]; if (!t) return [false, "No CEO approval recorded in Offer Research & Proposal"]; return dec && /^Allow/.test(dec.result || "") ? [true, `Allowed by the CEO${on} (${dec.id}) and recorded in the offer document`] : [null, "Approval recorded in the offer document. Only the CEO ticks this"] }],
+    ["Every belief in the chain has A or B proof, or is listed as a gap.", () => mc(5, "Belief chain").trim() && mc(5, "Proof for each belief").trim() ? [null, "Belief chain and proof written. Tick once every belief has A or B proof or sits in Proof gaps"] : [false, "Belief chain or proof is empty"]],
+    ["Conversion Strategy names one segment, one angle and the metric to move.", () => { const ok = ["Target segment", "Big idea and main angle", "Success metrics"].every(t => mc(6, t).trim()); return [ok, ok ? "Segment, angle and metrics written" : "Segment, angle or metrics missing"] }],
+    [`Vault holds at least ${quick ? "10" : "20"} ranked ideas.`, () => mc(7, "Ideas").trim() ? [null, "Ideas written. Tick once the count is reached and each is ranked"] : [false, "Ideas section is empty"]],
+    [`Marketer's Booklet complete, under about ${maxP} pages, every claim carrying its ledger ID.`, () => { if (!bk) return [false, "No Booklet yet"]; const w = L.MUST[8].filter(([t]) => String(((bk.mc || {})[t] || {}).t || "").trim()).length; return [w === 9 && pages <= maxP && bkEv(bk).length > 0, `${w} of 9 parts written · about ${pages} page${pages > 1 ? "s" : ""} (${bkWords(bk)} words)`] }]];
+  const st = (S.handoff || {})[c] || {}, by = (S.handoffBy || {})[c] || {};
+  const items = list.map(([text, f], i) => { const [ok, hint] = f(), t = !!st[i]; return Object.assign({ n: i + 1, text, state: ok === null ? (t ? "pass" : "tick") : ok ? "pass" : "fail", byApp: ok !== null, hint }, ok === null ? { ticked: t } : {}, ok === null && t && by[i] ? { tickedBy: by[i] } : {}) });
+  const passed = items.filter(x => x.state === "pass").length;
+  return { booklet: bk ? { id: bk._id, version: String(bk.version || ""), status: bk.status || "" } : null, items, passed, total: items.length, ready: passed === items.length };
+}
 
 if (["approve", "return", "pass-gate", "ask-override", "lesson"].includes(cmd)) obey("Project Director");
 
@@ -229,6 +288,10 @@ switch (cmd) {
     proj(project); obey(dept);
     const { list, idKey } = rowsOf(p, sec), r = list.find(x => x && x[idKey] === row); if (!r) fail("No record " + row + " in " + p + " " + sec + ".");
     if (r.project && r.project !== project) fail("That record belongs to " + r.project + ".");
+    if (p === "research" && sec === "documents" && r.doc === BOOKLET) { /* as on the Booklet page: only when all 15 handoff checks pass */
+      const h = handoff(project); if (h.booklet && h.booklet.id !== row) fail("That isn't " + project + "'s current Booklet (" + h.booklet.id + ").");
+      if (!h.ready) fail("The Booklet's ready-for-handoff checklist has " + (h.total - h.passed) + " of " + h.total + " items open: " + h.items.filter(x => x.state !== "pass").map(x => x.n + " (" + x.hint + ")").join("; ") + ". Run handoff --project " + project + " for the details.");
+    }
     const deliv = { id: (p === "studio" ? "uiux" : p) + ":" + sec + ":" + row, kind: k[0](r), title: k[1](r), version: String(r.version || ""), section: sec, row };
     const res = D.submit({ dept, project, deliv, note: args.note || "" });
     write(res.error ? res : { task: res.task, name: res.name, deliverable: deliv.title });
@@ -271,6 +334,20 @@ switch (cmd) {
     Object.assign(o, { issue: res.id, dec: res.decision, decision: "Waiting on CEO", asked: D.today(), date: "", note: "" });
     rows.unshift(o); s.aiReq = o._id;
     write({ request: o._id, issue: res.id, decision: res.decision, image, err: D.saveDept(PAGES.graphic, data) || undefined });
+    break;
+  }
+  case "handoff": { const project = need("project"); proj(project); out(Object.assign({ ok: true, project }, handoff(project))); break }
+  case "tick-handoff": {
+    const project = need("project"), n = parseInt(need("item"), 10), off = args.untick === "true"; proj(project); obey("Research & Strategist");
+    if (!(n >= 1 && n <= 15)) fail("--item is 1 to 15");
+    if (n === 11) fail("Only the CEO approves the offer: item 11 passes by itself once the CEO allows the offer decision (report --decision-type Approval) and the approval is written in the offer document's CEO approval part.");
+    const it = handoff(project).items[n - 1];
+    if (it.byApp) fail("Item " + n + " is checked by the app (" + it.hint + "). Fix the work instead of ticking it.");
+    if (!MANUAL_OK.includes(n)) fail("Item " + n + " can't be ticked by a work mate.");
+    const why = off ? "" : need("why"), data = D.page(PAGES.research) || {}; data.rows = data.rows || {};
+    const st = (data.handoff = data.handoff || {})[project] || (data.handoff[project] = {}), by = (data.handoffBy = data.handoffBy || {})[project] || (data.handoffBy[project] = {});
+    if (off) { st[n - 1] = false; delete by[n - 1] } else { st[n - 1] = true; by[n - 1] = { by: args.agent || "Research & Strategist (agent)", date: D.today(), why } }
+    write({ project, item: n, ticked: !off, err: D.saveDept(PAGES.research, data) || undefined });
     break;
   }
   case "task-status": {

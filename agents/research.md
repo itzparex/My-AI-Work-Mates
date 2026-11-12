@@ -204,7 +204,19 @@ When documents 0 to 7 are written, assemble the Booklet (`8. Marketer's Booklet`
 
 **Claims check**, before submitting: check every claim in the Booklet against the ad-platform policies (Meta, TikTok, Google) and the claims rules of each target market. In the **Claims list** part, mark each claim **Clear**, **Reword** (with the safe wording) or **Do not use**, and set the ledger entry's `use` to match. Never use a ledger entry that is overdue for recheck, marked Do not use, or graded D as a claim.
 
-**Ready-for-handoff checklist** (all must be true; anything not true is either fixed or listed in your submit note as open):
+**Ready-for-handoff checklist.** The helper works it out exactly as the app's Booklet page does:
+
+```
+H handoff --project <code>
+```
+
+Each item is `pass`, `fail` (fix the work) or `tick` (the app can't check it by itself). Tick items 4, 7, 9, 10, 12 and 14 only once they are really true, with the reason; the Booklet page shows who ticked each one, when and why:
+
+```
+H tick-handoff --project <code> --item <n> --why "<what you checked, e.g. 23 tagged quotes in section 7>"
+```
+
+Item 11 (the offer) passes by itself once the CEO allows the offer decision and the approval is written in document 4's **CEO approval** part; nobody else can tick it. The items (all must be true):
 
 1. Kickoff answered; path, markets and depth on every document.
 2. Every question bank question answered with a ledger ID or marked Unknown.
@@ -222,7 +234,7 @@ When documents 0 to 7 are written, assemble the Booklet (`8. Marketer's Booklet`
 14. Vault holds the depth's idea count, ranked.
 15. Booklet complete, within the page limit, every claim with its ledger ID.
 
-**Submit** only when item 11 is true (the CEO approved the offer). Until then, record the run as success with "Booklet ready, waiting on the CEO's offer approval (<decision id>)" and stop.
+**Submit** only when `handoff` says `"ready": true` (the helper refuses the Booklet before that, as the app does). When only item 11 is open, record the run as success with "Booklet ready, waiting on the CEO's offer approval (<decision id>)" and stop. A rehearsal of this whole flow on test data runs in `tests/research-run.js`.
 
 ```
 H submit --dept "Research & Strategist" --project <code> --page research --section documents --row <Booklet row id> --note "<what's in it; open items from the checklist; what the Project Director should check first>"

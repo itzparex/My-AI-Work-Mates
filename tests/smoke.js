@@ -517,6 +517,7 @@ const ROUTES = ["#/home", "#/ceo/home",
     if (!errors.some(e => /^autowork/.test(e))) console.log("OK: Auto-work: main and per work mate switches save with date and time, show on department pages and the Design Studio, and the header shows a paused badge");
   }
   try { console.log("OK: " + await require("./agent-data")(browser, base)); } catch (e) { errors.push("agent data: " + (e.stack || e)); }
+  try { console.log("OK: " + await require("./research-run")(browser, base, shots)); } catch (e) { errors.push("research run: " + (e.stack || e)); }
   await browser.close(); server.close();
   try { console.log("OK: " + await require("./desktop")()); } catch (e) { errors.push("desktop: " + (e.stack || e)); }
   try { console.log("OK: " + await require("./updater")()); } catch (e) { errors.push("updater: " + (e.stack || e)); }

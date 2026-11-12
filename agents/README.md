@@ -35,6 +35,7 @@ node tools/agent-data.js help          # every command and option
 | Read the department's records | `get --page <research\|copy\|graphic\|shopify\|studio> --section <s> [--project <code>]` |
 | Add or update a record (a document, copy map, image set, build…) | `put-row --page <p> --section <s> --json '<object>'` |
 | Research only: answer a question bank question (or mark it Unknown) | `answer --project <code> --doc <1-7> --q <n> --answer "<text>" --ev "<EV-…>"` |
+| Research only: the Booklet's 15-point ready-for-handoff checklist, and ticking the items the app can't check (with the reason) | `handoff --project <code>`, `tick-handoff --project <code> --item <n> --why "<reason>"` |
 | Graphic Designer only: ask the CEO to approve one AI-made product image (with its product spec) | `ask-ai-image --project <code> --set <image set id> --slide <slide id> --why "<why>"` |
 | Send a deliverable to the Project Director | `submit --dept "<department>" --project <code> --page <p> --section <s> --row <id> --note "<note>"` |
 | Log an issue (and, if the CEO must decide, a decision) | `report --dept "<department>" --project <code> --what "<what happened>" --sev Low\|Medium\|High [--decision-type Approval\|Override\|Escalation --decision-title "<question>" --rec "<recommendation>"]` |

@@ -19,8 +19,8 @@ module.exports = async function run(browser, base) {
   assert.ok(rTask, "project has a Research task");
   const work = cli("work", "--dept", "Research & Strategist").j; assert.ok(Array.isArray(work.tasks) && Array.isArray(work.inputs) && Array.isArray(work.decided), "work lists tasks, inputs and decided CEO decisions");
 
-  // a department writes its own records, then submits the Booklet
-  const add = cli("put-row", "--page", "research", "--section", "documents", "--json", JSON.stringify({ project: code, doc: "8. Marketer's Booklet", status: "Draft", version: "1", notes: "Written by the agent test" }), "--agent", "Research & Strategist");
+  // a department writes its own records, then submits one (the Booklet itself waits for its checklist: tests/research-run.js)
+  const add = cli("put-row", "--page", "research", "--section", "documents", "--json", JSON.stringify({ project: code, doc: "1. Product Deep Dive", status: "Draft", version: "1", notes: "Written by the agent test" }), "--agent", "Research & Strategist");
   assert.strictEqual(add.j.ok, true, "put-row: " + JSON.stringify(add.j)); assert.ok(add.j.added);
   const got = cli("get", "--page", "research", "--section", "documents", "--id", add.j.id).j; assert.strictEqual(got.notes, "Written by the agent test");
   assert.strictEqual(cli("submit", "--dept", "Copywriter", "--project", code, "--page", "research", "--section", "documents", "--row", add.j.id).j.ok, false, "can't submit another department's work");
@@ -29,7 +29,7 @@ module.exports = async function run(browser, base) {
   assert.notStrictEqual(rTask.status, "Done", "example data has an open Research task to submit to");
   {
     assert.strictEqual(sub.j.ok, true, "submit: " + JSON.stringify(sub.j)); assert.strictEqual(sub.j.task, rTask.id);
-    assert.ok(cli("review").j.queue.some(t => t.id === rTask.id && t.submission.title === "Marketer's Booklet v1" && t.submission.page === "research" && t.submission.section === "documents" && t.submission.row === add.j.id), "review queue shows the submission and where to open it");
+    assert.ok(cli("review").j.queue.some(t => t.id === rTask.id && t.submission.title === "1. Product Deep Dive" && t.submission.page === "research" && t.submission.section === "documents" && t.submission.row === add.j.id), "review queue shows the submission and where to open it");
     assert.ok(Array.isArray(cli("review").j.gates), "review lists gates in progress");
     assert.strictEqual(cli("put-row", "--page", "research", "--section", "documents", "--json", JSON.stringify({ _id: add.j.id, notes: "changed" })).j.ok, false, "work waiting on approval can't be changed");
     // the Project Director returns it (an issue is logged), then approves the next submission
