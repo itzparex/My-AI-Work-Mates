@@ -11,7 +11,9 @@
 //   summary                         projects, their timeline tasks, decisions waiting on the CEO, open issues
 //   work     --dept <department>    that department's open tasks, approved inputs, returned work, its CEO decisions
 //                                   (waiting and decided, with the CEO's answer) and its issues
-//   review                          tasks "Waiting on approval" (the Project Director's review queue), with gates
+//   review                          tasks "Waiting on approval" (the Project Director's review queue, each with the
+//                                   page, section and row to open it with get) and gates in progress (ready, missing
+//                                   work, guardrail hits, notes, what is being approved)
 //   get      --page <p> [--section <s>] [--project <code>] [--id <row _id>]   a department's records as JSON
 //   check                           the app's data checks
 // Write (saves the file only when the change worked; add --dry-run to try without saving):
@@ -31,7 +33,8 @@
 //   return   --project <code> --task <id> --comment <text>          Project Director only (logs an issue)
 //   pass-gate --project <code> --task <id> [--note <text>]          Project Director only, clean gates only
 //   ask-override --project <code> --task <id> --rec <text>          Project Director only: the CEO decides
-//   lesson   --project <code> --dept <department> --what <text> --type <t> --change <text>   Project Director only
+//   lesson   --project <code> --dept <department> --what <text> --type Mistake|Win|"Process gap" --change <text>
+//            [--cause <text>] [--fix <text>] [--rulebook <text>]       Project Director only
 //
 // Pages: research, copy, graphic, shopify (department records, "rows.<section>") and studio (Design Studio:
 // concepts, items, qa). Departments: "Research & Strategist", "Copywriter", "UI/UX Designer", "Graphic Designer",
@@ -108,7 +111,9 @@ function write(result) {
   out(Object.assign({ ok: true, saved: path.basename(file) }, result || {}));
 }
 
-const brief = t => ({ id: t.id, name: t.name, dept: t.dept, kind: t.gate ? "gate" : "step", start: t.start || "", due: t.due || "", status: t.status, submission: t.submission ? { title: t.submission.title, kind: t.submission.kind, version: t.submission.version, at: t.submission.at, state: t.submission.state || "Submitted", note: t.submission.note || "", comments: t.submission.comments || "" } : null, returns: t.returns || 0 });
+/* where a submitted deliverable lives, so the Project Director can open it with "get --page <p> --section <s> --id <row>" */
+const where = s => { const pre = String(s && s.id || "").split(":")[0], p = pre === "uiux" ? "studio" : pre; return PAGES[p] && s.section && s.row != null ? { page: p, section: s.section, row: s.row } : null };
+const brief = t => ({ id: t.id, name: t.name, dept: t.dept, kind: t.gate ? "gate" : "step", start: t.start || "", due: t.due || "", status: t.status, submission: t.submission ? Object.assign({ title: t.submission.title, kind: t.submission.kind, version: t.submission.version, at: t.submission.at, dept: t.submission.dept || "", state: t.submission.state || "Submitted", note: t.submission.note || "", comments: t.submission.comments || "" }, where(t.submission) || {}) : null, returns: t.returns || 0 });
 
 switch (cmd) {
   case "summary": {
@@ -123,7 +128,8 @@ switch (cmd) {
   }
   case "review": {
     const S = hq();
-    out({ queue: (S.projects || []).flatMap(p => (p.tasks || []).filter(t => t.status === "Waiting on approval").map(t => Object.assign({ project: p.code, projectName: p.name }, brief(t), t.gate ? { gate: D.gateView(p.code, t.id) } : {}))) });
+    out({ queue: (S.projects || []).flatMap(p => (p.tasks || []).filter(t => t.status === "Waiting on approval").map(t => Object.assign({ project: p.code, projectName: p.name }, brief(t), t.gate ? { gate: D.gateView(p.code, t.id) } : {}))),
+      gates: (S.projects || []).flatMap(p => (p.tasks || []).filter(t => t.gate && t.status === "In progress").map(t => { const g = D.gateView(p.code, t.id) || {}; return { project: p.code, projectName: p.name, task: t.id, name: t.name, due: t.due || "", ready: !!g.ready, canAsk: !!g.canAsk, asked: g.asked ? { id: g.asked.id, title: g.asked.title } : null, missing: (g.missing || []).map(x => x.id + " " + x.name), guardrails: (g.guardrails || []).map(x => x.text), notes: (g.notes || []).map(x => x.text), approved: (g.items || []).filter(x => !x.earlier && x.done && x.submission).map(x => Object.assign({ task: x.id, title: x.submission.title || x.submission.kind || "", version: x.submission.version || "" }, where(x.submission) || {})) } })) });
     break;
   }
   case "get": {
@@ -212,7 +218,7 @@ switch (cmd) {
     const project = need("project"); proj(project);
     const S = D.readHq(); S.lessons = S.lessons || [];
     const n = S.lessons.reduce((m, l) => Math.max(m, parseInt(String(l && l.id || "").replace(/^\D+/, ""), 10) || 0), 0) + 1, id = "LL-" + String(n).padStart(3, "0");
-    S.lessons.unshift({ id, date: D.today(), project, dept: deptArg(), what: need("what"), type: need("type"), change: need("change") });
+    S.lessons.unshift(Object.assign({ id, date: D.today(), project, dept: deptArg(), what: need("what"), type: need("type"), change: need("change") }, args.cause ? { cause: args.cause } : {}, args.fix ? { fix: args.fix } : {}, args.rulebook ? { rulebook: args.rulebook } : {}));
     write({ lesson: id, err: D.writeHq(S) || undefined });
     break;
   }

@@ -29,7 +29,8 @@ module.exports = async function run(browser, base) {
   assert.notStrictEqual(rTask.status, "Done", "example data has an open Research task to submit to");
   {
     assert.strictEqual(sub.j.ok, true, "submit: " + JSON.stringify(sub.j)); assert.strictEqual(sub.j.task, rTask.id);
-    assert.ok(cli("review").j.queue.some(t => t.id === rTask.id && t.submission.title === "Marketer's Booklet v1"), "review queue shows the submission");
+    assert.ok(cli("review").j.queue.some(t => t.id === rTask.id && t.submission.title === "Marketer's Booklet v1" && t.submission.page === "research" && t.submission.section === "documents" && t.submission.row === add.j.id), "review queue shows the submission and where to open it");
+    assert.ok(Array.isArray(cli("review").j.gates), "review lists gates in progress");
     assert.strictEqual(cli("put-row", "--page", "research", "--section", "documents", "--json", JSON.stringify({ _id: add.j.id, notes: "changed" })).j.ok, false, "work waiting on approval can't be changed");
     // the Project Director returns it (an issue is logged), then approves the next submission
     const ret = cli("return", "--project", code, "--task", rTask.id, "--comment", "Add ledger IDs to part 4");
@@ -56,6 +57,7 @@ module.exports = async function run(browser, base) {
   assert.strictEqual(cli("report", "--dept", "Nobody", "--project", code, "--what", "x").j.ok, false, "unknown department refused");
   assert.strictEqual(cli("task-status", "--project", code, "--task", rTask.id, "--status", "Done").j.ok, false, "agents can't mark a task Done");
   assert.strictEqual(cli("lesson", "--project", code, "--dept", "Research & Strategist", "--what", "Lab tests take a week", "--type", "Timing", "--change", "Ask for them on day one").j.ok, true);
+  assert.strictEqual(cli("lesson", "--project", code, "--dept", "Copywriter", "--what", "Headline used a Reword claim without the safe wording", "--type", "Mistake", "--cause", "Claims list not rechecked", "--fix", "Headline corrected", "--change", "Confirm the Booklet version at intake").j.ok, true, "lesson with cause and fix");
   assert.strictEqual(cli("put-row", "--page", "research", "--section", "documents", "--json", "{\"project\":\"NOPE\"}").j.ok, false, "unknown project refused");
   const dry = cli("report", "--dept", "Copywriter", "--project", code, "--what", "dry", "--dry-run").j; assert.ok(dry.ok && dry.dryRun);
   assert.ok(!cli("summary").j.openIssues.some(i => i.what === "dry"), "dry run saves nothing");

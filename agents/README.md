@@ -5,7 +5,7 @@ Each work mate is Claude, run on the CEO's own Claude subscription (no paid API 
 | Work mate | Playbook | Status |
 | --- | --- | --- |
 | Research & Strategist | `agents/research.md` | ready |
-| Project Director (reviewer) | `agents/project-director.md` | coming (W1-iii) |
+| Project Director (reviewer) | `agents/project-director.md` | ready |
 | Copywriter | `agents/copywriter.md` | coming (W1-iv) |
 | Graphic Designer | `agents/graphic-designer.md` | coming (W1-iv) |
 | UI/UX Designer | `agents/uiux-designer.md` | coming (W1-v) |
@@ -37,7 +37,7 @@ node tools/agent-data.js help          # every command and option
 | Send a deliverable to the Project Director | `submit --dept "<department>" --project <code> --page <p> --section <s> --row <id> --note "<note>"` |
 | Log an issue (and, if the CEO must decide, a decision) | `report --dept "<department>" --project <code> --what "<what happened>" --sev Low\|Medium\|High [--decision-type Approval\|Override\|Escalation --decision-title "<question>" --rec "<recommendation>"]` |
 | Say a task is underway, waiting on a person or blocked | `task-status --project <code> --task <id> --status "In progress"\|"Waiting on a person"\|"Blocked"` |
-| Project Director only: review queue, approve, return, gates, lessons | `review`, `approve`, `return`, `pass-gate`, `ask-override`, `lesson` |
+| Project Director only: review queue (with where each deliverable lives) and gates in progress, approve, return, gates, lessons | `review`, `approve`, `return`, `pass-gate`, `ask-override`, `lesson` |
 
 Every write prints one line of JSON (`{"ok":true,…}` or `{"ok":false,"error":"…"}`) and saves only when the change worked. `--dry-run` tries a change without saving. The helper refuses what an agent may not do: marking its own task Done, changing work that is waiting on approval or approved (make a new version instead), submitting another department's work, making the CEO's decisions.
 
