@@ -58,6 +58,18 @@ module.exports = async function run(browser, base) {
   assert.strictEqual(cli("task-status", "--project", code, "--task", rTask.id, "--status", "Done").j.ok, false, "agents can't mark a task Done");
   assert.strictEqual(cli("lesson", "--project", code, "--dept", "Research & Strategist", "--what", "Lab tests take a week", "--type", "Timing", "--change", "Ask for them on day one").j.ok, true);
   assert.strictEqual(cli("lesson", "--project", code, "--dept", "Copywriter", "--what", "Headline used a Reword claim without the safe wording", "--type", "Mistake", "--cause", "Claims list not rechecked", "--fix", "Headline corrected", "--change", "Confirm the Booklet version at intake").j.ok, true, "lesson with cause and fix");
+  // Graphic Designer playbook: an AI product image goes to the CEO only with what it shows and the full product spec
+  const gSet = cli("put-row", "--page", "graphic", "--section", "images", "--json", JSON.stringify({ project: code, set: "PDP carousel", status: "In progress", version: "1", prefix: "ag-test", slides: [{ id: "s1", std: 0, name: "Hero", shows: "Tube, closed, on white", aiimg: true, slug: "hero", ext: "jpg", spec: { color: "Brown Black", size: "10 ml" } }] }), "--agent", "Graphic Designer");
+  assert.strictEqual(gSet.j.ok, true, "image set added: " + JSON.stringify(gSet.j));
+  assert.strictEqual(cli("ask-ai-image", "--project", code, "--set", gSet.j.id, "--slide", "s1").j.ok, false, "AI image request refused without the full spec");
+  const gs = cli("get", "--page", "graphic", "--section", "images", "--id", gSet.j.id).j; gs.slides[0].spec = { color: "Brown Black", size: "10 ml", pack: "Matte black tube, gold cap", contents: "1 tube" };
+  assert.strictEqual(cli("put-row", "--page", "graphic", "--section", "images", "--json", JSON.stringify({ _id: gSet.j.id, slides: gs.slides })).j.ok, true);
+  const ai = cli("ask-ai-image", "--project", code, "--set", gSet.j.id, "--slide", "s1", "--why", "No photos of the new shade yet");
+  assert.ok(ai.j.ok && ai.j.decision && ai.j.image === "ag-test-carousel-01-hero.jpg", "AI image request: " + JSON.stringify(ai.j));
+  assert.strictEqual(cli("ask-ai-image", "--project", code, "--set", gSet.j.id, "--slide", "s1").j.ok, false, "a waiting request isn't asked twice");
+  const gp = cli("get", "--page", "graphic").j, aiRow = (gp.rows.aiimages || []).find(x => x._id === ai.j.request);
+  assert.ok(aiRow && aiRow.decision === "Waiting on CEO" && gp.rows.images.find(x => x._id === gSet.j.id).slides[0].aiReq === aiRow._id, "request saved on AI image approvals and linked to the slide");
+  assert.ok(cli("work", "--dept", "Graphic Designer").j.decisionsWaiting.some(d => d.id === ai.j.decision && d.type === "Override"), "the CEO decision waits for the Graphic Designer");
   assert.strictEqual(cli("put-row", "--page", "research", "--section", "documents", "--json", "{\"project\":\"NOPE\"}").j.ok, false, "unknown project refused");
   const dry = cli("report", "--dept", "Copywriter", "--project", code, "--what", "dry", "--dry-run").j; assert.ok(dry.ok && dry.dryRun);
   assert.ok(!cli("summary").j.openIssues.some(i => i.what === "dry"), "dry run saves nothing");
@@ -67,7 +79,7 @@ module.exports = async function run(browser, base) {
   const back = await page.evaluate(t => { const D = window.MAWM_DATA || document.getElementById("frame").contentWindow.MAWM_DATA; const r = D.readBackup(t); if (!r.ok) return { error: r.error }; const e = D.importAll(r.file, true); const S = D.readHq(); return { e, device: r.summary.device, issues: S.issues.map(i => i.what), decisions: S.decisions.map(d => d.title), lessons: S.lessons.map(l => l.what) } }, fs.readFileSync(file, "utf8"));
   assert.ok(!back.error && !back.e, "app reads the agent's file: " + (back.error || back.e));
   assert.ok(/AI work mate/.test(back.device), "the file says an AI work mate saved it");
-  assert.ok(back.issues.some(w => /lab test/.test(w)) && back.decisions.includes("Use an AI-made product image on slide 3?") && back.lessons.includes("Lab tests take a week"), "app shows the agent's issues, decisions and lessons");
+  assert.ok(back.issues.some(w => /lab test/.test(w)) && back.decisions.includes("Use an AI-made product image on slide 3?") && back.decisions.includes("AI product image: ag-test-carousel-01-hero.jpg") && back.lessons.includes("Lab tests take a week"), "app shows the agent's issues, decisions and lessons");
   await ctx.close(); fs.rmSync(path.dirname(file), { recursive: true, force: true });
   return "agent data helper reads the synced data file, writes records, submissions, reviews, issues, CEO decisions and lessons the app loads back, and refuses what agents may not do";
 };

@@ -27,6 +27,11 @@
 //   report   --dept <department> --project <code> --what <text> [--type <t>] [--sev Low|Medium|High] [--told <text>]
 //            [--decision-type Approval|Override|Escalation --decision-title <t> --detail <t> --rec <t>]
 //            logs an issue with the Project Director and, with --decision-type, a decision waiting on the CEO
+//   ask-ai-image --project <code> --set <image set _id> --slide <slide id> [--why <text>]
+//            Graphic Designer: asks the CEO to approve one AI-made product image, as the image set page does: the
+//            slide must be marked an AI product image with what it shows and all four spec lines (color, size,
+//            packaging, contents); the request appears on AI image approvals and the CEO's Allow or Disallow comes
+//            back onto the slide with the date
 //   task-status --project <code> --task <id> --status <status> [--note <text>]
 //            "In progress", "Waiting on a person" or "Blocked" only (approval goes through submit/approve)
 //   approve  --project <code> --task <id> [--note <text>]           Project Director only
@@ -199,6 +204,33 @@ switch (cmd) {
     }
     const res = D.report(o);
     write(res.error ? res : { issue: res.id, decision: res.decision || undefined });
+    break;
+  }
+  case "ask-ai-image": {
+    const project = need("project"), setId = need("set"), slideId = need("slide"); proj(project);
+    const data = D.page(PAGES.graphic) || {}; data.rows = data.rows || {};
+    const set = (data.rows.images || []).find(x => x && x._id === setId); if (!set) fail("No image set " + setId + ".");
+    if (set.project !== project) fail("That image set belongs to " + (set.project || "no project") + ".");
+    const s = (set.slides || []).find(x => x && x.id === slideId); if (!s) fail("No image " + slideId + " in that set.");
+    if (!s.aiimg) fail("Mark the image as an AI product image first (put-row the set with \"aiimg\": true on that slide).");
+    const spec = s.spec || {}, SPEC = [["color", "Color"], ["size", "Size"], ["pack", "Packaging"], ["contents", "Contents"]];
+    const missing = SPEC.filter(([k]) => !String(spec[k] || "").trim()).map(([, l]) => l);
+    if (!String(s.shows || "").trim() || missing.length) fail("Before asking, the image needs what it shows and the product spec it was checked against" + (missing.length ? " (missing: " + missing.join(", ") + ")" : "") + ".");
+    const rows = data.rows.aiimages || (data.rows.aiimages = []), old = s.aiReq && rows.find(x => x._id === s.aiReq);
+    const specText = SPEC.map(([k, l]) => l + ": " + String(spec[k] || "").trim()).join(" · "), sig = [s.id, s.slug || "", s.ext || "jpg", String(s.shows || "").trim(), specText].join("|");
+    if (old && old.decision === "Waiting on CEO") fail("This image is already waiting on the CEO (" + (old.dec || old._id) + ").");
+    if (old && old.decision === "Approved" && (!old.sig || old.sig === sig)) fail("The CEO already approved this exact image on " + (old.date || "an earlier date") + ".");
+    const slug = v => String(v || "").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/&/g, " and ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+    const kept = (set.slides || []).filter(x => !x.drop), k = kept.indexOf(s), TYPE = { "PDP carousel": "carousel", "Banner": "banner", "Section images": "section", "Icons": "icon", "Pop-up": "popup" };
+    const image = k >= 0 ? (slug(set.prefix) || "client-product") + "-" + (TYPE[set.set] || "image") + "-" + String(k + 1).padStart(2, "0") + "-" + (slug(s.slug || s.name) || "image") + "." + (s.ext || "jpg") : (s.name || "image");
+    const o = { _id: Math.random().toString(36).slice(2, 9), project, image, slideName: s.name || "", shows: String(s.shows || "").trim(), spec: specText, why: String(args.why || s.aiwhy || "").trim(), set: set._id, slide: s.id, sig };
+    const res = D.report({ dept: "Graphic Designer", project,
+      issue: { what: "AI product image needs CEO approval: " + image, type: "Override request", sev: "Medium", told: "Sent to the CEO with the product spec it was checked against; the image stays blocked until the CEO decides", decision: "Waiting on CEO", status: "Waiting on CEO" },
+      decision: { type: "Override", title: "AI product image: " + image, detail: (o.shows ? o.shows.replace(/\.$/, "") + ". " : "") + (o.why ? "Why AI: " + o.why.replace(/\.$/, "") + ". " : "") + "Checked against the product spec: " + specText + ".", rec: "Allow only if it matches the spec. Approval covers this image only; a changed or new AI product image needs its own approval.", ai: { dept: "graphic", row: o._id } } });
+    if (res.error) fail(res.error);
+    Object.assign(o, { issue: res.id, dec: res.decision, decision: "Waiting on CEO", asked: D.today(), date: "", note: "" });
+    rows.unshift(o); s.aiReq = o._id;
+    write({ request: o._id, issue: res.id, decision: res.decision, image, err: D.saveDept(PAGES.graphic, data) || undefined });
     break;
   }
   case "task-status": {
