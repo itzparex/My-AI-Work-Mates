@@ -22,7 +22,7 @@ const ROUTES = ["#/home", "#/ceo/home",
   await new Promise(r => server.listen(0, r)); const base = "http://localhost:" + server.address().port + "/";
   const browser = await chromium.launch(); const errors = [];
   const shots = process.argv.includes("--shots"); if (shots) fs.mkdirSync(path.join(ROOT, "tests", "shots"), { recursive: true });
-  for (const [label, vp] of [["desktop", { width: 1280, height: 860 }], ["phone", { width: 390, height: 800 }]]) {
+  for (const [label, vp] of process.env.ONLY_FLOWS ? [] : [["desktop", { width: 1280, height: 860 }], ["phone", { width: 390, height: 800 }]]) { /* ONLY_FLOWS=1 skips the page tour while debugging */
     const page = await browser.newPage({ viewport: vp });
     page.on("pageerror", e => errors.push(`${label} ${page.url()}: ${e.message}`));
     page.on("frameattached", f => {});
@@ -441,6 +441,34 @@ const ROUTES = ["#/home", "#/ceo/home",
       const bw2 = await B2.fr().evaluate(() => MAWM_DATA.syncStatus().warning);
       if (!/this device's newer changes/.test(bw2)) errors.push("sync auto: replacing an older copy on GitHub wasn't warned (" + bw2 + ")");
       if (shots) { await A2.p.goto(base + "index.html#/ceo/data"); await A2.p.waitForTimeout(1500); await A2.fr().evaluate(() => document.getElementById("ghsync").scrollIntoView()); await A2.p.screenshot({ path: path.join(ROOT, "tests", "shots", "desktop-sync-auto.png") }) }
+      { /* 3b-iii: open pages refresh themselves: GitHub on coming back into view (and every few minutes), other tabs of this device */
+        const r0 = await until(async () => !(await hqf(B2).evaluate(() => MAWM_DATA.syncStatus().busy)), 6000);
+        await edit(A2, "A while B away"); await until(() => nameOn(file()) === "A while B away");
+        await hqf(B2).evaluate(() => { window.__old = 1; const s = JSON.parse(localStorage.getItem("mawm-sync-state")); s.lastCheck = ""; localStorage.setItem("mawm-sync-state", JSON.stringify(s)); document.dispatchEvent(new Event("visibilitychange")) });
+        const back = await until(async () => { const f = hqf(B2); return f && await f.evaluate(() => !window.__old && MAWM_DATA.readHq().projects[0].name === "A while B away") }, 9000);
+        if (!r0 || !back) errors.push("refresh: coming back to the app didn't load the newer copy from GitHub and refresh the open page (" + JSON.stringify(await hqf(B2).evaluate(() => [window.__old, MAWM_DATA.readHq().projects[0].name, localStorage.getItem("mawm-sync-state")])) + ")");
+        if (!/ceo\/data/.test(B2.p.url()) || !(await hqf(B2).$("#ghsync"))) errors.push("refresh: refreshing moved away from the page the CEO was on");
+        const every = await hqf(B2).evaluate(() => MAWM_DATA.syncStatus().every);
+        if (!(every > 0 && every <= 5 * 60000)) errors.push("refresh: GitHub isn't checked every few minutes (" + every + ")");
+        if (shots) { await hqf(B2).evaluate(() => document.getElementById("ghsync").scrollIntoView()); await B2.p.screenshot({ path: path.join(ROOT, "tests", "shots", "phone-sync-refresh.png") }) }
+        /* a second tab on device B, in the background: a change in the first tab refreshes it when it's shown again */
+        const T = await B2.C.newPage(); T.on("pageerror", e => errors.push("refresh (tab): " + e.message)); await T.goto(base + "index.html#/research/overview"); await T.waitForTimeout(1500);
+        const tf = () => T.frames().find(f => /dept\.html/.test(f.url()));
+        const hide = h => tf().evaluate(h => { Object.defineProperty(document, "hidden", { configurable: true, get: () => h }); if (!h) document.dispatchEvent(new Event("visibilitychange")) }, h);
+        await tf().evaluate(() => window.__old = 1); await hide(true);
+        await edit(B2, "From the other tab"); await T.waitForTimeout(400);
+        if (!(await tf().evaluate(() => window.__old === 1))) errors.push("refresh: a background tab refreshed before it was shown");
+        await hide(false);
+        if (!(await until(async () => { const f = tf(); return f && await f.evaluate(() => !window.__old && MAWM_DATA.readHq().projects[0].name === "From the other tab") }, 6000))) errors.push("refresh: a background tab didn't refresh when shown again after another tab changed the data");
+        /* …unless the CEO is typing there: then it offers a Refresh button */
+        await T.waitForTimeout(800); await tf().evaluate(() => { const i = document.createElement("input"); i.id = "tmpType"; document.body.appendChild(i); i.focus(); window.__old = 1 }); await hide(true);
+        await edit(B2, "While typing"); await T.waitForTimeout(400); await hide(false); await T.waitForTimeout(500);
+        const tb = await tf().evaluate(() => ({ old: window.__old, bar: (document.getElementById("mawmSyncBar") || {}).textContent || "" }));
+        if (tb.old !== 1 || !/another tab/.test(tb.bar)) errors.push("refresh: a tab where the CEO is typing was swapped instead of offering Refresh (" + JSON.stringify(tb) + ")");
+        if (shots) await T.screenshot({ path: path.join(ROOT, "tests", "shots", "phone-refresh-bar.png") });
+        await T.close();
+        if (!errors.some(e => /^refresh/.test(e))) console.log("OK: open pages refresh themselves: a newer copy on GitHub loads when the CEO comes back to the app (same page), GitHub is checked every few minutes, and a background tab refreshes when shown after another tab changed the data (offering Refresh instead if the CEO is typing)");
+      }
       /* dismissing the warning clears the header; pausing stops automatic saves */
       await B2.p.waitForTimeout(500); const dis = await B2.fr().$("#ghDismiss"); if (dis) await dis.click(); await B2.p.waitForTimeout(400);
       if (await until(async () => !(await badge(B2)), 16000) !== true) errors.push("sync auto: dismissing the warning didn't clear the header");

@@ -26,6 +26,8 @@
    Step 3a: export and import everything as one backup file. Step 3b-i: optional GitHub sync to the CEO's own private repo
    (connectSync, syncSave, syncPeek, syncApply); the token stays on this device. Step 3b-ii: once connected and synced by
    hand once, every save goes to GitHub by itself and a newer copy there is loaded on opening a page (newest wins, warned).
+   Step 3b-iii: open pages refresh themselves: GitHub is checked every few minutes and when the tab comes back into view,
+   and a change saved in another tab of this device reaches a tab in the background when it's shown again.
    Used by hq.html, dept.html and studio.html as window.MAWM_DATA. No network unless the CEO connects GitHub sync. */
 (function (g) {
   "use strict";
@@ -668,7 +670,7 @@
   }
   /* what the page shows: connected repo and file (never the token), last save and load */
   function syncStatus() { const c = syncConfig(); if (!c) return null; const s = syncState(); return { repo: c.repo, path: c.path, connected: c.connected, lastSave: s.lastSave || "", lastLoad: s.lastLoad || "", lastSync: s.lastSync || "", remoteDevice: s.remoteDevice || "", warning: s.warning || "", warningAt: s.warningAt || "", tokenEnd: c.token.slice(-4),
-    auto: c.auto !== false, first: !s.sha, dirty: s.dirty || "", offline: !!s.offline, error: s.error || "", busy: !!(s.busy && Date.now() - Date.parse(s.busy) < 60000), waiting: !!s.waiting } }
+    auto: c.auto !== false, first: !s.sha, dirty: s.dirty || "", offline: !!s.offline, error: s.error || "", busy: !!(s.busy && Date.now() - Date.parse(s.busy) < 60000), waiting: !!s.waiting, lastCheck: s.lastCheck || "", every: CHECK_EVERY } }
   const dismissSyncWarning = () => setSyncState({ warning: "", warningAt: "" });
 
   /* 3b-ii: automatic sync. While connected (and "Sync automatically" is on), every save marks this device's data as
@@ -677,7 +679,7 @@
      own). If both changed, the newest wins: the newer copy is kept and a warning shows on the Data card and in the header
      (a replaced local copy is kept as the safety copy, so Undo last import brings it back; a replaced GitHub copy stays
      in the repo's history). Offline saves wait and go when the device is back online. Only api.github.com is contacted. */
-  const LOCK = "mawm-sync-lock", DELAY = 3000, OPEN_GAP = 20000, LID = Math.random().toString(36).slice(2);
+  const LOCK = "mawm-sync-lock", DELAY = 3000, OPEN_GAP = 20000, CHECK_EVERY = 3 * 60000, LID = Math.random().toString(36).slice(2);
   let timer = null, running = false, exporting = false;
   const autoOn = () => { const c = syncConfig(); return !!(c && c.auto !== false) };
   const emit = d => { try { g.dispatchEvent(new CustomEvent("mawm-sync", { detail: d || {} })) } catch (e) { } };
@@ -722,16 +724,53 @@
     const peek = Object.assign(b, { sha: r.sha });
     if (typing()) { setSyncState({ waiting: true }); offerLoad(peek, warning); return }
     const err = syncApply(peek, { auto: true, warning }); if (err) return setSyncState({ error: err });
-    emit({ loaded: true }); try { g.location.reload() } catch (e) { }
+    emit({ loaded: true }); softReload();
   }
   /* the CEO is typing: don't swap the data underneath; offer to load it */
   function offerLoad(peek, warning) {
+    bar("Newer data is on GitHub" + (peek.file.device ? " (saved from " + String(peek.file.device).replace(/[<>&"]/g, "") + ")" : "") + ".", "Load it",
+      el => { const err = syncApply(peek, { auto: true, warning }); if (err) { el.querySelector("span").textContent = err; return } softReload() });
+  }
+  function bar(text, label, go) {
     const d = g.document; if (!d || !d.body || d.getElementById("mawmSyncBar")) return;
     const el = d.createElement("div"); el.id = "mawmSyncBar"; el.setAttribute("role", "status");
     el.style.cssText = "position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:200;background:var(--ink,#24152b);color:var(--bg,#fff);padding:10px 12px 10px 16px;border-radius:12px;display:flex;gap:12px;align-items:center;font:600 13px/1.4 var(--f-body,system-ui,sans-serif);box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:calc(100% - 32px)";
-    el.innerHTML = '<span>Newer data is on GitHub' + (peek.file.device ? " (saved from " + String(peek.file.device).replace(/[<>&"]/g, "") + ")" : "") + '.</span><button type="button" style="all:unset;cursor:pointer;background:var(--accent,#6a35e8);color:var(--accent-ink,#fff);padding:6px 12px;border-radius:8px;font-weight:700;white-space:nowrap">Load it</button>';
-    el.querySelector("button").onclick = () => { const err = syncApply(peek, { auto: true, warning }); if (err) { el.querySelector("span").textContent = err; return } g.location.reload() };
+    el.innerHTML = '<span></span><button type="button" style="all:unset;cursor:pointer;background:var(--accent,#6a35e8);color:var(--accent-ink,#fff);padding:6px 12px;border-radius:8px;font-weight:700;white-space:nowrap"></button>';
+    el.querySelector("span").textContent = text; el.querySelector("button").textContent = label;
+    el.querySelector("button").onclick = () => go(el);
     d.body.appendChild(el);
+  }
+  /* 3b-iii: reload the page in place (same view, same scroll position) so it shows the newest data */
+  const SCROLL = "mawm-scroll:";
+  function softReload() {
+    try { const k = SCROLL + g.location.pathname + g.location.search + g.location.hash; g.sessionStorage.setItem(k, JSON.stringify({ y: g.scrollY || 0, at: Date.now() })) } catch (e) { }
+    try { g.location.reload() } catch (e) { }
+  }
+  function restoreScroll() {
+    let v = null; const k = SCROLL + g.location.pathname + g.location.search + g.location.hash;
+    try { v = JSON.parse(g.sessionStorage.getItem(k) || "null"); g.sessionStorage.removeItem(k) } catch (e) { }
+    if (!v || !(Date.now() - v.at < 15000) || !v.y) return;
+    const go = () => { try { g.scrollTo(0, v.y) } catch (e) { } };
+    if (g.document.readyState === "complete") setTimeout(go, 60); else g.addEventListener("load", () => setTimeout(go, 60));
+  }
+  /* the CEO is busy (typing, or a form or pop-up open): never swap the page underneath */
+  const busy = () => { if (typing()) return true; try { const d = g.document; return !!d.querySelector("dialog[open], .inline-input, #modalRoot:not(:empty), #uForm:not(:empty)") } catch (e) { return false } };
+  /* 3b-iii: open pages refresh themselves. Every few minutes while the tab is shown, and whenever it comes back into view,
+     GitHub is checked for a newer copy (when connected). A change saved in another tab of this device (or loaded there from
+     GitHub) is drawn at once by pages that update live; a tab in the background refreshes itself when it's shown again,
+     unless the CEO is busy there, in which case it offers a Refresh button instead. */
+  let stale = false;
+  function dataChanged(e) {
+    if (!e || e.key !== KEY || e.newValue == null) return;
+    const a = parse(e.oldValue), b = parse(e.newValue);
+    if (a && b && sig(contentOf(a)) === sig(contentOf(b))) return; /* saved again, nothing new */
+    try { g.dispatchEvent(new CustomEvent("mawm-data", { detail: { from: "tab" } })) } catch (err) { }
+    if (g.document.hidden) stale = true;
+  }
+  function shown() {
+    if (g.document.hidden) return;
+    if (stale) { stale = false; if (busy()) bar("This data was updated in another tab.", "Refresh", softReload); else return softReload() }
+    autoTick("open");
   }
 
 
@@ -747,5 +786,12 @@
     setTimeout(() => autoTick("open"), 400);
     g.addEventListener("online", () => { setSyncState({ offline: false }); autoTick("save") });
     g.addEventListener("offline", () => { if (syncState().dirty) { setSyncState({ offline: true }); emit() } });
+  }
+  /* 3b-iii: open pages refresh themselves (GitHub every few minutes and on coming back into view; other tabs of this device) */
+  if (g.document && g.addEventListener) {
+    restoreScroll();
+    g.addEventListener("storage", dataChanged);
+    g.document.addEventListener("visibilitychange", shown);
+    setInterval(() => { if (!g.document.hidden && syncConfig()) autoTick("open") }, CHECK_EVERY);
   }
 })(typeof window !== "undefined" ? window : globalThis);
